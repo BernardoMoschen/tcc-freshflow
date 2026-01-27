@@ -1,0 +1,36 @@
+{
+  "name": "freshflow",
+  "version": "1.0.0",
+  "private": true,
+  "description": "B2B fresh produce ordering and warehouse management system",
+  "workspaces": [
+    "backend",
+    "frontend",
+    "tests"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "build": "npm run build -w backend && npm run build -w frontend",
+    "start": "npm run start -w backend",
+    "db:migrate": "npm run prisma:migrate -w backend",
+    "db:seed": "npm run prisma:seed -w backend",
+    "test:unit": "npm run test:unit -w backend",
+    "test:integration": "npm run test:integration -w backend",
+    "test:e2e": "npm run test:e2e -w tests",
+    "test": "npm run test:unit && npm run test:integration && npm run test:e2e",
+    "typecheck": "npm run typecheck -w backend && npm run typecheck -w frontend",
+    "lint": "npm run lint -w backend && npm run lint -w frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.4",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}

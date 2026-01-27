@@ -1,0 +1,227 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User - system user with Supabase ID
+model User {
+  id          String       @id @default(uuid())
+  supabaseId  String       @unique
+  email       String       @unique
+  name        String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  memberships Membership[]
+}
+
+// Role - defines permission level
+model Role {
+  id          String       @id @default(uuid())
+  name        RoleType     @unique
+  memberships Membership[]
+}
+
+enum RoleType {
+  PLATFORM_ADMIN
+  TENANT_OWNER
+  TENANT_ADMIN
+  ACCOUNT_OWNER
+  ACCOUNT_BUYER
+}
+
+// Membership - links User to Tenant/Account with Role
+model Membership {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId    String
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  tenantId  String?
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  accountId String?
+  account   Account? @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, tenantId, accountId, roleId])
+  @@index([userId])
+  @@index([tenantId])
+  @@index([accountId])
+}
+
+// Tenant - distributor/supplier organization
+model Tenant {
+  id          String       @id @default(uuid())
+  name        String
+  slug        String       @unique
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  memberships Membership[]
+  accounts    Account[]
+  products    Product[]
+}
+
+// Account - customer organization (restaurant, etc.)
+model Account {
+  id          String       @id @default(uuid())
+  name        String
+  slug        String
+  tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  memberships Membership[]
+  customers   Customer[]
+  orders      Order[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+}
+
+// Customer - represents account in price/order context
+model Customer {
+  id             String          @id @default(uuid())
+  accountId      String          @unique
+  account        Account         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  customerPrices CustomerPrice[]
+  orders         Order[]
+}
+
+// Product - base product (e.g., "Tomatoes")
+model Product {
+  id          String          @id @default(uuid())
+  name        String
+  description String?
+  category    String?
+  tenantId    String
+  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  options     ProductOption[]
+
+  @@index([tenantId])
+  @@index([category])
+}
+
+// ProductOption - SKU with unit type and base price
+model ProductOption {
+  id             String          @id @default(uuid())
+  productId      String
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name           String
+  sku            String          @unique
+  unitType       UnitType
+  basePrice      Float // in cents
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  customerPrices CustomerPrice[]
+  orderItems     OrderItem[]
+
+  @@index([productId])
+  @@index([unitType])
+}
+
+enum UnitType {
+  FIXED  // sold by unit/box (finalPrice set at order creation)
+  WEIGHT // sold by weight (finalPrice set after weighing)
+}
+
+// CustomerPrice - per-customer price override
+model CustomerPrice {
+  id              String        @id @default(uuid())
+  customerId      String
+  customer        Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  productOptionId String
+  productOption   ProductOption @relation(fields: [productOptionId], references: [id], onDelete: Cascade)
+  price           Float // in cents
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([customerId, productOptionId])
+  @@index([customerId])
+  @@index([productOptionId])
+}
+
+// Order - customer order with lifecycle
+model Order {
+  id            String         @id @default(uuid())
+  orderNumber   String         @unique
+  customerId    String
+  customer      Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  accountId     String
+  account       Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  status        OrderStatus    @default(DRAFT)
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  sentAt        DateTime?
+  finalizedAt   DateTime?
+  items         OrderItem[]
+  deliveryNotes DeliveryNote[]
+
+  @@index([customerId])
+  @@index([accountId])
+  @@index([status])
+  @@index([orderNumber])
+}
+
+enum OrderStatus {
+  DRAFT
+  SENT
+  IN_SEPARATION
+  FINALIZED
+}
+
+// OrderItem - line item with requested/actual quantities
+model OrderItem {
+  id              String        @id @default(uuid())
+  orderId         String
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productOptionId String
+  productOption   ProductOption @relation(fields: [productOptionId], references: [id], onDelete: Cascade)
+  requestedQty    Float // units or kg requested
+  actualWeight    Float? // kg (for WEIGHT items, set during weighing)
+  finalPrice      Float? // in cents (set at order or weighing)
+  isExtra         Boolean       @default(false)
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  weighings       Weighing[]
+
+  @@index([orderId])
+  @@index([productOptionId])
+}
+
+// Weighing - audit log for weight measurements
+model Weighing {
+  id           String    @id @default(uuid())
+  orderItemId  String
+  orderItem    OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  actualWeight Float // kg
+  finalPrice   Float? // in cents (optional override)
+  notes        String?
+  photoUrl     String?
+  userId       String // who performed weighing
+  createdAt    DateTime  @default(now())
+
+  @@index([orderItemId])
+  @@index([userId])
+}
+
+// DeliveryNote - PDF generation metadata
+model DeliveryNote {
+  id          String   @id @default(uuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  pdfUrl      String? // if storing in cloud
+  generatedAt DateTime @default(now())
+  generatedBy String // userId
+
+  @@index([orderId])
+}
