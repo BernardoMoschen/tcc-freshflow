@@ -1,33 +1,86 @@
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { trpc, trpcClient } from "./lib/trpc";
+import { ProtectedRoute } from "./components/protected-route";
+
+// Pages
+import { LoginPage } from "./pages/login";
+import { CatalogPage } from "./pages/chef/catalog";
+import { CartPage } from "./pages/chef/cart";
+import { OrdersPage } from "./pages/chef/orders";
+import { WeighingPage } from "./pages/admin/weighing";
+import { FinalizePage } from "./pages/admin/finalize";
 
 function App() {
-  const [queryClient] = useState(() => new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 1000 * 60 * 5, // 5 minutes
-        retry: 1,
-      },
-    },
-  }));
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 1000 * 60 * 5, // 5 minutes
+            retry: 1,
+          },
+        },
+      })
+  );
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <div className="min-h-screen bg-background">
-            <h1 className="text-4xl font-bold text-center py-8">
-              FreshFlow
-            </h1>
-            <p className="text-center text-muted-foreground">
-              B2B Fresh Produce Ordering System
-            </p>
-            <p className="text-center text-sm text-muted-foreground mt-4">
-              Frontend foundation ready. Routes and pages coming next.
-            </p>
-          </div>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<LoginPage />} />
+
+            {/* Chef routes (protected) */}
+            <Route
+              path="/chef/catalog"
+              element={
+                <ProtectedRoute>
+                  <CatalogPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/chef/cart"
+              element={
+                <ProtectedRoute>
+                  <CartPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/chef/orders"
+              element={
+                <ProtectedRoute>
+                  <OrdersPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Admin routes (protected) */}
+            <Route
+              path="/admin/weighing/:orderId"
+              element={
+                <ProtectedRoute>
+                  <WeighingPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/finalize/:orderId"
+              element={
+                <ProtectedRoute>
+                  <FinalizePage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Default redirect */}
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
         </BrowserRouter>
       </QueryClientProvider>
     </trpc.Provider>
