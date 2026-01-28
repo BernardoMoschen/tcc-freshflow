@@ -126,6 +126,9 @@ async function main() {
           sku: "TOM-1KG-BOX",
           unitType: UnitType.FIXED,
           basePrice: 850, // R$ 8.50
+          stockQuantity: 50,
+          lowStockThreshold: 10,
+          isAvailable: true,
         },
       },
     },
@@ -145,6 +148,9 @@ async function main() {
           sku: "LET-UNIT",
           unitType: UnitType.FIXED,
           basePrice: 350, // R$ 3.50
+          stockQuantity: 8,
+          lowStockThreshold: 10,
+          isAvailable: true,
         },
       },
     },
@@ -164,6 +170,9 @@ async function main() {
           sku: "FISH-KG",
           unitType: UnitType.WEIGHT,
           basePrice: 4500, // R$ 45.00 per kg
+          stockQuantity: 25,
+          lowStockThreshold: 5,
+          isAvailable: true,
         },
       },
     },
@@ -183,6 +192,9 @@ async function main() {
           sku: "BEEF-KG",
           unitType: UnitType.WEIGHT,
           basePrice: 6000, // R$ 60.00 per kg
+          stockQuantity: 0,
+          lowStockThreshold: 5,
+          isAvailable: false,
         },
       },
     },
@@ -202,6 +214,9 @@ async function main() {
           sku: "POT-5KG-BAG",
           unitType: UnitType.FIXED,
           basePrice: 1200, // R$ 12.00
+          stockQuantity: 100,
+          lowStockThreshold: 20,
+          isAvailable: true,
         },
       },
     },

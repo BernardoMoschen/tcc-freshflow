@@ -112,20 +112,24 @@ model Product {
 
 // ProductOption - SKU with unit type and base price
 model ProductOption {
-  id             String          @id @default(uuid())
-  productId      String
-  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
-  name           String
-  sku            String          @unique
-  unitType       UnitType
-  basePrice      Float // in cents
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  customerPrices CustomerPrice[]
-  orderItems     OrderItem[]
+  id                String          @id @default(uuid())
+  productId         String
+  product           Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name              String
+  sku               String          @unique
+  unitType          UnitType
+  basePrice         Float // in cents
+  stockQuantity     Float?          @default(0) // Current stock quantity
+  lowStockThreshold Float?          @default(10) // Alert when below this
+  isAvailable       Boolean         @default(true) // Manually toggle availability
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  customerPrices    CustomerPrice[]
+  orderItems        OrderItem[]
 
   @@index([productId])
   @@index([unitType])
+  @@index([isAvailable])
 }
 
 enum UnitType {
