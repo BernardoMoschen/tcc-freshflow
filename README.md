@@ -12,14 +12,62 @@ B2B fresh produce ordering and warehouse management system with catch-weight sup
 - **Offline-Capable Weighing**: Queue operations when offline, auto-sync when online (last-write-wins)
 - **Order Lifecycle**: DRAFT → SENT → IN_SEPARATION → FINALIZED
 
+## Architecture
+
+### Development Environment
+```
+┌─────────────────┐       ┌──────────────────┐
+│   Frontend      │──────▶│    Backend       │
+│   (React)       │       │   (Express +     │
+│   :5173         │       │    tRPC)         │
+└─────────────────┘       │   :3001          │
+                          └──────────────────┘
+                                  │
+                    ┌─────────────┴─────────────┐
+                    │                           │
+              ┌─────▼─────┐             ┌──────▼──────┐
+              │  Docker    │             │  Supabase   │
+              │  Postgres  │             │  Auth       │
+              │  :5432     │             │  (Cloud)    │
+              └────────────┘             └─────────────┘
+              Local DB                   Remote Auth
+```
+
+### Production Environment
+```
+┌─────────────────┐       ┌──────────────────┐
+│   Frontend      │──────▶│    Backend       │
+│   (Vercel)      │       │   (Render)       │
+│   Static        │       │   Node.js        │
+└─────────────────┘       └──────────────────┘
+                                  │
+                          ┌───────▼────────┐
+                          │   Supabase     │
+                          │ ┌────────────┐ │
+                          │ │ PostgreSQL │ │
+                          │ │ São Paulo  │ │
+                          │ └────────────┘ │
+                          │ ┌────────────┐ │
+                          │ │    Auth    │ │
+                          │ └────────────┘ │
+                          └────────────────┘
+                          All-in-one service
+                          R$ 0-150/month
+```
+
+**Why this architecture?**
+- **Development**: Docker = free, fast, no external dependencies
+- **Production**: Supabase = managed, scalable, Brazil region (São Paulo), FREE tier
+
 ## Tech Stack
 
 ### Backend
 - **Runtime**: Node.js 20+
 - **Framework**: Express + tRPC v11
-- **Database**: PostgreSQL via Prisma v7
+- **Database**: PostgreSQL via Prisma 5.22
 - **Auth**: Supabase JWT (JWKS verification)
 - **PDF Generation**: pdfkit
+- **Notifications**: Twilio WhatsApp API
 - **Language**: TypeScript (strict mode)
 
 ### Frontend
@@ -30,6 +78,13 @@ B2B fresh produce ordering and warehouse management system with catch-weight sup
 - **Offline**: Dexie (IndexedDB)
 - **Auth**: Supabase client
 - **Language**: TypeScript (strict mode)
+
+### Infrastructure
+- **Dev Database**: Docker Compose PostgreSQL
+- **Prod Database**: Supabase PostgreSQL (São Paulo)
+- **Prod Backend**: Render/Railway (free tier)
+- **Prod Frontend**: Vercel/Netlify (free tier)
+- **Package Manager**: pnpm (monorepo)
 
 ## Prerequisites
 
