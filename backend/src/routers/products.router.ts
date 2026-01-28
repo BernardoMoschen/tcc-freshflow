@@ -154,4 +154,151 @@ export const productsRouter = router({
         options: optionsWithPrices,
       };
     }),
+
+  /**
+   * Create a new product with options
+   */
+  create: tenantProcedure
+    .input(
+      z.object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        category: z.string().optional(),
+        imageUrl: z.string().url().optional(),
+        options: z.array(
+          z.object({
+            name: z.string().min(1),
+            sku: z.string().min(1),
+            unitType: z.enum(["FIXED", "WEIGHT"]),
+            basePrice: z.number().positive(),
+            stockQuantity: z.number().min(0).default(0),
+            lowStockThreshold: z.number().min(0).default(10),
+            isAvailable: z.boolean().default(true),
+          })
+        ),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const product = await ctx.prisma.product.create({
+        data: {
+          name: input.name,
+          description: input.description,
+          category: input.category,
+          imageUrl: input.imageUrl,
+          tenantId: ctx.tenantId,
+          options: {
+            create: input.options,
+          },
+        },
+        include: {
+          options: true,
+        },
+      });
+
+      return product;
+    }),
+
+  /**
+   * Update an existing product
+   */
+  update: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        name: z.string().min(1).optional(),
+        description: z.string().optional(),
+        category: z.string().optional(),
+        imageUrl: z.string().url().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...data } = input;
+
+      const product = await ctx.prisma.product.update({
+        where: { id },
+        data,
+        include: {
+          options: true,
+        },
+      });
+
+      return product;
+    }),
+
+  /**
+   * Delete a product (and all its options)
+   */
+  delete: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.prisma.product.delete({
+        where: { id: input.id },
+      });
+
+      return { success: true };
+    }),
+
+  /**
+   * Create a product option
+   */
+  createOption: protectedProcedure
+    .input(
+      z.object({
+        productId: z.string().uuid(),
+        name: z.string().min(1),
+        sku: z.string().min(1),
+        unitType: z.enum(["FIXED", "WEIGHT"]),
+        basePrice: z.number().positive(),
+        stockQuantity: z.number().min(0).default(0),
+        lowStockThreshold: z.number().min(0).default(10),
+        isAvailable: z.boolean().default(true),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const option = await ctx.prisma.productOption.create({
+        data: input,
+      });
+
+      return option;
+    }),
+
+  /**
+   * Update a product option
+   */
+  updateOption: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        name: z.string().min(1).optional(),
+        sku: z.string().min(1).optional(),
+        unitType: z.enum(["FIXED", "WEIGHT"]).optional(),
+        basePrice: z.number().positive().optional(),
+        stockQuantity: z.number().min(0).optional(),
+        lowStockThreshold: z.number().min(0).optional(),
+        isAvailable: z.boolean().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...data } = input;
+
+      const option = await ctx.prisma.productOption.update({
+        where: { id },
+        data,
+      });
+
+      return option;
+    }),
+
+  /**
+   * Delete a product option
+   */
+  deleteOption: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.prisma.productOption.delete({
+        where: { id: input.id },
+      });
+
+      return { success: true };
+    }),
 });
