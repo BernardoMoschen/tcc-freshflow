@@ -17,24 +17,37 @@ export function useAuth() {
 
   // Auto-set context when session data is loaded
   useEffect(() => {
-    if (!sessionQuery.data) return;
+    if (!sessionQuery.data || sessionQuery.data.memberships.length === 0) return;
 
-    // Auto-set context if not already set
-    const tenantId = localStorage.getItem("freshflow:tenantId");
-    const accountId = localStorage.getItem("freshflow:accountId");
+    const storedTenantId = localStorage.getItem("freshflow:tenantId");
+    const storedAccountId = localStorage.getItem("freshflow:accountId");
 
-    if (!tenantId && !accountId && sessionQuery.data.memberships.length > 0) {
-      // Find first membership and set context
+    // Validate stored context against user's memberships
+    const validMembership = sessionQuery.data.memberships.find((m: any) => {
+      if (storedAccountId && m.account?.id === storedAccountId) return true;
+      if (storedTenantId && m.tenant?.id === storedTenantId) return true;
+      if (storedTenantId && m.account?.tenantId === storedTenantId) return true;
+      return false;
+    });
+
+    // If stored context is invalid or missing, set from first membership
+    if (!validMembership) {
       const firstMembership = sessionQuery.data.memberships[0];
 
       if (firstMembership.account) {
         // Account membership - set both tenant and account
         localStorage.setItem("freshflow:tenantId", firstMembership.account.tenantId);
         localStorage.setItem("freshflow:accountId", firstMembership.account.id);
+        console.log("🔄 Context reset to:", firstMembership.account.tenantId);
       } else if (firstMembership.tenant) {
         // Tenant membership - set only tenant
         localStorage.setItem("freshflow:tenantId", firstMembership.tenant.id);
+        localStorage.removeItem("freshflow:accountId");
+        console.log("🔄 Context reset to:", firstMembership.tenant.id);
       }
+
+      // Force page reload to use new context
+      window.location.reload();
     }
   }, [sessionQuery.data]);
 
