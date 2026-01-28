@@ -17,10 +17,15 @@ const STORAGE_KEY = "freshflow:cart-offline";
 export function useCart() {
   const hasSyncedOffline = useRef(false);
 
+  // Only fetch draft if user has account context (account users only)
+  // Platform admins and tenant admins without account context don't have carts
+  const hasAccountContext = !!localStorage.getItem("freshflow:accountId");
+
   // Fetch draft order
   const draftQuery = trpc.orders.getDraft.useQuery(undefined, {
     retry: 1,
     staleTime: 1000 * 30, // 30 seconds
+    enabled: hasAccountContext,
   });
 
   // Update draft mutation
@@ -189,7 +194,8 @@ export function useCart() {
     subtotal,
     count: items.length,
     draftOrderId: draftQuery.data?.id,
-    isLoading: draftQuery.isLoading,
+    isLoading: hasAccountContext && draftQuery.isLoading,
     isSyncing: updateDraftMutation.isPending || clearDraftMutation.isPending,
+    hasAccountContext,
   };
 }
