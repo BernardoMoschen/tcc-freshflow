@@ -7,7 +7,8 @@ import { PageLayout } from "@/components/page-layout";
 import { ProductCardSkeleton } from "@/components/ui/skeleton";
 import { CartPreview } from "@/components/cart-preview";
 import { Button } from "@/components/ui/button";
-import { X, Clock, Plus, Minus, Check, Star } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { X, Clock, Plus, Minus, Check, Star, AlertTriangle, XCircle, CheckCircle } from "lucide-react";
 
 const RECENT_SEARCHES_KEY = "freshflow:recent-searches";
 const MAX_RECENT_SEARCHES = 5;
@@ -292,7 +293,14 @@ export function CatalogPage() {
             const justAdded = justAddedId === option.id;
             const favorite = isFavorite(option.id);
 
+            // Stock status logic
+            const stockQty = option.stockQuantity ?? 0;
+            const lowThreshold = option.lowStockThreshold ?? 10;
+            const isOutOfStock = !option.isAvailable || stockQty === 0;
+            const isLowStock = stockQty > 0 && stockQty <= lowThreshold;
+
             const handleAddToCart = () => {
+              if (isOutOfStock) return;
               addItem({
                 productOptionId: option.id,
                 productName: product.name,
@@ -306,7 +314,7 @@ export function CatalogPage() {
             };
 
             return (
-              <div key={option.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all relative">
+              <div key={option.id} className={`bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all relative ${isOutOfStock ? 'opacity-75' : ''}`}>
                 {/* Favorite Star */}
                 <button
                   onClick={(e) => {
@@ -321,6 +329,26 @@ export function CatalogPage() {
                     }`}
                   />
                 </button>
+
+                {/* Stock Badge */}
+                <div className="absolute top-2 left-2 z-10">
+                  {isOutOfStock ? (
+                    <Badge variant="destructive" className="flex items-center gap-1">
+                      <XCircle className="h-3 w-3" />
+                      Out of Stock
+                    </Badge>
+                  ) : isLowStock ? (
+                    <Badge variant="secondary" className="flex items-center gap-1 bg-yellow-100 text-yellow-800 border-yellow-300">
+                      <AlertTriangle className="h-3 w-3" />
+                      Low Stock ({stockQty})
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="flex items-center gap-1 bg-green-100 text-green-800 border-green-300">
+                      <CheckCircle className="h-3 w-3" />
+                      In Stock
+                    </Badge>
+                  )}
+                </div>
 
                 {product.imageUrl ? (
                   <img
@@ -352,7 +380,8 @@ export function CatalogPage() {
                     <div className="mt-4 flex items-center gap-2">
                       <button
                         onClick={() => updateQuantity(option.id, Math.max(0.1, cartItem.requestedQty - 1))}
-                        className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary text-primary hover:bg-primary hover:text-white transition-colors flex items-center justify-center font-semibold"
+                        disabled={isOutOfStock}
+                        className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary text-primary hover:bg-primary hover:text-white transition-colors flex items-center justify-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Minus className="h-4 w-4" />
                       </button>
@@ -362,7 +391,8 @@ export function CatalogPage() {
                       </div>
                       <button
                         onClick={() => updateQuantity(option.id, cartItem.requestedQty + 1)}
-                        className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary bg-primary text-white hover:bg-primary/90 transition-colors flex items-center justify-center font-semibold"
+                        disabled={isOutOfStock}
+                        className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary bg-primary text-white hover:bg-primary/90 transition-colors flex items-center justify-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Plus className="h-4 w-4" />
                       </button>
@@ -370,13 +400,21 @@ export function CatalogPage() {
                   ) : (
                     <button
                       onClick={handleAddToCart}
-                      className={`mt-4 w-full px-4 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
-                        justAdded
+                      disabled={isOutOfStock}
+                      className={`mt-4 w-full px-4 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                        isOutOfStock
+                          ? "bg-gray-300 text-gray-600"
+                          : justAdded
                           ? "bg-green-500 text-white"
                           : "bg-primary text-white hover:bg-primary/90"
                       }`}
                     >
-                      {justAdded ? (
+                      {isOutOfStock ? (
+                        <>
+                          <XCircle className="h-5 w-5" />
+                          Out of Stock
+                        </>
+                      ) : justAdded ? (
                         <>
                           <Check className="h-5 w-5" />
                           Added!
