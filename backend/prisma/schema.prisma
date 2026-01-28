@@ -19,6 +19,7 @@ model User {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   memberships Membership[]
+  orders      Order[]
 }
 
 // Role - defines permission level
@@ -161,6 +162,8 @@ model Order {
   customer      Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
   accountId     String
   account       Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdBy     String
+  createdByUser User           @relation(fields: [createdBy], references: [id], onDelete: Cascade)
   status        OrderStatus    @default(DRAFT)
   notes         String?
   createdAt     DateTime       @default(now())
@@ -172,6 +175,7 @@ model Order {
 
   @@index([customerId])
   @@index([accountId])
+  @@index([createdBy])
   @@index([status])
   @@index([orderNumber])
 }

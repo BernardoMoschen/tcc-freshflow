@@ -137,6 +137,12 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
                   })}
                 </p>
               </div>
+              <div className="col-span-2">
+                <p className="text-gray-500">Created by</p>
+                <p className="font-medium">
+                  {order.createdByUser?.name || order.createdByUser?.email || "Unknown"}
+                </p>
+              </div>
               {order.sentAt && (
                 <div>
                   <p className="text-gray-500">Sent</p>

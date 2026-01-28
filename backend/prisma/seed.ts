@@ -258,6 +258,7 @@ async function main() {
       orderNumber: `ORD-${Date.now()}`,
       customerId: customer.id,
       accountId: account.id,
+      createdBy: chefUser.id,
       status: OrderStatus.SENT,
       sentAt: new Date(),
       notes: "Sample order for testing",

@@ -99,6 +99,7 @@ export const ordersRouter = router({
           orderNumber: generateOrderNumber(),
           customerId: customer.id,
           accountId: ctx.accountId,
+          createdBy: ctx.userId,
           status: OrderStatus.SENT,
           sentAt: new Date(),
           notes: input.notes,
@@ -121,6 +122,7 @@ export const ordersRouter = router({
               account: true,
             },
           },
+          createdByUser: true,
         },
       });
 
@@ -181,6 +183,7 @@ export const ordersRouter = router({
                 account: true,
               },
             },
+            createdByUser: true,
           },
           orderBy: {
             createdAt: "desc",
@@ -224,6 +227,7 @@ export const ordersRouter = router({
               customerPrices: true,
             },
           },
+          createdByUser: true,
         },
       });
 

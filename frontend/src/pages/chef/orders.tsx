@@ -137,6 +137,10 @@ export function OrdersPage() {
                         year: "numeric",
                       })}
                     </div>
+                    <div className="col-span-2">
+                      <span className="font-medium">Created by:</span>{" "}
+                      {order.createdByUser?.name || order.createdByUser?.email || "Unknown"}
+                    </div>
                     {order.sentAt && (
                       <div className="col-span-2">
                         <span className="font-medium">Sent:</span>{" "}
