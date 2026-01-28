@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -138,27 +139,31 @@ export function ContextSwitcher() {
           <ChevronDown className="h-4 w-4 flex-shrink-0" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[250px]">
-        <DropdownMenuLabel>Trocar Contexto</DropdownMenuLabel>
-        <DropdownMenuSeparator />
+      <DropdownMenuContent align="end" className="w-[280px]">
+        <div className="px-2 py-2 text-sm font-semibold border-b border-border mb-1">
+          Trocar Contexto
+        </div>
 
         {/* Platform admin: show all tenants */}
         {isPlatformAdmin && tenantsQuery.data && tenantsQuery.data.length > 0 && (
           <>
-            <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+            <DropdownMenuLabel>
               Todos os Distribuidores
             </DropdownMenuLabel>
             {tenantsQuery.data.map((tenant) => (
               <DropdownMenuItem
                 key={tenant.id}
                 onClick={() => handleSwitchToTenant(tenant)}
-                className="cursor-pointer"
+                className={cn(
+                  "cursor-pointer",
+                  currentTenantId === tenant.id && "bg-accent"
+                )}
               >
-                <Building2 className="h-4 w-4 mr-2" />
-                <div className="flex flex-col">
-                  <span className="text-sm">{tenant.name}</span>
+                <Building2 className="h-4 w-4 mr-2 flex-shrink-0 text-primary" />
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-medium truncate">{tenant.name}</span>
                   <span className="text-xs text-muted-foreground">
-                    Admin Global
+                    {currentTenantId === tenant.id ? "Selecionado" : "Clique para selecionar"}
                   </span>
                 </div>
               </DropdownMenuItem>
@@ -172,18 +177,21 @@ export function ContextSwitcher() {
         {/* User's tenant memberships */}
         {tenantMemberships.length > 0 && (
           <>
-            <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+            <DropdownMenuLabel>
               Meus Distribuidores
             </DropdownMenuLabel>
             {tenantMemberships.map((membership) => (
               <DropdownMenuItem
                 key={membership.id}
                 onClick={() => handleSwitchContext(membership)}
-                className="cursor-pointer"
+                className={cn(
+                  "cursor-pointer",
+                  currentTenantId === membership.tenant?.id && !currentAccountId && "bg-accent"
+                )}
               >
-                <Building2 className="h-4 w-4 mr-2" />
-                <div className="flex flex-col">
-                  <span className="text-sm">{membership.tenant!.name}</span>
+                <Building2 className="h-4 w-4 mr-2 flex-shrink-0 text-primary" />
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-medium truncate">{membership.tenant!.name}</span>
                   <span className="text-xs text-muted-foreground">
                     {membership.role}
                   </span>
@@ -197,18 +205,21 @@ export function ContextSwitcher() {
         {/* User's account memberships */}
         {accountMemberships.length > 0 && (
           <>
-            <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+            <DropdownMenuLabel>
               Minhas Contas
             </DropdownMenuLabel>
             {accountMemberships.map((membership) => (
               <DropdownMenuItem
                 key={membership.id}
                 onClick={() => handleSwitchContext(membership)}
-                className="cursor-pointer"
+                className={cn(
+                  "cursor-pointer",
+                  currentAccountId === membership.account?.id && "bg-accent"
+                )}
               >
-                <Store className="h-4 w-4 mr-2" />
-                <div className="flex flex-col">
-                  <span className="text-sm">{membership.account!.name}</span>
+                <Store className="h-4 w-4 mr-2 flex-shrink-0 text-green-600" />
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-medium truncate">{membership.account!.name}</span>
                   <span className="text-xs text-muted-foreground">
                     {membership.role}
                   </span>

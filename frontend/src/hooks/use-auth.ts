@@ -50,8 +50,9 @@ export function useAuth() {
 
     // Check if stored context is valid
     const isContextValid = (): boolean => {
-      // If user is platform admin and has no stored context, that's OK
-      if (isPlatformAdminUser && !storedTenantId && !storedAccountId) {
+      // Platform admin can select any tenant (or operate without context)
+      // Trust their manual selection - don't override it
+      if (isPlatformAdminUser) {
         return true;
       }
 
