@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { OrderStatusTimeline } from "@/components/order-status-timeline";
-import { ShoppingCart, Package } from "lucide-react";
+import { ShoppingCart, Package, XCircle, Trash2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useCart } from "@/hooks/use-cart";
 import { toast } from "sonner";
+import { useState } from "react";
 
 interface OrderDetailsDialogProps {
   orderId: string | null;
@@ -14,11 +15,36 @@ interface OrderDetailsDialogProps {
 }
 
 export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const utils = trpc.useUtils();
+
   const { data: order, isLoading } = trpc.orders.get.useQuery(
     { id: orderId! },
     { enabled: !!orderId }
   );
   const { addItem } = useCart();
+
+  const cancelOrderMutation = trpc.orders.cancel.useMutation({
+    onSuccess: () => {
+      toast.success("Order cancelled successfully");
+      utils.orders.list.invalidate();
+      onClose();
+    },
+    onError: (error) => {
+      toast.error("Failed to cancel order", { description: error.message });
+    },
+  });
+
+  const removeItemMutation = trpc.orders.removeItem.useMutation({
+    onSuccess: () => {
+      toast.success("Item removed from order");
+      utils.orders.get.invalidate();
+      utils.orders.list.invalidate();
+    },
+    onError: (error) => {
+      toast.error("Failed to remove item", { description: error.message });
+    },
+  });
 
   const handleReorder = () => {
     if (!order) return;
@@ -50,6 +76,41 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
         description: "This order has no items with final prices",
         duration: 3000,
       });
+    }
+  };
+
+  const handleCancelOrder = () => {
+    if (!order) return;
+
+    const reason = prompt(
+      "Please provide a reason for cancelling this order (optional):"
+    );
+
+    if (reason === null) return; // User clicked cancel
+
+    if (
+      confirm(
+        `Are you sure you want to cancel order ${order.orderNumber}? ${
+          order.status === "FINALIZED"
+            ? "Stock will be restored."
+            : "This action cannot be undone."
+        }`
+      )
+    ) {
+      cancelOrderMutation.mutate({
+        id: order.id,
+        reason: reason || undefined,
+      });
+    }
+  };
+
+  const handleRemoveItem = (itemId: string, itemName: string) => {
+    if (
+      confirm(
+        `Remove ${itemName} from this order? This action cannot be undone.`
+      )
+    ) {
+      removeItemMutation.mutate({ orderItemId: itemId });
     }
   };
 
@@ -202,12 +263,29 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
                           {item.productOption.name}
                         </p>
                       </div>
-                      <Badge
-                        variant={item.productOption.unitType === "FIXED" ? "secondary" : "outline"}
-                        className="text-xs"
-                      >
-                        {item.productOption.unitType}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant={item.productOption.unitType === "FIXED" ? "secondary" : "outline"}
+                          className="text-xs"
+                        >
+                          {item.productOption.unitType}
+                        </Badge>
+                        {order.status !== "FINALIZED" && isEditing && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() =>
+                              handleRemoveItem(
+                                item.id,
+                                `${item.productOption.product.name} - ${item.productOption.name}`
+                              )
+                            }
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-6 w-6 p-0"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-sm">
@@ -275,22 +353,47 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
             </div>
 
             {/* Actions */}
-            <div className="flex gap-3">
-              <Button
-                onClick={handleReorder}
-                className="flex-1"
-                variant="default"
-              >
-                <ShoppingCart className="mr-2 h-4 w-4" />
-                Reorder
-              </Button>
-              <Button
-                onClick={onClose}
-                variant="outline"
-                className="flex-1"
-              >
-                Close
-              </Button>
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleReorder}
+                  className="flex-1"
+                  variant="default"
+                >
+                  <ShoppingCart className="mr-2 h-4 w-4" />
+                  Reorder
+                </Button>
+
+                {order.status !== "FINALIZED" && (
+                  <Button
+                    onClick={() => setIsEditing(!isEditing)}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    {isEditing ? "Done Editing" : "Edit Items"}
+                  </Button>
+                )}
+
+                <Button
+                  onClick={onClose}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Close
+                </Button>
+              </div>
+
+              {order.status !== "DRAFT" && (
+                <Button
+                  onClick={handleCancelOrder}
+                  variant="destructive"
+                  className="w-full"
+                  disabled={cancelOrderMutation.isPending}
+                >
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Cancel Order
+                </Button>
+              )}
             </div>
 
             {order.status === "FINALIZED" && (

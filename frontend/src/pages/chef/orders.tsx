@@ -4,6 +4,7 @@ import { PageLayout } from "@/components/page-layout";
 import { CardSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -13,7 +14,8 @@ import {
 } from "@/components/ui/select";
 import { OrderDetailsDialog } from "@/components/order-details-dialog";
 import { OrderStatusTimeline } from "@/components/order-status-timeline";
-import { Search, ChevronLeft, ChevronRight, Eye, Download } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Eye, Download, FileDown, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 
 const PAGE_SIZE = 10;
 
@@ -22,12 +24,93 @@ export function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState<string>("");
+
+  const utils = trpc.useUtils();
 
   const ordersQuery = trpc.orders.list.useQuery({
     status: statusFilter === "all" ? undefined : (statusFilter as any),
     skip: currentPage * PAGE_SIZE,
     take: PAGE_SIZE,
   });
+
+  const bulkUpdateMutation = trpc.orders.bulkUpdateStatus.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Updated ${data.updated} order(s)`);
+      setSelectedOrders(new Set());
+      utils.orders.list.invalidate();
+    },
+    onError: (error) => {
+      toast.error("Failed to update orders", { description: error.message });
+    },
+  });
+
+  const exportQuery = trpc.orders.exportCsv.useQuery(
+    {
+      orderIds: selectedOrders.size > 0 ? Array.from(selectedOrders) : undefined,
+      status: statusFilter !== "all" ? (statusFilter as any) : undefined,
+    },
+    { enabled: false }
+  );
+
+  const toggleOrderSelection = (orderId: string) => {
+    const newSelection = new Set(selectedOrders);
+    if (newSelection.has(orderId)) {
+      newSelection.delete(orderId);
+    } else {
+      newSelection.add(orderId);
+    }
+    setSelectedOrders(newSelection);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedOrders.size === filteredOrders.length) {
+      setSelectedOrders(new Set());
+    } else {
+      setSelectedOrders(new Set(filteredOrders.map((o) => o.id)));
+    }
+  };
+
+  const handleBulkUpdateStatus = () => {
+    if (selectedOrders.size === 0) {
+      toast.error("No orders selected");
+      return;
+    }
+    if (!bulkStatus) {
+      toast.error("Please select a status");
+      return;
+    }
+
+    bulkUpdateMutation.mutate({
+      orderIds: Array.from(selectedOrders),
+      status: bulkStatus as any,
+    });
+  };
+
+  const handleExportCSV = async () => {
+    const result = await exportQuery.refetch();
+    if (result.data) {
+      // Convert to CSV string
+      const headers = Object.keys(result.data[0] || {});
+      const csvContent = [
+        headers.join(","),
+        ...result.data.map((row: any) =>
+          headers.map((h) => JSON.stringify(row[h] || "")).join(",")
+        ),
+      ].join("\n");
+
+      // Download CSV
+      const blob = new Blob([csvContent], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `orders-export-${new Date().toISOString()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("CSV exported successfully");
+    }
+  };
 
   // Filter orders by search query (client-side for order number)
   const filteredOrders = ordersQuery.data?.items.filter((order) => {
@@ -72,9 +155,54 @@ export function OrdersPage() {
           <p className="text-sm text-gray-600">
             Showing {filteredOrders.length} of {ordersQuery.data.total} order
             {ordersQuery.data.total !== 1 ? "s" : ""}
+            {selectedOrders.size > 0 && ` • ${selectedOrders.size} selected`}
           </p>
         )}
       </div>
+
+      {/* Batch Actions */}
+      {selectedOrders.size > 0 && (
+        <div className="mb-4 p-4 bg-blue-50 rounded-lg flex flex-col sm:flex-row items-center gap-3">
+          <span className="text-sm font-medium text-blue-900">
+            {selectedOrders.size} order{selectedOrders.size > 1 ? "s" : ""} selected
+          </span>
+
+          <div className="flex-1 flex items-center gap-2">
+            <Select value={bulkStatus} onValueChange={setBulkStatus}>
+              <SelectTrigger className="w-[180px] bg-white">
+                <SelectValue placeholder="Update status..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="SENT">Sent</SelectItem>
+                <SelectItem value="IN_SEPARATION">In Separation</SelectItem>
+                <SelectItem value="FINALIZED">Finalized</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button
+              onClick={handleBulkUpdateStatus}
+              size="sm"
+              disabled={!bulkStatus || bulkUpdateMutation.isPending}
+            >
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Update Status
+            </Button>
+          </div>
+
+          <Button onClick={handleExportCSV} size="sm" variant="outline">
+            <FileDown className="h-4 w-4 mr-1" />
+            Export CSV
+          </Button>
+
+          <Button
+            onClick={() => setSelectedOrders(new Set())}
+            size="sm"
+            variant="ghost"
+          >
+            Clear Selection
+          </Button>
+        </div>
+      )}
 
       {ordersQuery.isLoading && (
         <div className="space-y-4">
@@ -114,16 +242,38 @@ export function OrdersPage() {
         </div>
       )}
 
+      {/* Select All */}
+      {filteredOrders.length > 0 && (
+        <div className="mb-2 flex items-center gap-2">
+          <Checkbox
+            id="select-all"
+            checked={selectedOrders.size === filteredOrders.length}
+            onCheckedChange={toggleSelectAll}
+          />
+          <label htmlFor="select-all" className="text-sm text-gray-600 cursor-pointer">
+            Select all ({filteredOrders.length})
+          </label>
+        </div>
+      )}
+
       <div className="space-y-4">
         {filteredOrders.map((order) => (
           <div
             key={order.id}
-            className="bg-white rounded-lg shadow-sm p-4 md:p-6 hover:shadow-md transition-shadow"
+            className={`bg-white rounded-lg shadow-sm p-4 md:p-6 hover:shadow-md transition-shadow ${
+              selectedOrders.has(order.id) ? "ring-2 ring-blue-500" : ""
+            }`}
           >
             <div className="flex flex-col gap-4">
               {/* Order Header */}
               <div className="flex items-start justify-between">
-                <div className="flex-1">
+                <div className="flex items-start gap-3 flex-1">
+                  <Checkbox
+                    checked={selectedOrders.has(order.id)}
+                    onCheckedChange={() => toggleOrderSelection(order.id)}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
                   <h3 className="font-semibold text-lg mb-2">{order.orderNumber}</h3>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-gray-600 mb-3">
                     <div>

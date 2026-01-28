@@ -502,4 +502,363 @@ export const ordersRouter = router({
 
       return finalizedOrder;
     }),
+
+  /**
+   * Update draft order (before it's sent)
+   */
+  updateDraft: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const order = await ctx.prisma.order.findUnique({
+        where: { id: input.id },
+      });
+
+      if (!order) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Order not found",
+        });
+      }
+
+      // Only allow editing draft orders
+      if (order.status !== OrderStatus.DRAFT) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Can only edit draft orders. Once sent, orders are immutable.",
+        });
+      }
+
+      const updatedOrder = await ctx.prisma.order.update({
+        where: { id: input.id },
+        data: {
+          notes: input.notes,
+        },
+        include: {
+          items: {
+            include: {
+              productOption: {
+                include: {
+                  product: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      return updatedOrder;
+    }),
+
+  /**
+   * Remove item from order (admin only, not FINALIZED)
+   */
+  removeItem: protectedProcedure
+    .input(
+      z.object({
+        orderItemId: z.string().uuid(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const orderItem = await ctx.prisma.orderItem.findUnique({
+        where: { id: input.orderItemId },
+        include: {
+          order: true,
+        },
+      });
+
+      if (!orderItem) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Order item not found",
+        });
+      }
+
+      // Cannot remove items from finalized orders
+      if (orderItem.order.status === OrderStatus.FINALIZED) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot remove items from finalized orders",
+        });
+      }
+
+      await ctx.prisma.orderItem.delete({
+        where: { id: input.orderItemId },
+      });
+
+      return { success: true };
+    }),
+
+  /**
+   * Update order item quantity or notes (admin only, not FINALIZED)
+   */
+  updateItem: protectedProcedure
+    .input(
+      z.object({
+        orderItemId: z.string().uuid(),
+        requestedQty: z.number().positive().optional(),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const orderItem = await ctx.prisma.orderItem.findUnique({
+        where: { id: input.orderItemId },
+        include: {
+          order: true,
+          productOption: true,
+        },
+      });
+
+      if (!orderItem) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Order item not found",
+        });
+      }
+
+      // Cannot modify finalized orders
+      if (orderItem.order.status === OrderStatus.FINALIZED) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot modify finalized orders",
+        });
+      }
+
+      const { orderItemId, ...updateData } = input;
+
+      // If updating quantity and it's a FIXED item, recalculate price
+      if (updateData.requestedQty && orderItem.productOption.unitType === "FIXED") {
+        const pricePerUnit = orderItem.finalPrice ?? orderItem.productOption.basePrice;
+        updateData.requestedQty = input.requestedQty!;
+      }
+
+      const updatedItem = await ctx.prisma.orderItem.update({
+        where: { id: orderItemId },
+        data: updateData,
+        include: {
+          productOption: {
+            include: {
+              product: true,
+            },
+          },
+        },
+      });
+
+      return updatedItem;
+    }),
+
+  /**
+   * Cancel an order (with stock reversal if finalized)
+   */
+  cancel: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        reason: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const order = await ctx.prisma.order.findUnique({
+        where: { id: input.id },
+        include: {
+          items: {
+            include: {
+              productOption: true,
+            },
+          },
+        },
+      });
+
+      if (!order) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Order not found",
+        });
+      }
+
+      // If order was finalized, reverse stock deductions
+      if (order.status === OrderStatus.FINALIZED) {
+        await ctx.prisma.$transaction(async (tx) => {
+          for (const item of order.items) {
+            const quantityToRestore =
+              item.productOption.unitType === "WEIGHT" && item.actualWeight
+                ? item.actualWeight
+                : item.requestedQty;
+
+            // Restore stock
+            await tx.productOption.update({
+              where: { id: item.productOptionId },
+              data: {
+                stockQuantity: {
+                  increment: quantityToRestore,
+                },
+              },
+            });
+
+            // Create stock movement record
+            await tx.stockMovement.create({
+              data: {
+                productOptionId: item.productOptionId,
+                type: "RETURN" as any,
+                quantity: quantityToRestore,
+                orderId: order.id,
+                orderItemId: item.id,
+                notes: input.reason || `Order cancelled: ${order.orderNumber}`,
+                userId: ctx.userId,
+              },
+            });
+          }
+        });
+      }
+
+      // Delete the order (cascades to items)
+      await ctx.prisma.order.delete({
+        where: { id: input.id },
+      });
+
+      return { success: true, message: "Order cancelled successfully" };
+    }),
+
+  /**
+   * Bulk update order status
+   */
+  bulkUpdateStatus: protectedProcedure
+    .input(
+      z.object({
+        orderIds: z.array(z.string().uuid()).min(1),
+        status: z.nativeEnum(OrderStatus),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { orderIds, status } = input;
+
+      // Validate all orders exist and can be updated
+      const orders = await ctx.prisma.order.findMany({
+        where: {
+          id: { in: orderIds },
+        },
+        include: {
+          items: {
+            include: {
+              productOption: true,
+            },
+          },
+        },
+      });
+
+      if (orders.length !== orderIds.length) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Some orders not found",
+        });
+      }
+
+      // Validate status transitions
+      for (const order of orders) {
+        if (status === OrderStatus.FINALIZED && order.status !== OrderStatus.IN_SEPARATION) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Order ${order.orderNumber} must be in separation before finalizing`,
+          });
+        }
+      }
+
+      // If finalizing orders, handle stock deduction
+      if (status === OrderStatus.FINALIZED) {
+        for (const order of orders) {
+          if (order.status !== OrderStatus.FINALIZED) {
+            await validateStockAvailability(ctx.prisma, order.id);
+            await deductStockForOrder(ctx.prisma, order.id, ctx.userId);
+          }
+        }
+      }
+
+      // Update all orders
+      const result = await ctx.prisma.order.updateMany({
+        where: {
+          id: { in: orderIds },
+        },
+        data: {
+          status,
+          ...(status === OrderStatus.FINALIZED && { finalizedAt: new Date() }),
+        },
+      });
+
+      return {
+        success: true,
+        updated: result.count,
+      };
+    }),
+
+  /**
+   * Export orders to CSV format
+   */
+  exportCsv: protectedProcedure
+    .input(
+      z.object({
+        orderIds: z.array(z.string().uuid()).optional(),
+        status: z.nativeEnum(OrderStatus).optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const where: any = {};
+
+      if (input.orderIds && input.orderIds.length > 0) {
+        where.id = { in: input.orderIds };
+      }
+
+      if (input.status) {
+        where.status = input.status;
+      }
+
+      const orders = await ctx.prisma.order.findMany({
+        where,
+        include: {
+          items: {
+            include: {
+              productOption: {
+                include: {
+                  product: true,
+                },
+              },
+            },
+          },
+          customer: {
+            include: {
+              account: true,
+            },
+          },
+          createdByUser: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      // Convert to CSV rows
+      const rows = orders.flatMap((order) =>
+        order.items.map((item) => ({
+          orderNumber: order.orderNumber,
+          orderStatus: order.status,
+          customerName: order.customer.account.name,
+          createdBy: order.createdByUser?.name || order.createdByUser?.email || "Unknown",
+          createdAt: order.createdAt.toISOString(),
+          productName: item.productOption.product.name,
+          productOption: item.productOption.name,
+          sku: item.productOption.sku,
+          unitType: item.productOption.unitType,
+          requestedQty: item.requestedQty,
+          actualWeight: item.actualWeight || "",
+          finalPrice: item.finalPrice || "",
+          isExtra: item.isExtra,
+          notes: item.notes || "",
+        }))
+      );
+
+      return rows;
+    }),
 });
