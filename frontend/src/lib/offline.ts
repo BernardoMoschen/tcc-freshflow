@@ -40,7 +40,7 @@ export async function queueWeighing(weighing: Omit<QueuedWeighing, "id" | "times
  * Get all unsynced weighings
  */
 export async function getUnsyncedWeighings(): Promise<QueuedWeighing[]> {
-  return db.queue.where("synced").equals(false).toArray();
+  return db.queue.where("synced").equals(0 as any).toArray();
 }
 
 /**
@@ -54,14 +54,14 @@ export async function markWeighingSynced(id: number): Promise<void> {
  * Delete synced weighings (cleanup)
  */
 export async function deleteSyncedWeighings(): Promise<void> {
-  await db.queue.where("synced").equals(true).delete();
+  await db.queue.where("synced").equals(1 as any).delete();
 }
 
 /**
  * Get queue status (count of unsynced items)
  */
 export async function getQueueStatus(): Promise<{ pending: number }> {
-  const pending = await db.queue.where("synced").equals(false).count();
+  const pending = await db.queue.where("synced").equals(0 as any).count();
   return { pending };
 }
 

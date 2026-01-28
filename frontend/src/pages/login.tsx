@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
+import { setupDevMode } from "@/lib/dev-setup";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
@@ -23,6 +24,13 @@ export function LoginPage() {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDevLogin = (userKey: "chef" | "owner" | "admin") => {
+    if (setupDevMode(userKey)) {
+      // Reload to apply dev mode
+      window.location.href = "/chef/catalog";
     }
   };
 
@@ -82,11 +90,45 @@ export function LoginPage() {
             {loading ? "Signing in..." : "Sign in"}
           </button>
 
-          <div className="text-sm text-center text-gray-600 pt-2">
-            <p className="font-medium">Test credentials:</p>
-            <p className="font-mono text-xs mt-1">chef@chefstable.com</p>
-          </div>
+          {import.meta.env.PROD && (
+            <div className="text-sm text-center text-gray-600 pt-2">
+              <p className="font-medium">Test credentials:</p>
+              <p className="font-mono text-xs mt-1">chef@chefstable.com</p>
+            </div>
+          )}
         </form>
+
+        {/* Development mode quick login */}
+        {import.meta.env.DEV && (
+          <div className="border-t border-gray-200 pt-6">
+            <p className="text-sm font-medium text-gray-700 mb-3 text-center">
+              🔧 Development Mode - Quick Login
+            </p>
+            <div className="space-y-2">
+              <button
+                onClick={() => handleDevLogin("chef")}
+                className="w-full py-3 px-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 hover:bg-blue-100 transition-colors text-sm font-medium"
+              >
+                Login as Chef (ACCOUNT_OWNER)
+              </button>
+              <button
+                onClick={() => handleDevLogin("owner")}
+                className="w-full py-3 px-4 bg-purple-50 border border-purple-200 rounded-lg text-purple-700 hover:bg-purple-100 transition-colors text-sm font-medium"
+              >
+                Login as Tenant Owner (TENANT_OWNER)
+              </button>
+              <button
+                onClick={() => handleDevLogin("admin")}
+                className="w-full py-3 px-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors text-sm font-medium"
+              >
+                Login as Platform Admin
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-3 text-center">
+              No password required in development mode
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

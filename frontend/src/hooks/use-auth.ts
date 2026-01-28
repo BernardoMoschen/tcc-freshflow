@@ -16,7 +16,25 @@ export function useAuth() {
   });
 
   useEffect(() => {
-    // Get initial session
+    // Development mode bypass
+    if (import.meta.env.DEV) {
+      const devUserEmail = localStorage.getItem("freshflow:dev-user-email");
+      if (devUserEmail) {
+        // Create a mock user object for dev mode
+        setUser({
+          id: "dev-user",
+          email: devUserEmail,
+          app_metadata: {},
+          user_metadata: {},
+          aud: "authenticated",
+          created_at: new Date().toISOString(),
+        } as User);
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Production: Get initial session from Supabase
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
@@ -43,6 +61,17 @@ export function useAuth() {
   };
 
   const signOut = async () => {
+    // Development mode: just clear dev user
+    if (import.meta.env.DEV) {
+      localStorage.removeItem("freshflow:dev-user-email");
+      localStorage.removeItem("freshflow:tenantId");
+      localStorage.removeItem("freshflow:accountId");
+      setUser(null);
+      navigate("/login");
+      return;
+    }
+
+    // Production: sign out from Supabase
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
 

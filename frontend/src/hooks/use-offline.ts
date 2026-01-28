@@ -5,7 +5,6 @@ import {
   getUnsyncedWeighings,
   markWeighingSynced,
   getQueueStatus,
-  type QueuedWeighing,
 } from "@/lib/offline";
 
 export function useOffline() {

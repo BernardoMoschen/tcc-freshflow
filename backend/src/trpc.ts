@@ -12,12 +12,24 @@ export async function createContext({ req, res }: CreateExpressContextOptions) {
   const authHeader = req.headers.authorization;
   const tenantId = req.headers["x-tenant-id"] as string | undefined;
   const accountId = req.headers["x-account-id"] as string | undefined;
+  const devUserEmail = req.headers["x-dev-user-email"] as string | undefined;
 
   // Attempt authentication (returns userId or null)
   let userId: string | null = null;
   try {
     if (authHeader) {
       userId = await authenticateRequest(authHeader);
+    } else if (process.env.NODE_ENV === "development" && devUserEmail) {
+      // Development bypass: use x-dev-user-email header to impersonate user
+      const user = await prisma.user.findUnique({
+        where: { email: devUserEmail },
+      });
+      if (user) {
+        userId = user.id;
+        console.log(`🔧 [DEV MODE] Authenticated as: ${devUserEmail}`);
+      } else {
+        console.warn(`🔧 [DEV MODE] User not found: ${devUserEmail}`);
+      }
     }
   } catch (error) {
     // Don't throw here - let individual procedures decide if auth is required

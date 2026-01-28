@@ -3,6 +3,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { trpc, trpcClient } from "./lib/trpc";
 import { ProtectedRoute } from "./components/protected-route";
+import { ToastProvider } from "./components/toast";
+import { Toaster } from "./components/ui/sonner";
 
 // Pages
 import { LoginPage } from "./pages/login";
@@ -28,8 +30,10 @@ function App() {
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <Routes>
+        <ToastProvider>
+          <Toaster />
+          <BrowserRouter>
+            <Routes>
             {/* Public routes */}
             <Route path="/login" element={<LoginPage />} />
 
@@ -80,8 +84,9 @@ function App() {
             {/* Default redirect */}
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        </BrowserRouter>
+            </Routes>
+          </BrowserRouter>
+        </ToastProvider>
       </QueryClientProvider>
     </trpc.Provider>
   );

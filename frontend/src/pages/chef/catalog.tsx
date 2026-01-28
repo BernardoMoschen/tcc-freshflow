@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { trpc } from "@/lib/trpc";
 import { useCart } from "@/hooks/use-cart";
 import { PageLayout } from "@/components/page-layout";
+import { ProductCardSkeleton } from "@/components/ui/skeleton";
 
 export function CatalogPage() {
   const [search, setSearch] = useState("");
@@ -140,14 +141,22 @@ export function CatalogPage() {
 
       {/* Loading and error states */}
       {productsQuery.isLoading && (
-        <p className="text-center py-8 text-gray-600">Loading products...</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          <ProductCardSkeleton />
+          <ProductCardSkeleton />
+          <ProductCardSkeleton />
+          <ProductCardSkeleton />
+          <ProductCardSkeleton />
+          <ProductCardSkeleton />
+        </div>
       )}
       {productsQuery.error && (
         <p className="text-center py-8 text-red-600">Error loading products</p>
       )}
 
       {/* Product grid - single column on mobile, responsive grid on larger screens */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+      {!productsQuery.isLoading && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {productsQuery.data?.items.map((product) =>
           product.options.map((option) => (
             <div key={option.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
@@ -188,7 +197,8 @@ export function CatalogPage() {
             </div>
           ))
         )}
-      </div>
+        </div>
+      )}
 
       {/* Empty state */}
       {productsQuery.data?.items.length === 0 && (

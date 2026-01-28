@@ -55,15 +55,27 @@ export async function canAccessTenant(userId: string, tenantId: string): Promise
   const isPlatformAdmin = await hasRole(userId, RoleType.PLATFORM_ADMIN);
   if (isPlatformAdmin) return true;
 
-  // Check if user has any membership in this tenant
-  const membership = await prisma.membership.findFirst({
+  // Check if user has direct tenant-level membership
+  const tenantMembership = await prisma.membership.findFirst({
     where: {
       userId,
       tenantId,
     },
   });
 
-  return !!membership;
+  if (tenantMembership) return true;
+
+  // Check if user has account-level membership within this tenant
+  const accountMembership = await prisma.membership.findFirst({
+    where: {
+      userId,
+      account: {
+        tenantId,
+      },
+    },
+  });
+
+  return !!accountMembership;
 }
 
 /**

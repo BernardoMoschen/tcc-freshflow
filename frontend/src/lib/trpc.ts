@@ -10,14 +10,23 @@ export const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/trpc",
       async headers() {
-        const { data: { session } } = await supabase.auth.getSession();
-
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
         };
 
-        if (session?.access_token) {
-          headers.authorization = `Bearer ${session.access_token}`;
+        // Development mode bypass
+        if (import.meta.env.DEV) {
+          const devUserEmail = localStorage.getItem("freshflow:dev-user-email");
+          if (devUserEmail) {
+            headers["x-dev-user-email"] = devUserEmail;
+            console.log(`🔧 [DEV MODE] Using dev user: ${devUserEmail}`);
+          }
+        } else {
+          // Production: use Supabase authentication
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            headers.authorization = `Bearer ${session.access_token}`;
+          }
         }
 
         // Add context headers if available in localStorage

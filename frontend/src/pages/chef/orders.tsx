@@ -1,5 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { PageLayout } from "@/components/page-layout";
+import { CardSkeleton } from "@/components/ui/skeleton";
 
 const statusColors = {
   DRAFT: "bg-gray-100 text-gray-800",
@@ -14,7 +15,11 @@ export function OrdersPage() {
   return (
     <PageLayout title="My Orders">
       {ordersQuery.isLoading && (
-        <p className="text-center py-8 text-gray-600">Loading orders...</p>
+        <div className="space-y-4">
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
       )}
       {ordersQuery.error && (
         <p className="text-center py-8 text-red-600">Error loading orders</p>

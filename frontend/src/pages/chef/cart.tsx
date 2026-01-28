@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { trpc } from "@/lib/trpc";
 import { useCart } from "@/hooks/use-cart";
 import { PageLayout } from "@/components/page-layout";
+import { useToast } from "@/components/toast";
 
 export function CartPage() {
   const { items, updateQuantity, removeItem, clear, subtotal } = useCart();
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const createOrderMutation = trpc.orders.create.useMutation();
 
@@ -26,10 +28,10 @@ export function CartPage() {
       });
 
       clear();
-      alert(`Order created: ${order.orderNumber}`);
+      showToast(`Order created: ${order.orderNumber}`, "success");
       navigate("/chef/orders");
     } catch (error) {
-      alert("Failed to create order: " + (error instanceof Error ? error.message : "Unknown error"));
+      showToast("Failed to create order: " + (error instanceof Error ? error.message : "Unknown error"), "error");
     } finally {
       setSubmitting(false);
     }

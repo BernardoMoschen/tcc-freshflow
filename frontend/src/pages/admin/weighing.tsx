@@ -3,10 +3,13 @@ import { useParams } from "react-router-dom";
 import { trpc } from "@/lib/trpc";
 import { useOffline } from "@/hooks/use-offline";
 import { queueWeighing } from "@/lib/offline";
+import { useToast } from "@/components/toast";
+import { OrderItemSkeleton } from "@/components/ui/skeleton";
 
 export function WeighingPage() {
   const { orderId } = useParams<{ orderId: string }>();
   const { isOnline, pending } = useOffline();
+  const { showToast } = useToast();
 
   const orderQuery = trpc.orders.get.useQuery({ id: orderId! }, { enabled: !!orderId });
   const weighMutation = trpc.orders.weigh.useMutation();
@@ -21,7 +24,7 @@ export function WeighingPage() {
     const persistPrice = persistFlags[orderItemId] || false;
 
     if (!actualWeight || actualWeight <= 0) {
-      alert("Please enter a valid weight");
+      showToast("Please enter a valid weight", "warning");
       return;
     }
 
@@ -33,8 +36,12 @@ export function WeighingPage() {
           finalPrice,
           persistPrice,
         });
-        alert("Weight saved!");
+        showToast("Weight saved successfully!", "success");
         orderQuery.refetch();
+        // Clear the inputs for this item
+        setWeights((prev) => ({ ...prev, [orderItemId]: 0 }));
+        setPrices((prev) => ({ ...prev, [orderItemId]: 0 }));
+        setPersistFlags((prev) => ({ ...prev, [orderItemId]: false }));
       } else {
         await queueWeighing({
           orderItemId,
@@ -42,14 +49,32 @@ export function WeighingPage() {
           finalPrice,
           persistPrice,
         });
-        alert("Weight queued for sync when online");
+        showToast("Weight queued for sync when online", "info");
       }
     } catch (error) {
-      alert("Failed to save weight: " + (error instanceof Error ? error.message : "Unknown error"));
+      showToast(
+        "Failed to save weight: " + (error instanceof Error ? error.message : "Unknown error"),
+        "error"
+      );
     }
   };
 
-  if (orderQuery.isLoading) return <div className="p-8 text-center">Loading order...</div>;
+  if (orderQuery.isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <nav className="bg-white shadow-sm sticky top-0 z-40">
+          <div className="max-w-4xl mx-auto px-4 py-4">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Weighing Station</h1>
+          </div>
+        </nav>
+        <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
+          <OrderItemSkeleton />
+          <OrderItemSkeleton />
+          <OrderItemSkeleton />
+        </div>
+      </div>
+    );
+  }
   if (orderQuery.error) return <div className="p-8 text-center text-red-600">Error loading order</div>;
   if (!orderQuery.data) return <div className="p-8 text-center">Order not found</div>;
 
@@ -188,10 +213,10 @@ export function WeighingPage() {
 
                     <button
                       onClick={() => handleWeigh(item.id)}
-                      disabled={weighMutation.isLoading}
+                      disabled={weighMutation.isPending}
                       className="w-full bg-primary text-white px-6 py-5 rounded-xl hover:bg-primary/90 text-lg md:text-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
                     >
-                      {weighMutation.isLoading ? "Saving..." : "Save Weight"}
+                      {weighMutation.isPending ? "Saving..." : "Save Weight"}
                     </button>
                   </div>
                 )}
