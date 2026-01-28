@@ -14,6 +14,6 @@
     "types": ["node"],
     "allowSyntheticDefaultImports": true
   },
-  "include": ["src/**/*", "prisma/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "prisma"]
 }

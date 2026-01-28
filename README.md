@@ -33,9 +33,15 @@ B2B fresh produce ordering and warehouse management system with catch-weight sup
 
 ## Prerequisites
 
-- Node.js 20+ and npm 10+
+- Node.js 20+ and pnpm 8+
 - Docker and Docker Compose (for local Postgres)
 - Supabase account and project
+
+Install pnpm if you don't have it:
+
+```bash
+npm install -g pnpm
+```
 
 ## Quick Start
 
@@ -44,7 +50,7 @@ B2B fresh produce ordering and warehouse management system with catch-weight sup
 ```bash
 git clone <repo-url> freshflow
 cd freshflow
-npm ci
+pnpm install
 ```
 
 ### 2. Setup Environment
@@ -85,8 +91,8 @@ Wait for Postgres to be ready (check with `docker-compose logs postgres`).
 ### 4. Run Migrations and Seed
 
 ```bash
-npm run db:migrate
-npm run db:seed
+pnpm db:migrate
+pnpm db:seed
 ```
 
 This creates:
@@ -101,7 +107,7 @@ This creates:
 ### 5. Start Dev Servers
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 This starts:
@@ -191,18 +197,18 @@ npm run dev              # Start backend + frontend
 npm run build            # Build both workspaces
 npm run db:migrate       # Run Prisma migrations
 npm run db:seed          # Seed database
-npm run typecheck        # TypeScript check all workspaces
-npm run lint             # Lint all workspaces
-npm test                 # Run all tests
+pnpm typecheck           # TypeScript check all workspaces
+pnpm lint                # Lint all workspaces
+pnpm test                # Run all tests
 
 # Backend only
-npm run dev -w backend
-npm run build -w backend
-npm run start -w backend
+pnpm --filter backend dev
+pnpm --filter backend build
+pnpm --filter backend start
 
 # Frontend only
-npm run dev -w frontend
-npm run build -w frontend
+pnpm --filter frontend dev
+pnpm --filter frontend build
 ```
 
 ### Database Migrations
@@ -210,27 +216,27 @@ npm run build -w frontend
 ```bash
 # Create a new migration
 cd backend
-npx prisma migrate dev --name add_something
+pnpm prisma migrate dev --name add_something
 
 # Apply migrations (production)
-npm run db:migrate
+pnpm db:migrate
 
 # Reset database (careful!)
 cd backend
-npx prisma migrate reset
+pnpm prisma migrate reset
 ```
 
 ### Testing
 
 ```bash
 # Unit tests (backend business logic)
-npm run test:unit
+pnpm test:unit
 
 # Integration tests (tRPC procedures)
-npm run test:integration
+pnpm test:integration
 
 # E2E tests (Playwright)
-npm run test:e2e
+pnpm test:e2e
 ```
 
 ## User Flows

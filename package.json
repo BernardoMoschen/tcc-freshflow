@@ -3,23 +3,18 @@
   "version": "1.0.0",
   "private": true,
   "description": "B2B fresh produce ordering and warehouse management system",
-  "workspaces": [
-    "backend",
-    "frontend",
-    "tests"
-  ],
   "scripts": {
-    "dev": "concurrently \"npm run dev -w backend\" \"npm run dev -w frontend\"",
-    "build": "npm run build -w backend && npm run build -w frontend",
-    "start": "npm run start -w backend",
-    "db:migrate": "npm run prisma:migrate -w backend",
-    "db:seed": "npm run prisma:seed -w backend",
-    "test:unit": "npm run test:unit -w backend",
-    "test:integration": "npm run test:integration -w backend",
-    "test:e2e": "npm run test:e2e -w tests",
-    "test": "npm run test:unit && npm run test:integration && npm run test:e2e",
-    "typecheck": "npm run typecheck -w backend && npm run typecheck -w frontend",
-    "lint": "npm run lint -w backend && npm run lint -w frontend"
+    "dev": "concurrently \"pnpm --filter backend dev\" \"pnpm --filter frontend dev\"",
+    "build": "pnpm --filter backend build && pnpm --filter frontend build",
+    "start": "pnpm --filter backend start",
+    "db:migrate": "pnpm --filter backend prisma:migrate",
+    "db:seed": "pnpm --filter backend prisma:seed",
+    "test:unit": "pnpm --filter backend test:unit",
+    "test:integration": "pnpm --filter backend test:integration",
+    "test:e2e": "pnpm --filter tests test:e2e",
+    "test": "pnpm test:unit && pnpm test:integration && pnpm test:e2e",
+    "typecheck": "pnpm --filter backend typecheck && pnpm --filter frontend typecheck",
+    "lint": "pnpm --filter backend lint && pnpm --filter frontend lint"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
@@ -31,6 +26,6 @@
   },
   "engines": {
     "node": ">=20.0.0",
-    "npm": ">=10.0.0"
+    "pnpm": ">=8.0.0"
   }
 }
