@@ -2,9 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { trpc } from "@/lib/trpc";
 import { useCart } from "@/hooks/use-cart";
+import { useFavorites } from "@/hooks/use-favorites";
 import { PageLayout } from "@/components/page-layout";
 import { ProductCardSkeleton } from "@/components/ui/skeleton";
-import { X, Clock } from "lucide-react";
+import { CartPreview } from "@/components/cart-preview";
+import { Button } from "@/components/ui/button";
+import { X, Clock, Plus, Minus, Check, Star } from "lucide-react";
 
 const RECENT_SEARCHES_KEY = "freshflow:recent-searches";
 const MAX_RECENT_SEARCHES = 5;
@@ -19,7 +22,10 @@ export function CatalogPage() {
   const [unitType, setUnitType] = useState<"FIXED" | "WEIGHT" | "">("");
   const [sortBy, setSortBy] = useState<"name" | "price">("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const { addItem, count } = useCart();
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [justAddedId, setJustAddedId] = useState<string | null>(null);
+  const { items, addItem, updateQuantity, count } = useCart();
+  const { toggleFavorite, isFavorite, count: favoritesCount } = useFavorites();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -156,12 +162,25 @@ export function CatalogPage() {
         )}
       </div>
 
+      {/* Quick Filters */}
+      <div className="flex gap-2 mb-4 overflow-x-auto">
+        <Button
+          variant={showFavoritesOnly ? "default" : "outline"}
+          size="sm"
+          onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+          className="flex-shrink-0"
+        >
+          <Star className={`h-4 w-4 mr-1 ${showFavoritesOnly ? "fill-current" : ""}`} />
+          Favorites {favoritesCount > 0 && `(${favoritesCount})`}
+        </Button>
+      </div>
+
       {/* Filter toggle button - mobile only */}
       <button
         onClick={() => setShowFilters(!showFilters)}
         className="md:hidden w-full mb-4 px-4 py-3 bg-white border border-gray-300 rounded-lg text-left flex justify-between items-center"
       >
-        <span className="font-medium text-gray-700">Filters</span>
+        <span className="font-medium text-gray-700">More Filters</span>
         <svg
           className={`w-5 h-5 transition-transform ${showFilters ? "rotate-180" : ""}`}
           fill="none"
@@ -265,44 +284,115 @@ export function CatalogPage() {
       {!productsQuery.isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {productsQuery.data?.items.map((product) =>
-          product.options.map((option) => (
-            <div key={option.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-              {product.imageUrl && (
-                <img
-                  src={product.imageUrl}
-                  alt={product.name}
-                  className="w-full h-48 object-cover"
-                />
-              )}
-              <div className="p-4 md:p-6">
-                <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
-                <p className="text-sm text-gray-600 mt-1">{option.name}</p>
-                <div className="flex items-center justify-between mt-3">
-                  <span className="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-700">
-                    {option.unitType === "FIXED" ? "Fixed unit" : "By weight"}
-                  </span>
-                  <p className="text-lg font-bold text-primary">
-                    R$ {(option.basePrice / 100).toFixed(2)}
-                  </p>
-                </div>
+          product.options
+            .filter((option) => !showFavoritesOnly || isFavorite(option.id))
+            .map((option) => {
+            const cartItem = items.find((item) => item.productOptionId === option.id);
+            const inCart = !!cartItem;
+            const justAdded = justAddedId === option.id;
+            const favorite = isFavorite(option.id);
+
+            const handleAddToCart = () => {
+              addItem({
+                productOptionId: option.id,
+                productName: product.name,
+                optionName: option.name,
+                unitType: option.unitType,
+                requestedQty: 1,
+                price: option.basePrice,
+              });
+              setJustAddedId(option.id);
+              setTimeout(() => setJustAddedId(null), 2000);
+            };
+
+            return (
+              <div key={option.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all relative">
+                {/* Favorite Star */}
                 <button
-                  onClick={() =>
-                    addItem({
-                      productOptionId: option.id,
-                      productName: product.name,
-                      optionName: option.name,
-                      unitType: option.unitType,
-                      requestedQty: 1,
-                      price: option.basePrice,
-                    })
-                  }
-                  className="mt-4 w-full bg-primary text-white px-4 py-3 rounded-lg hover:bg-primary/90 font-medium transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFavorite(option.id);
+                  }}
+                  className="absolute top-2 right-2 z-10 bg-white/90 hover:bg-white rounded-full p-2 shadow-md transition-all hover:scale-110"
                 >
-                  Add to Cart
+                  <Star
+                    className={`h-5 w-5 ${
+                      favorite ? "fill-yellow-400 text-yellow-400" : "text-gray-400"
+                    }`}
+                  />
                 </button>
+
+                {product.imageUrl ? (
+                  <img
+                    src={product.imageUrl}
+                    alt={product.name}
+                    className="w-full h-48 object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-48 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                    <span className="text-5xl font-bold text-primary/30">
+                      {product.name.charAt(0)}
+                    </span>
+                  </div>
+                )}
+                <div className="p-4 md:p-6">
+                  <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
+                  <p className="text-sm text-gray-600 mt-1">{option.name}</p>
+                  <div className="flex items-center justify-between mt-3">
+                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-700">
+                      {option.unitType === "FIXED" ? "Fixed unit" : "By weight"}
+                    </span>
+                    <p className="text-lg font-bold text-primary">
+                      R$ {(option.basePrice / 100).toFixed(2)}
+                    </p>
+                  </div>
+
+                  {/* Quick Quantity Picker */}
+                  {inCart ? (
+                    <div className="mt-4 flex items-center gap-2">
+                      <button
+                        onClick={() => updateQuantity(option.id, Math.max(0.1, cartItem.requestedQty - 1))}
+                        className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary text-primary hover:bg-primary hover:text-white transition-colors flex items-center justify-center font-semibold"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </button>
+                      <div className="flex-1 text-center">
+                        <p className="text-lg font-bold text-primary">{cartItem.requestedQty}</p>
+                        <p className="text-xs text-gray-500">in cart</p>
+                      </div>
+                      <button
+                        onClick={() => updateQuantity(option.id, cartItem.requestedQty + 1)}
+                        className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary bg-primary text-white hover:bg-primary/90 transition-colors flex items-center justify-center font-semibold"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleAddToCart}
+                      className={`mt-4 w-full px-4 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                        justAdded
+                          ? "bg-green-500 text-white"
+                          : "bg-primary text-white hover:bg-primary/90"
+                      }`}
+                    >
+                      {justAdded ? (
+                        <>
+                          <Check className="h-5 w-5" />
+                          Added!
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-5 w-5" />
+                          Add to Cart
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
         </div>
       )}
@@ -313,6 +403,9 @@ export function CatalogPage() {
           <p className="text-gray-600">No products found</p>
         </div>
       )}
+
+      {/* Floating Cart Preview */}
+      <CartPreview />
     </PageLayout>
   );
 }

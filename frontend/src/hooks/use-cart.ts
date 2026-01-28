@@ -7,6 +7,7 @@ export interface CartItem {
   unitType: "FIXED" | "WEIGHT";
   requestedQty: number;
   price: number;
+  notes?: string;
 }
 
 const STORAGE_KEY = "freshflow:cart";
@@ -52,6 +53,12 @@ export function useCart() {
     );
   };
 
+  const updateNotes = (productOptionId: string, notes: string) => {
+    setItems((prev) =>
+      prev.map((i) => (i.productOptionId === productOptionId ? { ...i, notes } : i))
+    );
+  };
+
   const clear = () => {
     setItems([]);
   };
@@ -68,6 +75,7 @@ export function useCart() {
     addItem,
     removeItem,
     updateQuantity,
+    updateNotes,
     clear,
     subtotal,
     count: items.length,
