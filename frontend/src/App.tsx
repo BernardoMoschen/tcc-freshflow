@@ -15,6 +15,7 @@ import { WeighingPage } from "./pages/admin/weighing";
 import { FinalizePage } from "./pages/admin/finalize";
 import { StockManagementPage } from "./pages/admin/stock-management";
 import { ProductsManagementPage } from "./pages/admin/products";
+import { CustomersManagementPage } from "./pages/admin/customers";
 
 function App() {
   const [queryClient] = useState(
@@ -79,6 +80,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ProductsManagementPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/customers"
+              element={
+                <ProtectedRoute>
+                  <CustomersManagementPage />
                 </ProtectedRoute>
               }
             />
