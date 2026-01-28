@@ -1,118 +1,104 @@
 import { Request } from "express";
+import { PrismaClient, AuditEventType, AuditSeverity } from "@prisma/client";
+
+// Re-export enums for convenience
+export { AuditEventType, AuditSeverity };
 
 /**
- * Audit event types
- */
-export enum AuditEventType {
-  // Authentication events
-  AUTH_LOGIN = "AUTH_LOGIN",
-  AUTH_LOGOUT = "AUTH_LOGOUT",
-  AUTH_FAILED = "AUTH_FAILED",
-  AUTH_TOKEN_REFRESH = "AUTH_TOKEN_REFRESH",
-
-  // Order events
-  ORDER_CREATED = "ORDER_CREATED",
-  ORDER_UPDATED = "ORDER_UPDATED",
-  ORDER_SUBMITTED = "ORDER_SUBMITTED",
-  ORDER_FINALIZED = "ORDER_FINALIZED",
-  ORDER_CANCELLED = "ORDER_CANCELLED",
-  ORDER_ITEM_ADDED = "ORDER_ITEM_ADDED",
-  ORDER_ITEM_REMOVED = "ORDER_ITEM_REMOVED",
-  ORDER_ITEM_WEIGHED = "ORDER_ITEM_WEIGHED",
-
-  // Stock events
-  STOCK_ADDED = "STOCK_ADDED",
-  STOCK_REMOVED = "STOCK_REMOVED",
-  STOCK_ADJUSTED = "STOCK_ADJUSTED",
-  STOCK_DEDUCTED = "STOCK_DEDUCTED",
-  STOCK_RESTORED = "STOCK_RESTORED",
-
-  // Product events
-  PRODUCT_CREATED = "PRODUCT_CREATED",
-  PRODUCT_UPDATED = "PRODUCT_UPDATED",
-  PRODUCT_DELETED = "PRODUCT_DELETED",
-  PRODUCT_OPTION_CREATED = "PRODUCT_OPTION_CREATED",
-  PRODUCT_OPTION_UPDATED = "PRODUCT_OPTION_UPDATED",
-  PRODUCT_OPTION_DELETED = "PRODUCT_OPTION_DELETED",
-
-  // Customer events
-  CUSTOMER_CREATED = "CUSTOMER_CREATED",
-  CUSTOMER_UPDATED = "CUSTOMER_UPDATED",
-  CUSTOMER_DELETED = "CUSTOMER_DELETED",
-  CUSTOMER_PRICE_SET = "CUSTOMER_PRICE_SET",
-
-  // Admin events
-  USER_CREATED = "USER_CREATED",
-  USER_UPDATED = "USER_UPDATED",
-  USER_DELETED = "USER_DELETED",
-  ROLE_ASSIGNED = "ROLE_ASSIGNED",
-  ROLE_REMOVED = "ROLE_REMOVED",
-
-  // System events
-  SYSTEM_ERROR = "SYSTEM_ERROR",
-  RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED",
-  SECURITY_VIOLATION = "SECURITY_VIOLATION",
-}
-
-/**
- * Audit event severity levels
- */
-export enum AuditSeverity {
-  INFO = "INFO",
-  WARNING = "WARNING",
-  ERROR = "ERROR",
-  CRITICAL = "CRITICAL",
-}
-
-/**
- * Audit log entry
+ * Audit log entry interface (matches Prisma model)
  */
 export interface AuditLogEntry {
   id: string;
-  timestamp: Date;
   eventType: AuditEventType;
   severity: AuditSeverity;
-  userId?: string;
-  tenantId?: string;
-  accountId?: string;
-  resourceType?: string;
-  resourceId?: string;
   action: string;
-  details?: Record<string, any>;
-  ipAddress?: string;
-  userAgent?: string;
-  requestId?: string;
   success: boolean;
-  errorMessage?: string;
+  userId?: string | null;
+  tenantId?: string | null;
+  accountId?: string | null;
+  resourceType?: string | null;
+  resourceId?: string | null;
+  details?: Record<string, any> | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  requestId?: string | null;
+  errorMessage?: string | null;
+  createdAt: Date;
 }
 
 /**
- * Audit logger class
+ * Input for creating an audit log entry
+ */
+type AuditLogInput = Omit<AuditLogEntry, "id" | "createdAt">;
+
+/**
+ * Audit logger class with database persistence
  */
 class AuditLogger {
-  private logs: AuditLogEntry[] = [];
-  private maxLogsInMemory = 1000;
+  private prisma: PrismaClient | null = null;
+  private fallbackLogs: AuditLogEntry[] = [];
+  private maxFallbackLogs = 100;
+
+  /**
+   * Initialize with Prisma client
+   */
+  init(prisma: PrismaClient): void {
+    this.prisma = prisma;
+  }
 
   /**
    * Log an audit event
    */
-  log(entry: Omit<AuditLogEntry, "id" | "timestamp">): void {
+  async log(entry: AuditLogInput): Promise<void> {
+    // Always write to console for real-time monitoring
+    this.writeToConsole(entry);
+
+    // Write to database if initialized
+    if (this.prisma) {
+      try {
+        await this.prisma.auditLog.create({
+          data: {
+            eventType: entry.eventType,
+            severity: entry.severity,
+            action: entry.action,
+            success: entry.success,
+            userId: entry.userId || null,
+            tenantId: entry.tenantId || null,
+            accountId: entry.accountId || null,
+            resourceType: entry.resourceType || null,
+            resourceId: entry.resourceId || null,
+            details: entry.details || null,
+            ipAddress: entry.ipAddress || null,
+            userAgent: entry.userAgent || null,
+            requestId: entry.requestId || null,
+            errorMessage: entry.errorMessage || null,
+          },
+        });
+      } catch (error) {
+        // Log to console if database write fails
+        console.error("Failed to write audit log to database:", error);
+        this.storeFallback(entry);
+      }
+    } else {
+      // Store in memory fallback if Prisma not initialized
+      this.storeFallback(entry);
+    }
+  }
+
+  /**
+   * Store log in fallback memory storage
+   */
+  private storeFallback(entry: AuditLogInput): void {
     const logEntry: AuditLogEntry = {
       ...entry,
       id: this.generateId(),
-      timestamp: new Date(),
+      createdAt: new Date(),
     };
 
-    // Store in memory (for demo, should be stored in database/external service)
-    this.logs.push(logEntry);
-
-    // Trim logs if too many
-    if (this.logs.length > this.maxLogsInMemory) {
-      this.logs = this.logs.slice(-this.maxLogsInMemory);
+    this.fallbackLogs.push(logEntry);
+    if (this.fallbackLogs.length > this.maxFallbackLogs) {
+      this.fallbackLogs = this.fallbackLogs.slice(-this.maxFallbackLogs);
     }
-
-    // Also log to console in structured format
-    this.writeToConsole(logEntry);
   }
 
   /**
@@ -131,6 +117,7 @@ class AuditLogger {
       errorMessage?: string;
     } = {}
   ): void {
+    // Fire and forget - don't await to avoid blocking requests
     this.log({
       eventType,
       action,
@@ -146,7 +133,7 @@ class AuditLogger {
       ipAddress: req.ip || req.headers["x-forwarded-for"]?.toString(),
       userAgent: req.headers["user-agent"],
       requestId: (req as any).requestId,
-    });
+    }).catch((err) => console.error("Audit log failed:", err));
   }
 
   /**
@@ -167,7 +154,7 @@ class AuditLogger {
       userId,
       ipAddress,
       details,
-    });
+    }).catch((err) => console.error("Audit log failed:", err));
   }
 
   /**
@@ -188,7 +175,7 @@ class AuditLogger {
       resourceType: "Order",
       resourceId: orderId,
       details,
-    });
+    }).catch((err) => console.error("Audit log failed:", err));
   }
 
   /**
@@ -210,7 +197,7 @@ class AuditLogger {
       resourceType: "ProductOption",
       resourceId: productOptionId,
       details: { quantity, ...details },
-    });
+    }).catch((err) => console.error("Audit log failed:", err));
   }
 
   /**
@@ -230,7 +217,7 @@ class AuditLogger {
       userId,
       ipAddress,
       details,
-    });
+    }).catch((err) => console.error("Audit log failed:", err));
   }
 
   /**
@@ -248,38 +235,144 @@ class AuditLogger {
       severity: AuditSeverity.ERROR,
       errorMessage,
       details,
+    }).catch((err) => console.error("Audit log failed:", err));
+  }
+
+  /**
+   * Get recent logs from database
+   */
+  async getRecentLogs(limit: number = 100): Promise<AuditLogEntry[]> {
+    if (!this.prisma) {
+      return this.fallbackLogs.slice(-limit).reverse();
+    }
+
+    const logs = await this.prisma.auditLog.findMany({
+      take: limit,
+      orderBy: { createdAt: "desc" },
     });
+
+    return logs as AuditLogEntry[];
   }
 
   /**
-   * Get recent logs (for admin dashboard)
+   * Get logs by user from database
    */
-  getRecentLogs(limit: number = 100): AuditLogEntry[] {
-    return this.logs.slice(-limit).reverse();
+  async getLogsByUser(userId: string, limit: number = 100): Promise<AuditLogEntry[]> {
+    if (!this.prisma) {
+      return this.fallbackLogs
+        .filter((log) => log.userId === userId)
+        .slice(-limit)
+        .reverse();
+    }
+
+    const logs = await this.prisma.auditLog.findMany({
+      where: { userId },
+      take: limit,
+      orderBy: { createdAt: "desc" },
+    });
+
+    return logs as AuditLogEntry[];
   }
 
   /**
-   * Get logs by user
+   * Get logs by event type from database
    */
-  getLogsByUser(userId: string, limit: number = 100): AuditLogEntry[] {
-    return this.logs
-      .filter((log) => log.userId === userId)
-      .slice(-limit)
-      .reverse();
+  async getLogsByEventType(eventType: AuditEventType, limit: number = 100): Promise<AuditLogEntry[]> {
+    if (!this.prisma) {
+      return this.fallbackLogs
+        .filter((log) => log.eventType === eventType)
+        .slice(-limit)
+        .reverse();
+    }
+
+    const logs = await this.prisma.auditLog.findMany({
+      where: { eventType },
+      take: limit,
+      orderBy: { createdAt: "desc" },
+    });
+
+    return logs as AuditLogEntry[];
   }
 
   /**
-   * Get logs by event type
+   * Get logs by tenant from database
    */
-  getLogsByEventType(eventType: AuditEventType, limit: number = 100): AuditLogEntry[] {
-    return this.logs
-      .filter((log) => log.eventType === eventType)
-      .slice(-limit)
-      .reverse();
+  async getLogsByTenant(tenantId: string, limit: number = 100): Promise<AuditLogEntry[]> {
+    if (!this.prisma) {
+      return this.fallbackLogs
+        .filter((log) => log.tenantId === tenantId)
+        .slice(-limit)
+        .reverse();
+    }
+
+    const logs = await this.prisma.auditLog.findMany({
+      where: { tenantId },
+      take: limit,
+      orderBy: { createdAt: "desc" },
+    });
+
+    return logs as AuditLogEntry[];
   }
 
   /**
-   * Generate unique log ID
+   * Get logs with filters
+   */
+  async getLogs(options: {
+    eventType?: AuditEventType;
+    severity?: AuditSeverity;
+    userId?: string;
+    tenantId?: string;
+    resourceType?: string;
+    resourceId?: string;
+    startDate?: Date;
+    endDate?: Date;
+    skip?: number;
+    take?: number;
+  }): Promise<{ items: AuditLogEntry[]; total: number }> {
+    if (!this.prisma) {
+      // Fallback filtering
+      let filtered = [...this.fallbackLogs];
+      if (options.eventType) filtered = filtered.filter((l) => l.eventType === options.eventType);
+      if (options.severity) filtered = filtered.filter((l) => l.severity === options.severity);
+      if (options.userId) filtered = filtered.filter((l) => l.userId === options.userId);
+      if (options.tenantId) filtered = filtered.filter((l) => l.tenantId === options.tenantId);
+
+      const total = filtered.length;
+      const items = filtered
+        .slice(options.skip || 0, (options.skip || 0) + (options.take || 100))
+        .reverse();
+
+      return { items, total };
+    }
+
+    const where: any = {};
+    if (options.eventType) where.eventType = options.eventType;
+    if (options.severity) where.severity = options.severity;
+    if (options.userId) where.userId = options.userId;
+    if (options.tenantId) where.tenantId = options.tenantId;
+    if (options.resourceType) where.resourceType = options.resourceType;
+    if (options.resourceId) where.resourceId = options.resourceId;
+    if (options.startDate || options.endDate) {
+      where.createdAt = {};
+      if (options.startDate) where.createdAt.gte = options.startDate;
+      if (options.endDate) where.createdAt.lte = options.endDate;
+    }
+
+    const [items, total] = await Promise.all([
+      this.prisma.auditLog.findMany({
+        where,
+        skip: options.skip || 0,
+        take: options.take || 100,
+        orderBy: { createdAt: "desc" },
+      }),
+      this.prisma.auditLog.count({ where }),
+    ]);
+
+    return { items: items as AuditLogEntry[], total };
+  }
+
+  /**
+   * Generate unique log ID for fallback storage
    */
   private generateId(): string {
     const timestamp = Date.now().toString(36);
@@ -290,12 +383,12 @@ class AuditLogger {
   /**
    * Write log to console in structured format
    */
-  private writeToConsole(entry: AuditLogEntry): void {
+  private writeToConsole(entry: AuditLogInput): void {
     const logLevel = this.getLogLevel(entry.severity);
     const formatted = {
       type: "AUDIT",
       ...entry,
-      timestamp: entry.timestamp.toISOString(),
+      timestamp: new Date().toISOString(),
     };
 
     // Use appropriate console method based on severity

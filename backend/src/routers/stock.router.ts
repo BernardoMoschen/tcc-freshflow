@@ -3,6 +3,7 @@ import { router, protectedProcedure, tenantProcedure, tenantAdminProcedure } fro
 import { StockMovementType } from "@prisma/client";
 import { stockService } from "../services/stock.service.js";
 import { auditLogger, AuditEventType } from "../lib/audit-logger.js";
+import { checkRateLimit, procedureRateLimits } from "../middleware/rate-limit.js";
 
 export const stockRouter = router({
   /**
@@ -17,6 +18,9 @@ export const stockRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // Rate limit stock adjustments per user
+      checkRateLimit(`stock:adjust:${ctx.userId}`, procedureRateLimits.stockAdjust);
+
       const result = await stockService.addStock(
         input.productOptionId,
         input.quantity,
@@ -48,6 +52,9 @@ export const stockRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // Rate limit stock adjustments per user
+      checkRateLimit(`stock:adjust:${ctx.userId}`, procedureRateLimits.stockAdjust);
+
       const result = await stockService.removeStock(
         input.productOptionId,
         input.quantity,

@@ -1,7 +1,46 @@
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { router, tenantProcedure, tenantAdminProcedure } from "../trpc.js";
 import { resolvePricesBatch } from "../lib/price-engine.js";
+import { Errors } from "../lib/errors.js";
+
+/**
+ * Verify that a product belongs to the specified tenant.
+ * Throws NotFound error if product doesn't exist or doesn't belong to tenant.
+ */
+async function verifyProductTenantAccess(
+  prisma: PrismaClient,
+  productId: string,
+  tenantId: string
+): Promise<void> {
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { tenantId: true },
+  });
+
+  if (!product || product.tenantId !== tenantId) {
+    throw Errors.notFound("Product", productId);
+  }
+}
+
+/**
+ * Verify that a product option belongs to a product in the specified tenant.
+ * Throws NotFound error if option doesn't exist or doesn't belong to tenant.
+ */
+async function verifyProductOptionTenantAccess(
+  prisma: PrismaClient,
+  optionId: string,
+  tenantId: string
+): Promise<void> {
+  const option = await prisma.productOption.findUnique({
+    where: { id: optionId },
+    include: { product: { select: { tenantId: true } } },
+  });
+
+  if (!option || option.product.tenantId !== tenantId) {
+    throw Errors.notFound("ProductOption", optionId);
+  }
+}
 
 export const productsRouter = router({
   /**
@@ -54,59 +93,94 @@ export const productsRouter = router({
       // Build orderBy clause
       const orderBy: { name: "asc" | "desc" } = { name: sortOrder };
 
-      // Performance: When sorting by price, we need to fetch products and sort in memory
-      // because Prisma doesn't support sorting by aggregated related fields.
-      // To prevent unbounded queries, we limit to 500 products max for price sorting.
-      const PRICE_SORT_MAX_PRODUCTS = 500;
       const isPriceSorting = sortBy === "price";
 
-      const [items, total] = await Promise.all([
-        ctx.prisma.product.findMany({
+      // Get total count first (shared across both paths)
+      const total = await ctx.prisma.product.count({ where });
+
+      let items;
+
+      if (isPriceSorting && total > 0) {
+        // Price sorting: Use two-phase approach for better efficiency
+        // Phase 1: Get only IDs and min prices (lightweight query)
+        const productsWithMinPrice = await ctx.prisma.product.findMany({
           where,
-          skip: isPriceSorting ? 0 : skip,
-          take: isPriceSorting ? PRICE_SORT_MAX_PRODUCTS : take,
-          include: {
+          select: {
+            id: true,
             options: {
-              include: {
+              select: {
+                basePrice: true,
                 customerPrices: customerId
                   ? {
-                      where: {
-                        customerId,
-                      },
+                      where: { customerId },
+                      select: { price: true },
                     }
                   : false,
               },
             },
           },
+        });
+
+        // Calculate min price for each product
+        const sortedIds = productsWithMinPrice
+          .map((product) => {
+            const prices = product.options.map((opt) => {
+              // Use customer price if available, otherwise base price
+              const customerPrice = opt.customerPrices && opt.customerPrices[0]?.price;
+              return customerPrice ?? opt.basePrice;
+            });
+            const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+            return { id: product.id, minPrice };
+          })
+          .sort((a, b) => sortOrder === "asc" ? a.minPrice - b.minPrice : b.minPrice - a.minPrice)
+          .slice(skip, skip + take)
+          .map((p) => p.id);
+
+        // Phase 2: Fetch full details for only the paginated products
+        if (sortedIds.length > 0) {
+          const fullProducts = await ctx.prisma.product.findMany({
+            where: { id: { in: sortedIds } },
+            include: {
+              options: {
+                include: {
+                  customerPrices: customerId
+                    ? { where: { customerId } }
+                    : false,
+                },
+              },
+            },
+          });
+
+          // Maintain sort order (Prisma doesn't preserve order from `in` clause)
+          const productMap = new Map(fullProducts.map((p) => [p.id, p]));
+          items = sortedIds.map((id) => productMap.get(id)!).filter(Boolean);
+        } else {
+          items = [];
+        }
+      } else {
+        // Name sorting: Direct database sort with pagination
+        items = await ctx.prisma.product.findMany({
+          where,
+          skip,
+          take,
+          include: {
+            options: {
+              include: {
+                customerPrices: customerId
+                  ? { where: { customerId } }
+                  : false,
+              },
+            },
+          },
           orderBy,
-        }),
-        ctx.prisma.product.count({ where }),
-      ]);
+        });
+      }
 
       // Resolve customer prices using centralized price engine
-      const itemsWithResolvedPrices = items.map((product) => ({
+      const processedItems = items.map((product) => ({
         ...product,
         options: resolvePricesBatch(product.options),
       }));
-
-      // Post-process for price sorting
-      let processedItems = itemsWithResolvedPrices;
-      if (isPriceSorting) {
-        // Calculate min price for each product
-        const itemsWithMinPrice = itemsWithResolvedPrices.map((product) => {
-          const prices = product.options.map((opt) => opt.resolvedPrice);
-          const minOptionPrice = prices.length > 0 ? Math.min(...prices) : 0;
-          return { ...product, minPrice: minOptionPrice };
-        });
-
-        // Sort by min price
-        itemsWithMinPrice.sort((a, b) => {
-          return sortOrder === "asc" ? a.minPrice - b.minPrice : b.minPrice - a.minPrice;
-        });
-
-        // Apply pagination after sorting
-        processedItems = itemsWithMinPrice.slice(skip, skip + take);
-      }
 
       return {
         items: processedItems,
@@ -150,12 +224,12 @@ export const productsRouter = router({
       });
 
       if (!product) {
-        throw new Error("Product not found");
+        throw Errors.notFound("Product", input.id);
       }
 
       // Security: Verify product belongs to the requesting tenant
       if (product.tenant.id !== ctx.tenantId) {
-        throw new Error("Product not found");
+        throw Errors.notFound("Product", input.id);
       }
 
       // Format options with resolved prices using centralized price engine
@@ -224,15 +298,7 @@ export const productsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
 
-      // Verify product belongs to this tenant
-      const existingProduct = await ctx.prisma.product.findUnique({
-        where: { id },
-        select: { tenantId: true },
-      });
-
-      if (!existingProduct || existingProduct.tenantId !== ctx.tenantId) {
-        throw new Error("Product not found or access denied");
-      }
+      await verifyProductTenantAccess(ctx.prisma, id, ctx.tenantId);
 
       const product = await ctx.prisma.product.update({
         where: { id },
@@ -251,15 +317,7 @@ export const productsRouter = router({
   delete: tenantAdminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      // Verify product belongs to this tenant
-      const existingProduct = await ctx.prisma.product.findUnique({
-        where: { id: input.id },
-        select: { tenantId: true },
-      });
-
-      if (!existingProduct || existingProduct.tenantId !== ctx.tenantId) {
-        throw new Error("Product not found or access denied");
-      }
+      await verifyProductTenantAccess(ctx.prisma, input.id, ctx.tenantId);
 
       await ctx.prisma.product.delete({
         where: { id: input.id },
@@ -285,15 +343,7 @@ export const productsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Verify product belongs to this tenant
-      const product = await ctx.prisma.product.findUnique({
-        where: { id: input.productId },
-        select: { tenantId: true },
-      });
-
-      if (!product || product.tenantId !== ctx.tenantId) {
-        throw new Error("Product not found or access denied");
-      }
+      await verifyProductTenantAccess(ctx.prisma, input.productId, ctx.tenantId);
 
       const option = await ctx.prisma.productOption.create({
         data: input,
@@ -321,15 +371,7 @@ export const productsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
 
-      // Verify option belongs to a product in this tenant
-      const option = await ctx.prisma.productOption.findUnique({
-        where: { id },
-        include: { product: { select: { tenantId: true } } },
-      });
-
-      if (!option || option.product.tenantId !== ctx.tenantId) {
-        throw new Error("Product option not found or access denied");
-      }
+      await verifyProductOptionTenantAccess(ctx.prisma, id, ctx.tenantId);
 
       const updatedOption = await ctx.prisma.productOption.update({
         where: { id },
@@ -345,15 +387,7 @@ export const productsRouter = router({
   deleteOption: tenantAdminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      // Verify option belongs to a product in this tenant
-      const option = await ctx.prisma.productOption.findUnique({
-        where: { id: input.id },
-        include: { product: { select: { tenantId: true } } },
-      });
-
-      if (!option || option.product.tenantId !== ctx.tenantId) {
-        throw new Error("Product option not found or access denied");
-      }
+      await verifyProductOptionTenantAccess(ctx.prisma, input.id, ctx.tenantId);
 
       await ctx.prisma.productOption.delete({
         where: { id: input.id },

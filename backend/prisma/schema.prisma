@@ -54,6 +54,7 @@ model Membership {
   @@index([userId])
   @@index([tenantId])
   @@index([accountId])
+  @@index([userId, roleId]) // Composite for RBAC role checks
 }
 
 // Tenant - distributor/supplier organization
@@ -133,6 +134,7 @@ model ProductOption {
   @@index([productId])
   @@index([unitType])
   @@index([isAvailable])
+  @@index([productId, isAvailable]) // Composite for available options lookup
 }
 
 enum UnitType {
@@ -182,6 +184,7 @@ model Order {
   @@index([orderNumber])
   @@index([accountId, status]) // Composite for filtered order lists
   @@index([status, createdAt]) // Composite for status-filtered sorted lists
+  @@index([customerId, status]) // Composite for customer order filtering
 }
 
 enum OrderStatus {
@@ -264,4 +267,89 @@ enum StockMovementType {
   MANUAL_DEDUCTION // Manual stock decrease
   ADJUSTMENT // Inventory reconciliation
   RETURN // Customer return
+}
+
+// AuditLog - persistent audit trail for compliance and security
+model AuditLog {
+  id           String         @id @default(uuid())
+  eventType    AuditEventType
+  severity     AuditSeverity
+  action       String
+  success      Boolean
+  userId       String?
+  tenantId     String?
+  accountId    String?
+  resourceType String?
+  resourceId   String?
+  details      Json? // Flexible JSON for event-specific data
+  ipAddress    String?
+  userAgent    String?
+  requestId    String?
+  errorMessage String?
+  createdAt    DateTime       @default(now())
+
+  @@index([eventType])
+  @@index([userId])
+  @@index([tenantId])
+  @@index([createdAt])
+  @@index([severity])
+  @@index([resourceType, resourceId])
+}
+
+enum AuditEventType {
+  // Authentication events
+  AUTH_LOGIN
+  AUTH_LOGOUT
+  AUTH_FAILED
+  AUTH_TOKEN_REFRESH
+
+  // Order events
+  ORDER_CREATED
+  ORDER_UPDATED
+  ORDER_SUBMITTED
+  ORDER_FINALIZED
+  ORDER_CANCELLED
+  ORDER_ITEM_ADDED
+  ORDER_ITEM_REMOVED
+  ORDER_ITEM_WEIGHED
+
+  // Stock events
+  STOCK_ADDED
+  STOCK_REMOVED
+  STOCK_ADJUSTED
+  STOCK_DEDUCTED
+  STOCK_RESTORED
+
+  // Product events
+  PRODUCT_CREATED
+  PRODUCT_UPDATED
+  PRODUCT_DELETED
+  PRODUCT_OPTION_CREATED
+  PRODUCT_OPTION_UPDATED
+  PRODUCT_OPTION_DELETED
+
+  // Customer events
+  CUSTOMER_CREATED
+  CUSTOMER_UPDATED
+  CUSTOMER_DELETED
+  CUSTOMER_PRICE_SET
+
+  // Admin events
+  USER_CREATED
+  USER_UPDATED
+  USER_DELETED
+  ROLE_ASSIGNED
+  ROLE_REMOVED
+
+  // System events
+  SYSTEM_ERROR
+  RATE_LIMIT_EXCEEDED
+  SECURITY_VIOLATION
+}
+
+enum AuditSeverity {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
 }

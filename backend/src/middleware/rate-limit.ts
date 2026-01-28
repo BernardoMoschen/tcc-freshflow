@@ -93,6 +93,52 @@ const rateLimitStore = new RateLimitStore();
 setInterval(() => rateLimitStore.cleanup(), 60 * 1000);
 
 /**
+ * Check rate limit for tRPC procedures (throws TRPCError if exceeded)
+ * Can be called at the start of any procedure
+ */
+export function checkRateLimit(
+  key: string,
+  config: { windowMs: number; maxRequests: number; operation?: string }
+): void {
+  const { windowMs, maxRequests, operation = "this operation" } = config;
+  const result = rateLimitStore.check(key, windowMs, maxRequests);
+
+  if (!result.allowed) {
+    const { TRPCError } = require("@trpc/server");
+    throw new TRPCError({
+      code: "TOO_MANY_REQUESTS",
+      message: `Rate limit exceeded for ${operation}. Please try again in ${Math.ceil((result.resetTime - Date.now()) / 1000)} seconds.`,
+    });
+  }
+}
+
+/**
+ * Pre-configured rate limit configs for tRPC procedures
+ */
+export const procedureRateLimits = {
+  /** Order creation: 10 orders per minute per user */
+  orderCreate: { windowMs: 60 * 1000, maxRequests: 10, operation: "order creation" },
+
+  /** Bulk operations: 5 per minute per user */
+  bulkOperation: { windowMs: 60 * 1000, maxRequests: 5, operation: "bulk operations" },
+
+  /** Price updates: 20 per minute per user */
+  priceUpdate: { windowMs: 60 * 1000, maxRequests: 20, operation: "price updates" },
+
+  /** Stock adjustments: 30 per minute per user */
+  stockAdjust: { windowMs: 60 * 1000, maxRequests: 30, operation: "stock adjustments" },
+
+  /** Product creation: 20 per minute per user */
+  productCreate: { windowMs: 60 * 1000, maxRequests: 20, operation: "product creation" },
+
+  /** Order finalization: 20 per minute per user */
+  orderFinalize: { windowMs: 60 * 1000, maxRequests: 20, operation: "order finalization" },
+
+  /** Export operations: 5 per minute per user */
+  export: { windowMs: 60 * 1000, maxRequests: 5, operation: "export operations" },
+};
+
+/**
  * Create rate limiting middleware
  */
 export function rateLimit(config: RateLimitConfig) {

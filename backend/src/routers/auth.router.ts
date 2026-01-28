@@ -1,5 +1,6 @@
 import { router, protectedProcedure } from "../trpc.js";
 import { getUserMemberships } from "../rbac.js";
+import { Errors } from "../lib/errors.js";
 
 export const authRouter = router({
   /**
@@ -18,7 +19,7 @@ export const authRouter = router({
     });
 
     if (!user) {
-      throw new Error("User not found");
+      throw Errors.notFound("User", ctx.userId);
     }
 
     const memberships = await getUserMemberships(ctx.userId);

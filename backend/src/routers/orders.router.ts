@@ -21,6 +21,7 @@ import {
   validateStockAvailability,
   deductStockForOrder,
 } from "../lib/stock-manager.js";
+import { checkRateLimit, procedureRateLimits } from "../middleware/rate-limit.js";
 
 export const ordersRouter = router({
   /**
@@ -40,6 +41,9 @@ export const ordersRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // Rate limit order creation per user
+      checkRateLimit(`order:create:${ctx.userId}`, procedureRateLimits.orderCreate);
+
       // Get customer for this account
       const customer = await ctx.prisma.customer.findUnique({
         where: { accountId: ctx.accountId },
@@ -513,22 +517,59 @@ export const ordersRouter = router({
           where,
           skip,
           take,
-          include: {
+          select: {
+            id: true,
+            orderNumber: true,
+            status: true,
+            notes: true,
+            createdAt: true,
+            updatedAt: true,
+            sentAt: true,
+            finalizedAt: true,
+            // Only get item count and minimal data for list view
             items: {
-              include: {
+              select: {
+                id: true,
+                requestedQty: true,
+                actualWeight: true,
+                finalPrice: true,
                 productOption: {
-                  include: {
-                    product: true,
+                  select: {
+                    id: true,
+                    name: true,
+                    unitType: true,
+                    product: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
                   },
                 },
               },
             },
             customer: {
-              include: {
-                account: true,
+              select: {
+                id: true,
+                account: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
               },
             },
-            createdByUser: true,
+            createdByUser: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            _count: {
+              select: {
+                items: true,
+              },
+            },
           },
           orderBy: {
             createdAt: "desc",
@@ -591,22 +632,59 @@ export const ordersRouter = router({
           where,
           skip,
           take,
-          include: {
+          select: {
+            id: true,
+            orderNumber: true,
+            status: true,
+            notes: true,
+            createdAt: true,
+            updatedAt: true,
+            sentAt: true,
+            finalizedAt: true,
+            // Only get item count and minimal data for list view
             items: {
-              include: {
+              select: {
+                id: true,
+                requestedQty: true,
+                actualWeight: true,
+                finalPrice: true,
                 productOption: {
-                  include: {
-                    product: true,
+                  select: {
+                    id: true,
+                    name: true,
+                    unitType: true,
+                    product: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
                   },
                 },
               },
             },
             customer: {
-              include: {
-                account: true,
+              select: {
+                id: true,
+                account: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
               },
             },
-            createdByUser: true,
+            createdByUser: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            _count: {
+              select: {
+                items: true,
+              },
+            },
           },
           orderBy: {
             createdAt: "desc",
@@ -628,6 +706,62 @@ export const ordersRouter = router({
   get: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
+      // SECURITY: First validate access with lightweight query BEFORE loading full data
+      const orderAccess = await ctx.prisma.order.findUnique({
+        where: { id: input.id },
+        select: {
+          id: true,
+          accountId: true,
+          customer: {
+            select: {
+              account: {
+                select: { tenantId: true },
+              },
+            },
+          },
+        },
+      });
+
+      if (!orderAccess) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Order not found",
+        });
+      }
+
+      // Check 1: User belongs to the order's account
+      const isAccountMember = ctx.accountId && orderAccess.accountId === ctx.accountId;
+
+      // Check 2: User is a tenant admin for the order's tenant
+      let isTenantAdmin = false;
+      if (ctx.tenantId) {
+        const membership = await ctx.prisma.membership.findFirst({
+          where: {
+            userId: ctx.userId,
+            OR: [
+              { tenantId: ctx.tenantId },
+              { role: { name: "PLATFORM_ADMIN" } },
+            ],
+          },
+          include: { role: true },
+        });
+        const adminRoles = ["PLATFORM_ADMIN", "TENANT_OWNER", "TENANT_ADMIN"];
+        isTenantAdmin = !!membership && adminRoles.includes(membership.role.name);
+
+        // Also verify order belongs to this tenant
+        if (isTenantAdmin && orderAccess.customer.account.tenantId !== ctx.tenantId) {
+          isTenantAdmin = false;
+        }
+      }
+
+      if (!isAccountMember && !isTenantAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Access denied to this order",
+        });
+      }
+
+      // ONLY NOW load the full order data after access is verified
       const order = await ctx.prisma.order.findUnique({
         where: { id: input.id },
         include: {
@@ -654,46 +788,6 @@ export const ordersRouter = router({
           createdByUser: true,
         },
       });
-
-      if (!order) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Order not found",
-        });
-      }
-
-      // Security: Verify user has access to this order
-      // Check 1: User belongs to the order's account
-      const isAccountMember = ctx.accountId && order.accountId === ctx.accountId;
-
-      // Check 2: User is a tenant admin for the order's tenant
-      let isTenantAdmin = false;
-      if (ctx.tenantId) {
-        const membership = await ctx.prisma.membership.findFirst({
-          where: {
-            userId: ctx.userId,
-            OR: [
-              { tenantId: ctx.tenantId },
-              { role: { name: "PLATFORM_ADMIN" } },
-            ],
-          },
-          include: { role: true },
-        });
-        const adminRoles = ["PLATFORM_ADMIN", "TENANT_OWNER", "TENANT_ADMIN"];
-        isTenantAdmin = !!membership && adminRoles.includes(membership.role.name);
-
-        // Also verify order belongs to this tenant
-        if (isTenantAdmin && order.customer.account.tenantId !== ctx.tenantId) {
-          isTenantAdmin = false;
-        }
-      }
-
-      if (!isAccountMember && !isTenantAdmin) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Access denied to this order",
-        });
-      }
 
       return order;
     }),
@@ -872,6 +966,9 @@ export const ordersRouter = router({
   finalize: tenantAdminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
+      // Rate limit order finalization per user
+      checkRateLimit(`order:finalize:${ctx.userId}`, procedureRateLimits.orderFinalize);
+
       // Get order with items
       const order = await ctx.prisma.order.findUnique({
         where: { id: input.id },
@@ -1194,6 +1291,9 @@ export const ordersRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // Rate limit bulk operations per user
+      checkRateLimit(`order:bulk:${ctx.userId}`, procedureRateLimits.bulkOperation);
+
       const { orderIds, status } = input;
 
       // Validate all orders exist and can be updated

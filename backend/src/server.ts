@@ -241,6 +241,9 @@ async function startServer() {
   // Initialize cache connection
   await cache.connect();
 
+  // Initialize audit logger with database connection
+  auditLogger.init(prisma);
+
   // Start server
   app.listen(PORT, () => {
     logger.banner([
@@ -252,6 +255,7 @@ async function startServer() {
       `🏥 Health:     http://localhost:${PORT}/health`,
       `🔒 Security:   Headers, CORS, Rate Limiting enabled`,
       `📦 Cache:      ${cache.isAvailable() ? "Redis connected" : "In-memory mode"}`,
+      `📝 Audit:      Database persistence enabled`,
       `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`,
     ]);
   });
