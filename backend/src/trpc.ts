@@ -147,6 +147,48 @@ export const accountProcedure = protectedProcedure.use(async ({ ctx, next }) => 
 });
 
 /**
+ * Tenant Admin procedure (requires tenant admin role: PLATFORM_ADMIN, TENANT_OWNER, TENANT_ADMIN)
+ * This is for operations that only tenant admins can perform (not ACCOUNT_OWNER or ACCOUNT_BUYER)
+ */
+export const tenantAdminProcedure = tenantProcedure.use(async ({ ctx, next }) => {
+  // Check if user has tenant admin role (not just account-level access)
+  const membership = await prisma.membership.findFirst({
+    where: {
+      userId: ctx.userId,
+      OR: [
+        // Direct tenant membership
+        { tenantId: ctx.tenantId },
+        // Platform admin (can access any tenant)
+        {
+          role: {
+            name: "PLATFORM_ADMIN",
+          },
+        },
+      ],
+    },
+    include: {
+      role: true,
+    },
+  });
+
+  // Verify membership exists and has admin role
+  const adminRoles = ["PLATFORM_ADMIN", "TENANT_OWNER", "TENANT_ADMIN"];
+  if (!membership || !adminRoles.includes(membership.role.name)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Tenant admin access required",
+    });
+  }
+
+  return next({
+    ctx: {
+      ...ctx,
+      userRole: membership.role.name,
+    },
+  });
+});
+
+/**
  * Export router and procedure helpers
  */
 export const router: typeof t.router = t.router;

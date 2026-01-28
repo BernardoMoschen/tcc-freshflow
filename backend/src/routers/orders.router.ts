@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure, accountProcedure } from "../trpc.js";
+import { router, protectedProcedure, accountProcedure, tenantAdminProcedure } from "../trpc.js";
 import { OrderStatus } from "@prisma/client";
 import {
   resolvePrice,
@@ -543,6 +543,84 @@ export const ordersRouter = router({
     }),
 
   /**
+   * List all orders for a tenant (tenant admin only)
+   * This shows all orders across all accounts in the tenant
+   */
+  adminList: tenantAdminProcedure
+    .input(
+      z.object({
+        status: z.nativeEnum(OrderStatus).optional(),
+        search: z.string().optional(),
+        skip: z.number().min(0).default(0),
+        take: z.number().min(1).max(100).default(20),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { status, search, skip, take } = input;
+
+      // Build where clause for orders in this tenant
+      const where: any = {
+        account: {
+          tenantId: ctx.tenantId,
+        },
+        // Exclude draft orders from admin view
+        status: status || { not: OrderStatus.DRAFT },
+      };
+
+      // Add search filter for order number or customer name
+      if (search) {
+        where.OR = [
+          { orderNumber: { contains: search, mode: "insensitive" as const } },
+          {
+            customer: {
+              account: {
+                name: { contains: search, mode: "insensitive" as const },
+              },
+            },
+          },
+        ];
+      }
+
+      if (status) {
+        where.status = status;
+      }
+
+      const [items, total] = await Promise.all([
+        ctx.prisma.order.findMany({
+          where,
+          skip,
+          take,
+          include: {
+            items: {
+              include: {
+                productOption: {
+                  include: {
+                    product: true,
+                  },
+                },
+              },
+            },
+            customer: {
+              include: {
+                account: true,
+              },
+            },
+            createdByUser: true,
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        }),
+        ctx.prisma.order.count({ where }),
+      ]);
+
+      return {
+        items,
+        total,
+      };
+    }),
+
+  /**
    * Get single order with full details
    */
   get: protectedProcedure
@@ -586,9 +664,9 @@ export const ordersRouter = router({
     }),
 
   /**
-   * Weigh order item (creates Weighing record, updates OrderItem)
+   * Weigh order item (creates Weighing record, updates OrderItem) - tenant admin only
    */
-  weigh: protectedProcedure
+  weigh: tenantAdminProcedure
     .input(
       z.object({
         orderItemId: z.string().uuid(),
@@ -676,9 +754,9 @@ export const ordersRouter = router({
     }),
 
   /**
-   * Add extra item to order (admin only, before finalization)
+   * Add extra item to order (tenant admin only, before finalization)
    */
-  addItem: protectedProcedure
+  addItem: tenantAdminProcedure
     .input(
       z.object({
         orderId: z.string().uuid(),
@@ -754,9 +832,9 @@ export const ordersRouter = router({
     }),
 
   /**
-   * Finalize order (validates all WEIGHT items weighed, updates status)
+   * Finalize order (validates all WEIGHT items weighed, updates status) - tenant admin only
    */
-  finalize: protectedProcedure
+  finalize: tenantAdminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       // Get order with items
@@ -895,9 +973,9 @@ export const ordersRouter = router({
     }),
 
   /**
-   * Remove item from order (admin only, not FINALIZED)
+   * Remove item from order (tenant admin only, not FINALIZED)
    */
-  removeItem: protectedProcedure
+  removeItem: tenantAdminProcedure
     .input(
       z.object({
         orderItemId: z.string().uuid(),
@@ -934,9 +1012,9 @@ export const ordersRouter = router({
     }),
 
   /**
-   * Update order item quantity or notes (admin only, not FINALIZED)
+   * Update order item quantity or notes (tenant admin only, not FINALIZED)
    */
-  updateItem: protectedProcedure
+  updateItem: tenantAdminProcedure
     .input(
       z.object({
         orderItemId: z.string().uuid(),
@@ -991,9 +1069,9 @@ export const ordersRouter = router({
     }),
 
   /**
-   * Cancel an order (with stock reversal if finalized)
+   * Cancel an order (with stock reversal if finalized) - tenant admin only
    */
-  cancel: protectedProcedure
+  cancel: tenantAdminProcedure
     .input(
       z.object({
         id: z.string().uuid(),
@@ -1063,9 +1141,9 @@ export const ordersRouter = router({
     }),
 
   /**
-   * Bulk update order status
+   * Bulk update order status - tenant admin only
    */
-  bulkUpdateStatus: protectedProcedure
+  bulkUpdateStatus: tenantAdminProcedure
     .input(
       z.object({
         orderIds: z.array(z.string().uuid()).min(1),
@@ -1134,9 +1212,9 @@ export const ordersRouter = router({
     }),
 
   /**
-   * Export orders to CSV format
+   * Export orders to CSV format - tenant admin only
    */
-  exportCsv: protectedProcedure
+  exportCsv: tenantAdminProcedure
     .input(
       z.object({
         orderIds: z.array(z.string().uuid()).optional(),

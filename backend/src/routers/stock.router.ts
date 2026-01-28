@@ -1,14 +1,14 @@
 import { z } from "zod";
-import { router, protectedProcedure, tenantProcedure } from "../trpc.js";
+import { router, protectedProcedure, tenantProcedure, tenantAdminProcedure } from "../trpc.js";
 import { StockMovementType } from "@prisma/client";
 import { stockService } from "../services/stock.service.js";
 import { auditLogger, AuditEventType } from "../lib/audit-logger.js";
 
 export const stockRouter = router({
   /**
-   * Add stock to a product option (receive inventory)
+   * Add stock to a product option (receive inventory) - tenant admin only
    */
-  addStock: protectedProcedure
+  addStock: tenantAdminProcedure
     .input(
       z.object({
         productOptionId: z.string().uuid(),
@@ -37,9 +37,9 @@ export const stockRouter = router({
     }),
 
   /**
-   * Remove stock from a product option (manual deduction)
+   * Remove stock from a product option (manual deduction) - tenant admin only
    */
-  removeStock: protectedProcedure
+  removeStock: tenantAdminProcedure
     .input(
       z.object({
         productOptionId: z.string().uuid(),
@@ -68,9 +68,9 @@ export const stockRouter = router({
     }),
 
   /**
-   * Adjust stock (inventory reconciliation)
+   * Adjust stock (inventory reconciliation) - tenant admin only
    */
-  adjustStock: protectedProcedure
+  adjustStock: tenantAdminProcedure
     .input(
       z.object({
         productOptionId: z.string().uuid(),
@@ -146,9 +146,9 @@ export const stockRouter = router({
     }),
 
   /**
-   * Toggle product availability
+   * Toggle product availability - tenant admin only
    */
-  toggleAvailability: protectedProcedure
+  toggleAvailability: tenantAdminProcedure
     .input(
       z.object({
         productOptionId: z.string().uuid(),

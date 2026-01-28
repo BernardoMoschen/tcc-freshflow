@@ -25,6 +25,7 @@ import { FinalizePage } from "./pages/admin/finalize";
 import { StockManagementPage } from "./pages/admin/stock-management";
 import { ProductsManagementPage } from "./pages/admin/products";
 import { CustomersManagementPage } from "./pages/admin/customers";
+import { AdminOrdersPage } from "./pages/admin/orders";
 
 // Helper to check if error is retryable (only server/network errors)
 function shouldRetry(failureCount: number, error: unknown): boolean {
@@ -88,7 +89,10 @@ function App() {
               }
             />
 
-            {/* Chef routes (protected) */}
+            {/*
+              Catalog - All authenticated users can browse
+              Tenant admins see manage mode, buyers can add to cart
+            */}
             <Route
               path="/chef/catalog"
               element={
@@ -97,28 +101,41 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            {/*
+              Cart - Account-level users only (ACCOUNT_OWNER, ACCOUNT_BUYER)
+              Tenant admins don't need a shopping cart
+            */}
             <Route
               path="/chef/cart"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requireAccountUser>
                   <CartPage />
                 </ProtectedRoute>
               }
             />
+
+            {/*
+              My Orders - Account-level users only (ACCOUNT_OWNER, ACCOUNT_BUYER)
+              Shows orders placed by the account
+            */}
             <Route
               path="/chef/orders"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requireAccountUser>
                   <OrdersPage />
                 </ProtectedRoute>
               }
             />
 
-            {/* Admin routes (protected, admin roles only) */}
+            {/*
+              Admin routes - Tenant admins only (PLATFORM_ADMIN, TENANT_OWNER, TENANT_ADMIN)
+              ACCOUNT_OWNER should NOT have access to these
+            */}
             <Route
               path="/admin/products"
               element={
-                <ProtectedRoute requireAdmin>
+                <ProtectedRoute requireTenantAdmin>
                   <ProductsManagementPage />
                 </ProtectedRoute>
               }
@@ -126,7 +143,7 @@ function App() {
             <Route
               path="/admin/customers"
               element={
-                <ProtectedRoute requireAdmin>
+                <ProtectedRoute requireTenantAdmin>
                   <CustomersManagementPage />
                 </ProtectedRoute>
               }
@@ -134,15 +151,23 @@ function App() {
             <Route
               path="/admin/stock"
               element={
-                <ProtectedRoute requireAdmin>
+                <ProtectedRoute requireTenantAdmin>
                   <StockManagementPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/orders"
+              element={
+                <ProtectedRoute requireTenantAdmin>
+                  <AdminOrdersPage />
                 </ProtectedRoute>
               }
             />
             <Route
               path="/admin/weighing/:orderId"
               element={
-                <ProtectedRoute requireAdmin>
+                <ProtectedRoute requireTenantAdmin>
                   <WeighingPage />
                 </ProtectedRoute>
               }
@@ -150,7 +175,7 @@ function App() {
             <Route
               path="/admin/finalize/:orderId"
               element={
-                <ProtectedRoute requireAdmin>
+                <ProtectedRoute requireTenantAdmin>
                   <FinalizePage />
                 </ProtectedRoute>
               }

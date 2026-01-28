@@ -9,22 +9,21 @@ import {
   X,
   PackageSearch,
   ClipboardList,
-  ShoppingCart
+  ShoppingCart,
+  ShoppingBag,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useCart } from "@/hooks/use-cart";
 import { ContextSwitcher } from "./context-switcher";
 
 export function Navbar() {
   const location = useLocation();
-  const { session, signOut } = useAuth();
+  const { signOut, isTenantAdmin, isAccountUser } = useAuth();
+  const { items } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Determine user role from session
-  const userRoles = session?.memberships?.map((m: any) => m.role) || [];
-  const isAdmin = userRoles.some((role: string) =>
-    ["PLATFORM_ADMIN", "TENANT_OWNER", "TENANT_ADMIN", "ACCOUNT_OWNER"].includes(role)
-  );
+  const cartItemCount = items.length;
 
   const handleLogout = async () => {
     try {
@@ -38,22 +37,25 @@ export function Navbar() {
     return location.pathname === path || location.pathname.startsWith(path + "/");
   };
 
-  const navLinks = {
-    chef: [
-      { path: "/dashboard", label: "Painel", icon: Home },
-      { path: "/chef/catalog", label: "Catálogo", icon: ShoppingCart },
-      { path: "/chef/orders", label: "Meus Pedidos", icon: ClipboardList },
-    ],
-    admin: [
-      { path: "/dashboard", label: "Painel", icon: Home },
-      { path: "/admin/products", label: "Produtos", icon: Package },
-      { path: "/admin/customers", label: "Clientes", icon: Users },
-      { path: "/admin/stock", label: "Estoque", icon: PackageSearch },
-      { path: "/chef/orders", label: "Todos Pedidos", icon: ClipboardList },
-    ],
-  };
+  // Navigation links based on user type
+  // Tenant admins: manage products, stock, customers, process orders
+  // Account users (buyers): browse catalog, place orders, view their orders
+  const tenantAdminLinks = [
+    { path: "/dashboard", label: "Painel", icon: Home },
+    { path: "/admin/orders", label: "Pedidos", icon: ClipboardList },
+    { path: "/admin/products", label: "Produtos", icon: Package },
+    { path: "/admin/customers", label: "Clientes", icon: Users },
+    { path: "/admin/stock", label: "Estoque", icon: PackageSearch },
+  ];
 
-  const links = isAdmin ? navLinks.admin : navLinks.chef;
+  const accountUserLinks = [
+    { path: "/dashboard", label: "Painel", icon: Home },
+    { path: "/chef/catalog", label: "Catálogo", icon: ShoppingBag },
+    { path: "/chef/orders", label: "Meus Pedidos", icon: ClipboardList },
+  ];
+
+  // Determine which links to show based on role
+  const links = isTenantAdmin ? tenantAdminLinks : accountUserLinks;
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
@@ -87,6 +89,26 @@ export function Navbar() {
                 </Link>
               );
             })}
+
+            {/* Cart button for account users */}
+            {isAccountUser && (
+              <Link
+                to="/chef/cart"
+                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors relative ${
+                  isActive("/chef/cart")
+                    ? "bg-primary text-white"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <ShoppingCart className="h-4 w-4" />
+                Carrinho
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold">
+                    {cartItemCount}
+                  </span>
+                )}
+              </Link>
+            )}
 
             <div className="ml-3">
               <ContextSwitcher />
@@ -143,6 +165,27 @@ export function Navbar() {
                 </Link>
               );
             })}
+
+            {/* Cart button for account users (mobile) */}
+            {isAccountUser && (
+              <Link
+                to="/chef/cart"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2 ${
+                  isActive("/chef/cart")
+                    ? "bg-primary text-white"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <ShoppingCart className="h-5 w-5" />
+                Carrinho
+                {cartItemCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5 font-semibold">
+                    {cartItemCount}
+                  </span>
+                )}
+              </Link>
+            )}
 
             <div className="px-3 py-2">
               <ContextSwitcher />

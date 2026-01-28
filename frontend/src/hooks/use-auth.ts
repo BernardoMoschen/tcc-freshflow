@@ -136,6 +136,33 @@ export function useAuth() {
   // This prevents the page from blinking when session query retries
   const isInitialLoading = loading || (!!user && !sessionQuery.data && sessionQuery.isLoading && !sessionQuery.isError);
 
+  // Extract user roles from memberships
+  const userRoles: string[] = sessionQuery.data?.memberships?.map((m: any) => m.role) || [];
+
+  // Role check helpers
+  const isPlatformAdmin = userRoles.includes("PLATFORM_ADMIN");
+
+  // Tenant-level admins (can manage products, stock, orders, customers)
+  const isTenantAdmin = isPlatformAdmin ||
+    userRoles.some((role) => ["TENANT_OWNER", "TENANT_ADMIN"].includes(role));
+
+  // Account-level users (can browse catalog, place orders)
+  const isAccountUser = userRoles.some((role) =>
+    ["ACCOUNT_OWNER", "ACCOUNT_BUYER"].includes(role)
+  );
+
+  // ACCOUNT_OWNER is a special case - they can view account data but NOT manage tenant resources
+  const isAccountOwner = userRoles.includes("ACCOUNT_OWNER");
+
+  // Buyers can only browse and order
+  const isBuyer = userRoles.includes("ACCOUNT_BUYER");
+
+  // Check if user has any of the specified roles
+  const hasAnyRole = (roles: string[]) => {
+    if (isPlatformAdmin) return true;
+    return userRoles.some((role) => roles.includes(role));
+  };
+
   return {
     user,
     session: sessionQuery.data,
@@ -144,5 +171,13 @@ export function useAuth() {
     signIn,
     signOut,
     setContext,
+    // Role helpers
+    userRoles,
+    isPlatformAdmin,
+    isTenantAdmin,
+    isAccountUser,
+    isAccountOwner,
+    isBuyer,
+    hasAnyRole,
   };
 }

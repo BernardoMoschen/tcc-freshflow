@@ -11,22 +11,37 @@ type RoleType =
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredRoles?: RoleType[];
+  /**
+   * Requires tenant-level admin access (PLATFORM_ADMIN, TENANT_OWNER, TENANT_ADMIN)
+   * Use for: product management, stock, customers, weighing, finalize, admin orders
+   */
+  requireTenantAdmin?: boolean;
+  /**
+   * Requires account-level access (ACCOUNT_OWNER, ACCOUNT_BUYER)
+   * Use for: cart, my orders (buyer experience)
+   */
+  requireAccountUser?: boolean;
+  /**
+   * @deprecated Use requireTenantAdmin instead
+   */
   requireAdmin?: boolean;
 }
 
 export function ProtectedRoute({
   children,
   requiredRoles,
+  requireTenantAdmin = false,
+  requireAccountUser = false,
   requireAdmin = false,
 }: ProtectedRouteProps) {
-  const { user, session, loading } = useAuth();
+  const { user, userRoles, loading, isPlatformAdmin, isTenantAdmin, isAccountUser } = useAuth();
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <p className="mt-2 text-sm text-muted-foreground">Loading...</p>
+          <p className="mt-2 text-sm text-muted-foreground">Carregando...</p>
         </div>
       </div>
     );
@@ -36,41 +51,34 @@ export function ProtectedRoute({
     return <Navigate to="/login" replace />;
   }
 
-  // Check role-based permissions
-  if (session?.memberships && (requiredRoles || requireAdmin)) {
-    const userRoles = session.memberships.map((m: any) => m.role);
+  // Platform admin bypasses all role checks
+  if (isPlatformAdmin) {
+    return <>{children}</>;
+  }
 
-    // Platform admin can access everything
-    if (userRoles.includes("PLATFORM_ADMIN")) {
-      return <>{children}</>;
+  // Check for tenant admin requirement (products, stock, customers, weighing, finalize)
+  if (requireTenantAdmin || requireAdmin) {
+    if (!isTenantAdmin) {
+      // Redirect non-tenant-admins to their appropriate home
+      return <Navigate to={isAccountUser ? "/chef/catalog" : "/dashboard"} replace />;
     }
+    return <>{children}</>;
+  }
 
-    // Check for admin-level roles
-    if (requireAdmin) {
-      const adminRoles = [
-        "PLATFORM_ADMIN",
-        "TENANT_OWNER",
-        "TENANT_ADMIN",
-        "ACCOUNT_OWNER",
-      ];
-      const hasAdminRole = userRoles.some((role: string) =>
-        adminRoles.includes(role)
-      );
-
-      if (!hasAdminRole) {
-        return <Navigate to="/chef/catalog" replace />;
-      }
+  // Check for account user requirement (cart, my orders - buyer experience)
+  if (requireAccountUser) {
+    if (!isAccountUser) {
+      // Tenant admins trying to access buyer pages get redirected to admin area
+      return <Navigate to={isTenantAdmin ? "/admin/orders" : "/dashboard"} replace />;
     }
+    return <>{children}</>;
+  }
 
-    // Check for specific required roles
-    if (requiredRoles && requiredRoles.length > 0) {
-      const hasRequiredRole = requiredRoles.some((role) =>
-        userRoles.includes(role)
-      );
-
-      if (!hasRequiredRole) {
-        return <Navigate to="/chef/catalog" replace />;
-      }
+  // Check for specific required roles
+  if (requiredRoles && requiredRoles.length > 0) {
+    const hasRequiredRole = requiredRoles.some((role) => userRoles.includes(role));
+    if (!hasRequiredRole) {
+      return <Navigate to="/dashboard" replace />;
     }
   }
 

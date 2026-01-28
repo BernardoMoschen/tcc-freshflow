@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, protectedProcedure, tenantProcedure } from "../trpc.js";
+import { router, protectedProcedure, tenantProcedure, tenantAdminProcedure } from "../trpc.js";
 
 export const productsRouter = router({
   /**
@@ -184,9 +184,9 @@ export const productsRouter = router({
     }),
 
   /**
-   * Create a new product with options
+   * Create a new product with options (tenant admin only)
    */
-  create: tenantProcedure
+  create: tenantAdminProcedure
     .input(
       z.object({
         name: z.string().min(1),
@@ -227,9 +227,9 @@ export const productsRouter = router({
     }),
 
   /**
-   * Update an existing product
+   * Update an existing product (tenant admin only)
    */
-  update: protectedProcedure
+  update: tenantAdminProcedure
     .input(
       z.object({
         id: z.string().uuid(),
@@ -241,6 +241,16 @@ export const productsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
+
+      // Verify product belongs to this tenant
+      const existingProduct = await ctx.prisma.product.findUnique({
+        where: { id },
+        select: { tenantId: true },
+      });
+
+      if (!existingProduct || existingProduct.tenantId !== ctx.tenantId) {
+        throw new Error("Product not found or access denied");
+      }
 
       const product = await ctx.prisma.product.update({
         where: { id },
@@ -254,11 +264,21 @@ export const productsRouter = router({
     }),
 
   /**
-   * Delete a product (and all its options)
+   * Delete a product (and all its options) - tenant admin only
    */
-  delete: protectedProcedure
+  delete: tenantAdminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
+      // Verify product belongs to this tenant
+      const existingProduct = await ctx.prisma.product.findUnique({
+        where: { id: input.id },
+        select: { tenantId: true },
+      });
+
+      if (!existingProduct || existingProduct.tenantId !== ctx.tenantId) {
+        throw new Error("Product not found or access denied");
+      }
+
       await ctx.prisma.product.delete({
         where: { id: input.id },
       });
@@ -267,9 +287,9 @@ export const productsRouter = router({
     }),
 
   /**
-   * Create a product option
+   * Create a product option (tenant admin only)
    */
-  createOption: protectedProcedure
+  createOption: tenantAdminProcedure
     .input(
       z.object({
         productId: z.string().uuid(),
@@ -283,6 +303,16 @@ export const productsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // Verify product belongs to this tenant
+      const product = await ctx.prisma.product.findUnique({
+        where: { id: input.productId },
+        select: { tenantId: true },
+      });
+
+      if (!product || product.tenantId !== ctx.tenantId) {
+        throw new Error("Product not found or access denied");
+      }
+
       const option = await ctx.prisma.productOption.create({
         data: input,
       });
@@ -291,9 +321,9 @@ export const productsRouter = router({
     }),
 
   /**
-   * Update a product option
+   * Update a product option (tenant admin only)
    */
-  updateOption: protectedProcedure
+  updateOption: tenantAdminProcedure
     .input(
       z.object({
         id: z.string().uuid(),
@@ -309,20 +339,40 @@ export const productsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
 
-      const option = await ctx.prisma.productOption.update({
+      // Verify option belongs to a product in this tenant
+      const option = await ctx.prisma.productOption.findUnique({
+        where: { id },
+        include: { product: { select: { tenantId: true } } },
+      });
+
+      if (!option || option.product.tenantId !== ctx.tenantId) {
+        throw new Error("Product option not found or access denied");
+      }
+
+      const updatedOption = await ctx.prisma.productOption.update({
         where: { id },
         data,
       });
 
-      return option;
+      return updatedOption;
     }),
 
   /**
-   * Delete a product option
+   * Delete a product option (tenant admin only)
    */
-  deleteOption: protectedProcedure
+  deleteOption: tenantAdminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
+      // Verify option belongs to a product in this tenant
+      const option = await ctx.prisma.productOption.findUnique({
+        where: { id: input.id },
+        include: { product: { select: { tenantId: true } } },
+      });
+
+      if (!option || option.product.tenantId !== ctx.tenantId) {
+        throw new Error("Product option not found or access denied");
+      }
+
       await ctx.prisma.productOption.delete({
         where: { id: input.id },
       });

@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { router, protectedProcedure, tenantProcedure } from "../trpc.js";
+import { router, tenantAdminProcedure } from "../trpc.js";
 import { Errors } from "../lib/errors.js";
 
 export const customersRouter = router({
   /**
-   * List all customers with their accounts
+   * List all customers with their accounts (tenant admin only)
    */
-  list: tenantProcedure
+  list: tenantAdminProcedure
     .input(
       z.object({
         search: z.string().optional(),
@@ -73,9 +73,9 @@ export const customersRouter = router({
     }),
 
   /**
-   * Get single customer with full details
+   * Get single customer with full details (tenant admin only)
    */
-  get: protectedProcedure
+  get: tenantAdminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       const customer = await ctx.prisma.customer.findUnique({
@@ -134,9 +134,9 @@ export const customersRouter = router({
     }),
 
   /**
-   * Set custom price for a product option for a customer
+   * Set custom price for a product option for a customer (tenant admin only)
    */
-  setCustomPrice: protectedProcedure
+  setCustomPrice: tenantAdminProcedure
     .input(
       z.object({
         customerId: z.string().uuid(),
@@ -192,9 +192,9 @@ export const customersRouter = router({
     }),
 
   /**
-   * Remove custom price (revert to base price)
+   * Remove custom price (revert to base price) - tenant admin only
    */
-  removeCustomPrice: protectedProcedure
+  removeCustomPrice: tenantAdminProcedure
     .input(
       z.object({
         customerId: z.string().uuid(),
@@ -215,9 +215,9 @@ export const customersRouter = router({
     }),
 
   /**
-   * Get customer statistics
+   * Get customer statistics (tenant admin only)
    */
-  getStats: protectedProcedure
+  getStats: tenantAdminProcedure
     .input(z.object({ customerId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       const [totalOrders, orders] = await Promise.all([
