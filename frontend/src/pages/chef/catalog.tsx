@@ -5,12 +5,22 @@ import { useCart } from "@/hooks/use-cart";
 
 export function CatalogPage() {
   const [search, setSearch] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [unitType, setUnitType] = useState<"FIXED" | "WEIGHT" | "">("");
+  const [sortBy, setSortBy] = useState<"name" | "price">("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const { addItem, count } = useCart();
 
   const productsQuery = trpc.products.list.useQuery({
     skip: 0,
     take: 20,
     search: search || undefined,
+    minPrice: minPrice ? parseFloat(minPrice) * 100 : undefined,
+    maxPrice: maxPrice ? parseFloat(maxPrice) * 100 : undefined,
+    unitType: unitType || undefined,
+    sortBy,
+    sortOrder,
   });
 
   return (
@@ -30,7 +40,7 @@ export function CatalogPage() {
       </nav>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
+        <div className="mb-6 space-y-4">
           <input
             type="text"
             placeholder="Search products..."
@@ -38,6 +48,77 @@ export function CatalogPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
           />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Min Price (R$)
+              </label>
+              <input
+                type="number"
+                placeholder="0.00"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Max Price (R$)
+              </label>
+              <input
+                type="number"
+                placeholder="999.99"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Unit Type
+              </label>
+              <select
+                value={unitType}
+                onChange={(e) => setUnitType(e.target.value as "FIXED" | "WEIGHT" | "")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+              >
+                <option value="">All Types</option>
+                <option value="FIXED">Fixed Unit</option>
+                <option value="WEIGHT">By Weight</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Sort By
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as "name" | "price")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+              >
+                <option value="name">Name</option>
+                <option value="price">Price</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Order
+              </label>
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+              >
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         {productsQuery.isLoading && <p>Loading products...</p>}
