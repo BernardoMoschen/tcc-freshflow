@@ -12,14 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { OrderDetailsDialog } from "@/components/order-details-dialog";
+import { OrderStatusTimeline } from "@/components/order-status-timeline";
 import { Search, ChevronLeft, ChevronRight, Eye, Download } from "lucide-react";
-
-const statusColors = {
-  DRAFT: "bg-gray-100 text-gray-800",
-  SENT: "bg-blue-100 text-blue-800",
-  IN_SEPARATION: "bg-yellow-100 text-yellow-800",
-  FINALIZED: "bg-green-100 text-green-800",
-};
 
 const PAGE_SIZE = 10;
 
@@ -130,17 +124,8 @@ export function OrdersPage() {
               {/* Order Header */}
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-3">
-                    <h3 className="font-semibold text-lg">{order.orderNumber}</h3>
-                    <span
-                      className={`text-xs font-medium px-2 py-1 rounded-full ${
-                        statusColors[order.status as keyof typeof statusColors]
-                      }`}
-                    >
-                      {order.status}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-gray-600">
+                  <h3 className="font-semibold text-lg mb-2">{order.orderNumber}</h3>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-gray-600 mb-3">
                     <div>
                       <span className="font-medium">Items:</span> {order.items.length}
                     </div>
@@ -166,6 +151,9 @@ export function OrdersPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Status Timeline */}
+              <OrderStatusTimeline status={order.status as any} compact />
 
               {/* Actions */}
               <div className="flex flex-col sm:flex-row gap-2">

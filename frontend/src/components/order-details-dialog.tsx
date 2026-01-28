@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { OrderStatusTimeline } from "@/components/order-status-timeline";
 import { ShoppingCart, Package } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useCart } from "@/hooks/use-cart";
@@ -113,6 +114,11 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
           </div>
         ) : order ? (
           <div className="space-y-6">
+            {/* Status Timeline */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <OrderStatusTimeline status={order.status as any} />
+            </div>
+
             {/* Order Info */}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
