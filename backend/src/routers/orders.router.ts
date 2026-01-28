@@ -155,8 +155,12 @@ export const ordersRouter = router({
 
   /**
    * Get or create draft order for current account
+   * Uses optimistic locking to handle race conditions
    */
   getDraft: accountProcedure.query(async ({ ctx }) => {
+    // Rate limit to prevent rapid duplicate calls
+    checkRateLimit(`draft:get:${ctx.userId}:${ctx.accountId}`, procedureRateLimits.draftOrder);
+
     // Get customer for this account
     const customer = await ctx.prisma.customer.findUnique({
       where: { accountId: ctx.accountId },
@@ -169,6 +173,23 @@ export const ordersRouter = router({
       });
     }
 
+    const draftInclude = {
+      items: {
+        include: {
+          productOption: {
+            include: {
+              product: true,
+            },
+          },
+        },
+      },
+      customer: {
+        include: {
+          account: true,
+        },
+      },
+    };
+
     // Find existing draft order
     let draftOrder = await ctx.prisma.order.findFirst({
       where: {
@@ -176,22 +197,7 @@ export const ordersRouter = router({
         status: OrderStatus.DRAFT,
         createdBy: ctx.userId,
       },
-      include: {
-        items: {
-          include: {
-            productOption: {
-              include: {
-                product: true,
-              },
-            },
-          },
-        },
-        customer: {
-          include: {
-            account: true,
-          },
-        },
-      },
+      include: draftInclude,
       orderBy: {
         updatedAt: "desc",
       },
@@ -199,31 +205,49 @@ export const ordersRouter = router({
 
     // Create draft order if doesn't exist
     if (!draftOrder) {
-      draftOrder = await ctx.prisma.order.create({
-        data: {
-          orderNumber: `DRAFT-${Date.now()}`,
-          accountId: ctx.accountId,
-          customerId: customer.id,
-          status: OrderStatus.DRAFT,
-          createdBy: ctx.userId,
-        },
-        include: {
-          items: {
-            include: {
-              productOption: {
-                include: {
-                  product: true,
-                },
-              },
-            },
+      try {
+        // Use a unique order number with random suffix to prevent collisions
+        const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+        draftOrder = await ctx.prisma.order.create({
+          data: {
+            orderNumber: `DRAFT-${uniqueId}`,
+            accountId: ctx.accountId,
+            customerId: customer.id,
+            status: OrderStatus.DRAFT,
+            createdBy: ctx.userId,
           },
-          customer: {
-            include: {
-              account: true,
+          include: draftInclude,
+        });
+      } catch (error: unknown) {
+        // Handle race condition: if another request created a draft simultaneously,
+        // try to find it instead of throwing
+        if (
+          error &&
+          typeof error === "object" &&
+          "code" in error &&
+          error.code === "P2002"
+        ) {
+          // Unique constraint violation - another draft was created, fetch it
+          draftOrder = await ctx.prisma.order.findFirst({
+            where: {
+              accountId: ctx.accountId,
+              status: OrderStatus.DRAFT,
+              createdBy: ctx.userId,
             },
-          },
-        },
-      });
+            include: draftInclude,
+            orderBy: {
+              updatedAt: "desc",
+            },
+          });
+
+          if (!draftOrder) {
+            // This shouldn't happen, but if it does, throw original error
+            throw error;
+          }
+        } else {
+          throw error;
+        }
+      }
     }
 
     return draftOrder;

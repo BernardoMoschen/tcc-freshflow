@@ -97,10 +97,11 @@ const defaultCorsConfig: CorsConfig = {
 };
 
 /**
- * Enhanced CORS middleware
+ * Enhanced CORS middleware with strict origin validation
  */
 export function corsMiddleware(config: Partial<CorsConfig> = {}) {
   const finalConfig = { ...defaultCorsConfig, ...config };
+  const isProduction = process.env.NODE_ENV === "production";
 
   return (req: Request, res: Response, next: NextFunction): void => {
     const origin = req.headers.origin;
@@ -110,6 +111,24 @@ export function corsMiddleware(config: Partial<CorsConfig> = {}) {
       !origin ||
       finalConfig.origins.includes("*") ||
       finalConfig.origins.includes(origin);
+
+    // In production, reject requests from unknown origins for state-changing methods
+    if (isProduction && origin && !isAllowed) {
+      const method = req.method.toUpperCase();
+      if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+        logger.warn("CORS violation: rejected request from unknown origin", {
+          origin,
+          method,
+          path: req.path,
+          ip: req.ip,
+        });
+        res.status(403).json({
+          error: "Forbidden",
+          message: "Cross-origin request blocked",
+        });
+        return;
+      }
+    }
 
     if (isAllowed && origin) {
       res.setHeader("Access-Control-Allow-Origin", origin);

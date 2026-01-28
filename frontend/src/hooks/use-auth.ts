@@ -67,6 +67,16 @@ export function useAuth() {
 
     // If context is already valid, no need to change
     if (isContextValid()) {
+      // Clear the reload flag if context is now valid
+      sessionStorage.removeItem("freshflow:context-reload-pending");
+      return;
+    }
+
+    // Prevent infinite reload loops - only reload once per session
+    const reloadPending = sessionStorage.getItem("freshflow:context-reload-pending");
+    if (reloadPending) {
+      console.warn("⚠️ Context reload already attempted, skipping to prevent infinite loop");
+      sessionStorage.removeItem("freshflow:context-reload-pending");
       return;
     }
 
@@ -78,12 +88,16 @@ export function useAuth() {
       localStorage.setItem("freshflow:tenantId", contextMembership.account.tenantId);
       localStorage.setItem("freshflow:accountId", contextMembership.account.id);
       console.log("🔄 Context set to account:", contextMembership.account.id);
+      // Set flag before reload to prevent infinite loop
+      sessionStorage.setItem("freshflow:context-reload-pending", "true");
       window.location.reload();
     } else if (contextMembership?.tenant) {
       // Tenant membership - set only tenant
       localStorage.setItem("freshflow:tenantId", contextMembership.tenant.id);
       localStorage.removeItem("freshflow:accountId");
       console.log("🔄 Context set to tenant:", contextMembership.tenant.id);
+      // Set flag before reload to prevent infinite loop
+      sessionStorage.setItem("freshflow:context-reload-pending", "true");
       window.location.reload();
     } else if (isPlatformAdminUser) {
       // Platform admin with no tenant/account memberships - clear context and don't reload

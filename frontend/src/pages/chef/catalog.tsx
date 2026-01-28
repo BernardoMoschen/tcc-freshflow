@@ -307,7 +307,20 @@ export function CatalogPage() {
         </div>
       )}
       {productsQuery.error && (
-        <p className="text-center py-8 text-red-600">Erro ao carregar produtos</p>
+        <div className="text-center py-12 bg-red-50 rounded-lg">
+          <AlertTriangle className="mx-auto h-12 w-12 text-red-400" aria-hidden="true" />
+          <p className="mt-3 text-lg font-medium text-red-800">Erro ao carregar produtos</p>
+          <p className="mt-1 text-sm text-red-600">
+            {productsQuery.error.message || "Não foi possível carregar os produtos. Tente novamente."}
+          </p>
+          <Button
+            onClick={() => productsQuery.refetch()}
+            variant="outline"
+            className="mt-4"
+          >
+            Tentar Novamente
+          </Button>
+        </div>
       )}
 
       {/* Product grid - single column on mobile, responsive grid on larger screens */}
@@ -351,11 +364,14 @@ export function CatalogPage() {
                     toggleFavorite(option.id);
                   }}
                   className="absolute top-2 right-2 z-10 bg-white/90 hover:bg-white rounded-full p-2 shadow-md transition-all hover:scale-110"
+                  aria-label={favorite ? `Remover ${product.name} dos favoritos` : `Adicionar ${product.name} aos favoritos`}
+                  aria-pressed={favorite}
                 >
                   <Star
                     className={`h-5 w-5 ${
                       favorite ? "fill-yellow-400 text-yellow-400" : "text-gray-400"
                     }`}
+                    aria-hidden="true"
                   />
                 </button>
 
@@ -417,24 +433,26 @@ export function CatalogPage() {
                   {/* Quick Quantity Picker - Only for account users who can add to cart */}
                   {canAddToCart && (
                     inCart ? (
-                      <div className="mt-4 flex items-center gap-2">
+                      <div className="mt-4 flex items-center gap-2" role="group" aria-label={`Quantidade de ${product.name}`}>
                         <button
                           onClick={() => updateQuantity(option.id, Math.max(0.1, cartItem.requestedQty - 1))}
                           disabled={isOutOfStock || isSyncing}
                           className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary text-primary hover:bg-primary hover:text-white transition-colors flex items-center justify-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                          aria-label={`Diminuir quantidade de ${product.name}`}
                         >
-                          <Minus className="h-4 w-4" />
+                          <Minus className="h-4 w-4" aria-hidden="true" />
                         </button>
                         <div className="flex-1 text-center">
-                          <p className="text-lg font-bold text-primary">{cartItem.requestedQty}</p>
+                          <p className="text-lg font-bold text-primary" aria-live="polite">{cartItem.requestedQty}</p>
                           <p className="text-xs text-gray-500">{isSyncing ? "sincronizando..." : "no carrinho"}</p>
                         </div>
                         <button
                           onClick={() => updateQuantity(option.id, cartItem.requestedQty + 1)}
                           disabled={isOutOfStock || isSyncing}
                           className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary bg-primary text-white hover:bg-primary/90 transition-colors flex items-center justify-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                          aria-label={`Aumentar quantidade de ${product.name}`}
                         >
-                          <Plus className="h-4 w-4" />
+                          <Plus className="h-4 w-4" aria-hidden="true" />
                         </button>
                       </div>
                     ) : (
@@ -483,8 +501,46 @@ export function CatalogPage() {
 
       {/* Estado vazio */}
       {productsQuery.data?.items.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-gray-600">Nenhum produto encontrado</p>
+        <div className="text-center py-16 bg-gray-50 rounded-lg">
+          <svg
+            className="mx-auto h-16 w-16 text-gray-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+            />
+          </svg>
+          <p className="mt-4 text-lg font-medium text-gray-700">
+            {search || minPrice || maxPrice || unitType || showFavoritesOnly
+              ? "Nenhum produto corresponde aos filtros"
+              : "Nenhum produto disponível"}
+          </p>
+          <p className="mt-1 text-sm text-gray-500">
+            {search || minPrice || maxPrice || unitType || showFavoritesOnly
+              ? "Tente ajustar seus filtros ou termos de busca"
+              : "Não há produtos cadastrados no momento"}
+          </p>
+          {(search || minPrice || maxPrice || unitType || showFavoritesOnly) && (
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={() => {
+                setSearch("");
+                setMinPrice("");
+                setMaxPrice("");
+                setUnitType("");
+                setShowFavoritesOnly(false);
+              }}
+            >
+              Limpar Filtros
+            </Button>
+          )}
         </div>
       )}
 

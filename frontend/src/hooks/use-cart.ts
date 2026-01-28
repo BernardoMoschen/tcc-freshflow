@@ -21,11 +21,24 @@ export function useCart() {
   // Platform admins and tenant admins without account context don't have carts
   const hasAccountContext = !!localStorage.getItem("freshflow:accountId");
 
-  // Fetch draft order
+  // Fetch draft order with improved error handling
   const draftQuery = trpc.orders.getDraft.useQuery(undefined, {
-    retry: 1,
+    retry: (failureCount, error) => {
+      // Don't retry on auth/permission errors
+      if (error?.data?.code === "UNAUTHORIZED" || error?.data?.code === "FORBIDDEN") {
+        return false;
+      }
+      // Don't retry on NOT_FOUND (customer not found)
+      if (error?.data?.code === "NOT_FOUND") {
+        return false;
+      }
+      // Retry other errors up to 2 times
+      return failureCount < 2;
+    },
     staleTime: 1000 * 30, // 30 seconds
     enabled: hasAccountContext,
+    // Prevent rapid refetches on window focus when there's an error
+    refetchOnWindowFocus: (query) => query.state.status !== "error",
   });
 
   // Update draft mutation

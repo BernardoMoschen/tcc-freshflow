@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { PageLayout } from "@/components/page-layout";
 import { CardSkeleton } from "@/components/ui/skeleton";
@@ -14,8 +14,11 @@ import {
 } from "@/components/ui/select";
 import { OrderDetailsDialog } from "@/components/order-details-dialog";
 import { OrderStatusTimeline } from "@/components/order-status-timeline";
-import { Search, ChevronLeft, ChevronRight, Eye, Download, FileDown, RefreshCw } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Eye, Download, FileDown, RefreshCw, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
+
+// Auto-refresh interval in milliseconds (30 seconds)
+const AUTO_REFRESH_INTERVAL = 30 * 1000;
 
 const PAGE_SIZE = 10;
 
@@ -32,14 +35,44 @@ export function OrdersPage() {
 
   const utils = trpc.useUtils();
 
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isAutoRefreshEnabled, setIsAutoRefreshEnabled] = useState(true);
+
   const ordersQuery = trpc.orders.list.useQuery(
     {
       status: statusFilter === "all" ? undefined : (statusFilter as any),
       skip: currentPage * PAGE_SIZE,
       take: PAGE_SIZE,
     },
-    { enabled: hasAccountContext }
+    {
+      enabled: hasAccountContext,
+      refetchInterval: isAutoRefreshEnabled ? AUTO_REFRESH_INTERVAL : false,
+      refetchIntervalInBackground: false, // Don't refresh when tab is hidden
+    }
   );
+
+  // Track last updated time
+  useEffect(() => {
+    if (ordersQuery.dataUpdatedAt) {
+      setLastUpdated(new Date(ordersQuery.dataUpdatedAt));
+    }
+  }, [ordersQuery.dataUpdatedAt]);
+
+  // Manual refresh handler
+  const handleManualRefresh = useCallback(() => {
+    ordersQuery.refetch();
+    toast.success("Pedidos atualizados");
+  }, [ordersQuery]);
+
+  // Format relative time
+  const getRelativeTime = (date: Date) => {
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (seconds < 60) return "agora mesmo";
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `há ${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    return `há ${hours}h`;
+  };
 
   const bulkUpdateMutation = trpc.orders.bulkUpdateStatus.useMutation({
     onSuccess: (data) => {
@@ -156,14 +189,53 @@ export function OrdersPage() {
           </Select>
         </div>
 
-        {/* Results count */}
-        {ordersQuery.data && (
-          <p className="text-sm text-gray-600">
-            Mostrando {filteredOrders.length} de {ordersQuery.data.total} pedido
-            {ordersQuery.data.total !== 1 ? "s" : ""}
-            {selectedOrders.size > 0 && ` • ${selectedOrders.size} selecionado(s)`}
-          </p>
-        )}
+        {/* Results count and auto-refresh indicator */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          {ordersQuery.data && (
+            <p className="text-sm text-gray-600">
+              Mostrando {filteredOrders.length} de {ordersQuery.data.total} pedido
+              {ordersQuery.data.total !== 1 ? "s" : ""}
+              {selectedOrders.size > 0 && ` • ${selectedOrders.size} selecionado(s)`}
+            </p>
+          )}
+
+          {/* Auto-refresh controls */}
+          <div className="flex items-center gap-3">
+            {lastUpdated && (
+              <span className="text-xs text-gray-500">
+                Atualizado {getRelativeTime(lastUpdated)}
+              </span>
+            )}
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleManualRefresh}
+              disabled={ordersQuery.isFetching}
+              className="h-8 px-2"
+              aria-label="Atualizar pedidos"
+            >
+              <RefreshCw className={`h-4 w-4 ${ordersQuery.isFetching ? "animate-spin" : ""}`} />
+            </Button>
+
+            <button
+              onClick={() => setIsAutoRefreshEnabled(!isAutoRefreshEnabled)}
+              className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors ${
+                isAutoRefreshEnabled
+                  ? "bg-green-100 text-green-700 hover:bg-green-200"
+                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+              }`}
+              aria-label={isAutoRefreshEnabled ? "Desativar atualização automática" : "Ativar atualização automática"}
+            >
+              {isAutoRefreshEnabled ? (
+                <Wifi className="h-3 w-3" />
+              ) : (
+                <WifiOff className="h-3 w-3" />
+              )}
+              <span className="hidden sm:inline">Auto</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Batch Actions */}
@@ -219,7 +291,34 @@ export function OrdersPage() {
       )}
 
       {ordersQuery.error && (
-        <p className="text-center py-8 text-red-600">Erro ao carregar pedidos</p>
+        <div className="text-center py-12 bg-red-50 rounded-lg">
+          <svg
+            className="mx-auto h-12 w-12 text-red-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            />
+          </svg>
+          <p className="mt-3 text-lg font-medium text-red-800">Erro ao carregar pedidos</p>
+          <p className="mt-1 text-sm text-red-600">
+            {ordersQuery.error.message || "Não foi possível carregar os pedidos. Tente novamente."}
+          </p>
+          <Button
+            onClick={() => ordersQuery.refetch()}
+            variant="outline"
+            className="mt-4"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Tentar Novamente
+          </Button>
+        </div>
       )}
 
       {ordersQuery.data && filteredOrders.length === 0 && (

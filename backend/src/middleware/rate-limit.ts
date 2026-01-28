@@ -136,6 +136,21 @@ export const procedureRateLimits = {
 
   /** Export operations: 5 per minute per user */
   export: { windowMs: 60 * 1000, maxRequests: 5, operation: "export operations" },
+
+  /** Login attempts: 5 per minute per IP (strict to prevent brute force) */
+  login: { windowMs: 60 * 1000, maxRequests: 5, operation: "login attempts" },
+
+  /** Session queries: 60 per minute per user (allow frequent context checks) */
+  session: { windowMs: 60 * 1000, maxRequests: 60, operation: "session queries" },
+
+  /** Context switching: 10 per minute per user */
+  contextSwitch: { windowMs: 60 * 1000, maxRequests: 10, operation: "context switching" },
+
+  /** Draft order operations: 30 per minute per user (cart operations) */
+  draftOrder: { windowMs: 60 * 1000, maxRequests: 30, operation: "cart operations" },
+
+  /** Customer price updates: 50 per minute per user (batch pricing) */
+  customerPrice: { windowMs: 60 * 1000, maxRequests: 50, operation: "customer pricing" },
 };
 
 /**
