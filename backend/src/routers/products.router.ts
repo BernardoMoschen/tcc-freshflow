@@ -17,10 +17,11 @@ export const productsRouter = router({
         unitType: z.enum(["FIXED", "WEIGHT"]).optional(),
         sortBy: z.enum(["name", "price"]).default("name"),
         sortOrder: z.enum(["asc", "desc"]).default("asc"),
+        customerId: z.string().uuid().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
-      const { skip, take, search, category, minPrice, maxPrice, unitType, sortBy, sortOrder } = input;
+      const { skip, take, search, category, minPrice, maxPrice, unitType, sortBy, sortOrder, customerId } = input;
 
       // Build base where clause for products
       const where: any = {
@@ -65,19 +66,46 @@ export const productsRouter = router({
           skip: sortBy === "price" ? 0 : skip,
           take: sortBy === "price" ? undefined : take,
           include: {
-            options: true,
+            options: {
+              include: {
+                customerPrices: customerId
+                  ? {
+                      where: {
+                        customerId,
+                      },
+                    }
+                  : false,
+              },
+            },
           },
           orderBy,
         }),
         ctx.prisma.product.count({ where }),
       ]);
 
+      // Resolve customer prices
+      const itemsWithResolvedPrices = items.map((product) => ({
+        ...product,
+        options: product.options.map((option: any) => {
+          const customerPrice =
+            option.customerPrices && option.customerPrices.length > 0
+              ? option.customerPrices[0].price
+              : null;
+
+          return {
+            ...option,
+            resolvedPrice: customerPrice || option.basePrice,
+            hasCustomerPrice: !!customerPrice,
+          };
+        }),
+      }));
+
       // Post-process for price sorting
-      let processedItems = items;
+      let processedItems = itemsWithResolvedPrices;
       if (sortBy === "price") {
         // Calculate min price for each product
-        const itemsWithMinPrice = items.map((product) => {
-          const minPrice = Math.min(...product.options.map((opt) => opt.basePrice));
+        const itemsWithMinPrice = itemsWithResolvedPrices.map((product) => {
+          const minPrice = Math.min(...product.options.map((opt) => opt.resolvedPrice));
           return { ...product, minPrice };
         });
 

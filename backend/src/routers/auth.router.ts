@@ -23,34 +23,56 @@ export const authRouter = router({
 
     const memberships = await getUserMemberships(ctx.userId);
 
+    // Batch fetch all customers for account memberships (avoids N+1)
+    const accountIds = memberships
+      .filter((m) => m.account)
+      .map((m) => m.account!.id);
+
+    const customers =
+      accountIds.length > 0
+        ? await ctx.prisma.customer.findMany({
+            where: { accountId: { in: accountIds } },
+            select: { id: true, accountId: true },
+          })
+        : [];
+
+    // Create lookup map for O(1) access
+    const customerByAccountId = new Map(
+      customers.map((c) => [c.accountId, c.id])
+    );
+
+    // Build memberships with customer IDs
+    const membershipsWithCustomers = memberships.map((m) => ({
+      id: m.id,
+      role: m.role.name,
+      tenant: m.tenant
+        ? {
+            id: m.tenant.id,
+            name: m.tenant.name,
+            slug: m.tenant.slug,
+          }
+        : null,
+      account: m.account
+        ? {
+            id: m.account.id,
+            name: m.account.name,
+            slug: m.account.slug,
+            tenantId: m.account.tenantId,
+            customerId: customerByAccountId.get(m.account.id) || null,
+            tenant: m.account.tenant
+              ? {
+                  id: m.account.tenant.id,
+                  name: m.account.tenant.name,
+                  slug: m.account.tenant.slug,
+                }
+              : null,
+          }
+        : null,
+    }));
+
     return {
       user,
-      memberships: memberships.map((m) => ({
-        id: m.id,
-        role: m.role.name,
-        tenant: m.tenant
-          ? {
-              id: m.tenant.id,
-              name: m.tenant.name,
-              slug: m.tenant.slug,
-            }
-          : null,
-        account: m.account
-          ? {
-              id: m.account.id,
-              name: m.account.name,
-              slug: m.account.slug,
-              tenantId: m.account.tenantId,
-              tenant: m.account.tenant
-                ? {
-                    id: m.account.tenant.id,
-                    name: m.account.tenant.name,
-                    slug: m.account.tenant.slug,
-                  }
-                : null,
-            }
-          : null,
-      })),
+      memberships: membershipsWithCustomers,
     };
   }),
 });

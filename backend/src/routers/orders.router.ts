@@ -149,6 +149,346 @@ export const ordersRouter = router({
     }),
 
   /**
+   * Get or create draft order for current account
+   */
+  getDraft: accountProcedure.query(async ({ ctx }) => {
+    // Get customer for this account
+    const customer = await ctx.prisma.customer.findUnique({
+      where: { accountId: ctx.accountId },
+    });
+
+    if (!customer) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Customer not found for this account",
+      });
+    }
+
+    // Find existing draft order
+    let draftOrder = await ctx.prisma.order.findFirst({
+      where: {
+        accountId: ctx.accountId,
+        status: OrderStatus.DRAFT,
+        createdBy: ctx.userId,
+      },
+      include: {
+        items: {
+          include: {
+            productOption: {
+              include: {
+                product: true,
+              },
+            },
+          },
+        },
+        customer: {
+          include: {
+            account: true,
+          },
+        },
+      },
+      orderBy: {
+        updatedAt: "desc",
+      },
+    });
+
+    // Create draft order if doesn't exist
+    if (!draftOrder) {
+      draftOrder = await ctx.prisma.order.create({
+        data: {
+          orderNumber: `DRAFT-${Date.now()}`,
+          accountId: ctx.accountId,
+          customerId: customer.id,
+          status: OrderStatus.DRAFT,
+          createdBy: ctx.userId,
+        },
+        include: {
+          items: {
+            include: {
+              productOption: {
+                include: {
+                  product: true,
+                },
+              },
+            },
+          },
+          customer: {
+            include: {
+              account: true,
+            },
+          },
+        },
+      });
+    }
+
+    return draftOrder;
+  }),
+
+  /**
+   * Update draft order items
+   */
+  updateDraft: accountProcedure
+    .input(
+      z.object({
+        orderId: z.string().uuid(),
+        items: z.array(
+          z.object({
+            productOptionId: z.string().uuid(),
+            requestedQty: z.number().positive(),
+          })
+        ),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verify order is draft and belongs to user
+      const order = await ctx.prisma.order.findUnique({
+        where: { id: input.orderId },
+        include: { items: true },
+      });
+
+      if (!order) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Order not found",
+        });
+      }
+
+      if (order.status !== OrderStatus.DRAFT) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Can only update draft orders",
+        });
+      }
+
+      if (order.accountId !== ctx.accountId || order.createdBy !== ctx.userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Not authorized to update this order",
+        });
+      }
+
+      // Get customer
+      const customer = await ctx.prisma.customer.findUnique({
+        where: { accountId: ctx.accountId },
+      });
+
+      if (!customer) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Customer not found",
+        });
+      }
+
+      // Delete existing items and create new ones
+      await ctx.prisma.orderItem.deleteMany({
+        where: { orderId: input.orderId },
+      });
+
+      // Validate product options and calculate prices
+      const productOptions = await ctx.prisma.productOption.findMany({
+        where: {
+          id: { in: input.items.map((item) => item.productOptionId) },
+        },
+      });
+
+      if (productOptions.length !== input.items.length) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "One or more product options not found",
+        });
+      }
+
+      // Create new items with resolved prices
+      const orderItems = await Promise.all(
+        input.items.map(async (item) => {
+          const productOption = productOptions.find(
+            (po) => po.id === item.productOptionId
+          );
+
+          if (!productOption) {
+            throw new Error("Product option not found");
+          }
+
+          let finalPrice: number | null = null;
+
+          if (productOption.unitType === "FIXED") {
+            finalPrice = await calculateFixedItemPrice(
+              item.productOptionId,
+              item.requestedQty,
+              customer.id
+            );
+          }
+
+          return {
+            productOptionId: item.productOptionId,
+            requestedQty: item.requestedQty,
+            finalPrice,
+          };
+        })
+      );
+
+      // Update order
+      const updatedOrder = await ctx.prisma.order.update({
+        where: { id: input.orderId },
+        data: {
+          notes: input.notes,
+          items: {
+            create: orderItems,
+          },
+        },
+        include: {
+          items: {
+            include: {
+              productOption: {
+                include: {
+                  product: true,
+                },
+              },
+            },
+          },
+          customer: {
+            include: {
+              account: true,
+            },
+          },
+        },
+      });
+
+      return updatedOrder;
+    }),
+
+  /**
+   * Submit draft order (converts to SENT status)
+   */
+  submitDraft: accountProcedure
+    .input(z.object({ orderId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      // Verify order is draft and belongs to user
+      const order = await ctx.prisma.order.findUnique({
+        where: { id: input.orderId },
+        include: { items: true },
+      });
+
+      if (!order) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Order not found",
+        });
+      }
+
+      if (order.status !== OrderStatus.DRAFT) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Can only submit draft orders",
+        });
+      }
+
+      if (order.accountId !== ctx.accountId || order.createdBy !== ctx.userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Not authorized to submit this order",
+        });
+      }
+
+      if (order.items.length === 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot submit empty order",
+        });
+      }
+
+      // Validate stock availability
+      await validateStockAvailability(ctx.prisma, input.orderId);
+
+      // Generate proper order number
+      const orderNumber = generateOrderNumber();
+
+      // Update order status to SENT
+      const submittedOrder = await ctx.prisma.order.update({
+        where: { id: input.orderId },
+        data: {
+          status: OrderStatus.SENT,
+          orderNumber,
+          sentAt: new Date(),
+        },
+        include: {
+          items: {
+            include: {
+              productOption: {
+                include: {
+                  product: true,
+                },
+              },
+            },
+          },
+          customer: {
+            include: {
+              account: true,
+            },
+          },
+          createdByUser: true,
+        },
+      });
+
+      // Send WhatsApp notification
+      try {
+        const phoneNumber = process.env.WHATSAPP_DEFAULT_PHONE;
+        if (phoneNumber) {
+          await sendOrderCreatedNotification(
+            phoneNumber,
+            submittedOrder,
+            submittedOrder.customer.account.name
+          );
+        }
+      } catch (error) {
+        console.error("Failed to send WhatsApp notification:", error);
+      }
+
+      return submittedOrder;
+    }),
+
+  /**
+   * Clear draft order (delete all items)
+   */
+  clearDraft: accountProcedure
+    .input(z.object({ orderId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      // Verify order is draft and belongs to user
+      const order = await ctx.prisma.order.findUnique({
+        where: { id: input.orderId },
+      });
+
+      if (!order) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Order not found",
+        });
+      }
+
+      if (order.status !== OrderStatus.DRAFT) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Can only clear draft orders",
+        });
+      }
+
+      if (order.accountId !== ctx.accountId || order.createdBy !== ctx.userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Not authorized to clear this order",
+        });
+      }
+
+      // Delete all items
+      await ctx.prisma.orderItem.deleteMany({
+        where: { orderId: input.orderId },
+      });
+
+      return { success: true };
+    }),
+
+  /**
    * List orders with optional status filter
    */
   list: accountProcedure
@@ -504,9 +844,9 @@ export const ordersRouter = router({
     }),
 
   /**
-   * Update draft order (before it's sent)
+   * Update draft order notes (before it's sent)
    */
-  updateDraft: protectedProcedure
+  updateDraftNotes: protectedProcedure
     .input(
       z.object({
         id: z.string().uuid(),
@@ -630,9 +970,8 @@ export const ordersRouter = router({
 
       const { orderItemId, ...updateData } = input;
 
-      // If updating quantity and it's a FIXED item, recalculate price
+      // If updating quantity and it's a FIXED item, update the requested quantity
       if (updateData.requestedQty && orderItem.productOption.unitType === "FIXED") {
-        const pricePerUnit = orderItem.finalPrice ?? orderItem.productOption.basePrice;
         updateData.requestedQty = input.requestedQty!;
       }
 

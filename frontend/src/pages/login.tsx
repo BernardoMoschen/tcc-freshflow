@@ -19,7 +19,7 @@ export function LoginPage() {
 
     try {
       await signIn(email, password);
-      navigate("/chef/catalog");
+      navigate("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -30,7 +30,7 @@ export function LoginPage() {
   const handleDevLogin = (userKey: "chef" | "owner" | "admin") => {
     if (setupDevMode(userKey)) {
       // Reload to apply dev mode
-      window.location.href = "/chef/catalog";
+      window.location.href = "/dashboard";
     }
   };
 

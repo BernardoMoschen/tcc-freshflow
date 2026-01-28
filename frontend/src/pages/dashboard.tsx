@@ -1,0 +1,267 @@
+import { trpc } from "@/lib/trpc";
+import { PageLayout } from "@/components/page-layout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { CardSkeleton } from "@/components/ui/skeleton";
+import {
+  DollarSign,
+  ShoppingCart,
+  AlertTriangle,
+  Clock,
+  CheckCircle,
+} from "lucide-react";
+import { Link } from "react-router-dom";
+
+export function DashboardPage() {
+  const ordersQuery = trpc.orders.list.useQuery({
+    take: 100,
+  });
+
+  const stockQuery = trpc.stock.getStockLevels.useQuery({
+    lowStockOnly: false,
+    take: 100,
+  });
+
+  const lowStockItems = stockQuery.data?.items.filter((item) => item.isLowStock || item.isOutOfStock) || [];
+
+  // Calculate metrics
+  const totalOrders = ordersQuery.data?.total || 0;
+  const todayOrders =
+    ordersQuery.data?.items.filter((order) => {
+      const today = new Date();
+      const orderDate = new Date(order.createdAt);
+      return orderDate.toDateString() === today.toDateString();
+    }).length || 0;
+
+  const pendingOrders =
+    ordersQuery.data?.items.filter(
+      (order) => order.status === "SENT" || order.status === "IN_SEPARATION"
+    ).length || 0;
+
+  const finalizedOrders =
+    ordersQuery.data?.items.filter((order) => order.status === "FINALIZED").length || 0;
+
+  // Calculate revenue (only finalized orders)
+  const totalRevenue =
+    ordersQuery.data?.items
+      .filter((order) => order.status === "FINALIZED")
+      .reduce((sum, order) => {
+        const orderTotal = order.items.reduce((itemSum, item) => {
+          if (item.finalPrice) {
+            if (item.productOption.unitType === "WEIGHT" && item.actualWeight) {
+              return itemSum + item.finalPrice * item.actualWeight;
+            } else {
+              return itemSum + item.finalPrice * item.requestedQty;
+            }
+          }
+          return itemSum;
+        }, 0);
+        return sum + orderTotal;
+      }, 0) || 0;
+
+  const formatPrice = (cents: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(cents / 100);
+  };
+
+  const recentOrders = ordersQuery.data?.items.slice(0, 5) || [];
+
+  return (
+    <PageLayout title="Dashboard">
+      {/* Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {ordersQuery.isLoading ? (
+              <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{totalOrders}</div>
+                <p className="text-xs text-muted-foreground">
+                  {todayOrders} today
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {ordersQuery.isLoading ? (
+              <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{formatPrice(totalRevenue)}</div>
+                <p className="text-xs text-muted-foreground">
+                  From {finalizedOrders} finalized orders
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {ordersQuery.isLoading ? (
+              <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{pendingOrders}</div>
+                <p className="text-xs text-muted-foreground">
+                  Need processing
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {stockQuery.isLoading ? (
+              <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+            ) : (
+              <>
+                <div className="text-2xl font-bold text-yellow-600">
+                  {lowStockItems.length}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Requires attention
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Orders */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>Recent Orders</span>
+              <Link
+                to="/chef/orders"
+                className="text-sm text-primary hover:underline font-normal"
+              >
+                View all
+              </Link>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {ordersQuery.isLoading ? (
+              <div className="space-y-3">
+                <CardSkeleton />
+                <CardSkeleton />
+              </div>
+            ) : recentOrders.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">No orders yet</p>
+            ) : (
+              <div className="space-y-3">
+                {recentOrders.map((order) => (
+                  <Link
+                    key={order.id}
+                    to="/chef/orders"
+                    className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-medium text-sm">{order.orderNumber}</span>
+                      <Badge
+                        variant={
+                          order.status === "FINALIZED"
+                            ? "secondary"
+                            : order.status === "SENT"
+                            ? "default"
+                            : "outline"
+                        }
+                        className="text-xs"
+                      >
+                        {order.status}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      {order.items.length} items •{" "}
+                      {new Date(order.createdAt).toLocaleDateString("pt-BR")}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Low Stock Alerts */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>Low Stock Alerts</span>
+              <Link
+                to="/admin/stock"
+                className="text-sm text-primary hover:underline font-normal"
+              >
+                Manage stock
+              </Link>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stockQuery.isLoading ? (
+              <div className="space-y-3">
+                <CardSkeleton />
+                <CardSkeleton />
+              </div>
+            ) : lowStockItems.length === 0 ? (
+              <div className="text-center py-8">
+                <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
+                <p className="text-gray-500">All stock levels good!</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {lowStockItems.slice(0, 5).map((item) => (
+                  <div
+                    key={item.optionId}
+                    className="p-3 bg-gray-50 rounded-lg"
+                  >
+                    <div className="flex items-start justify-between mb-1">
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{item.productName}</p>
+                        <p className="text-xs text-gray-500">{item.optionName}</p>
+                      </div>
+                      <Badge
+                        variant={item.isOutOfStock ? "destructive" : "secondary"}
+                        className="text-xs"
+                      >
+                        {item.isOutOfStock ? "Out" : `${item.stockQuantity}`}
+                      </Badge>
+                    </div>
+                    {!item.isOutOfStock && (
+                      <p className="text-xs text-yellow-600">
+                        Below threshold ({item.lowStockThreshold})
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </PageLayout>
+  );
+}

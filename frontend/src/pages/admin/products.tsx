@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ImageUpload } from "@/components/image-upload";
 import { Package, Plus, Edit, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 
@@ -377,26 +378,23 @@ export function ProductsManagementPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="category">Category</Label>
-                  <Input
-                    id="category"
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    placeholder="e.g., Vegetables"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="imageUrl">Image URL</Label>
-                  <Input
-                    id="imageUrl"
-                    type="url"
-                    value={formData.imageUrl}
-                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                    placeholder="https://..."
-                  />
-                </div>
+              <div>
+                <Label htmlFor="category">Category</Label>
+                <Input
+                  id="category"
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  placeholder="e.g., Vegetables"
+                />
+              </div>
+
+              <div>
+                <Label>Product Image</Label>
+                <ImageUpload
+                  value={formData.imageUrl}
+                  onChange={(url) => setFormData({ ...formData, imageUrl: url })}
+                  onClear={() => setFormData({ ...formData, imageUrl: "" })}
+                />
               </div>
             </div>
 

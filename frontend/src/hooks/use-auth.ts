@@ -15,6 +15,29 @@ export function useAuth() {
     retry: false,
   });
 
+  // Auto-set context when session data is loaded
+  useEffect(() => {
+    if (!sessionQuery.data) return;
+
+    // Auto-set context if not already set
+    const tenantId = localStorage.getItem("freshflow:tenantId");
+    const accountId = localStorage.getItem("freshflow:accountId");
+
+    if (!tenantId && !accountId && sessionQuery.data.memberships.length > 0) {
+      // Find first membership and set context
+      const firstMembership = sessionQuery.data.memberships[0];
+
+      if (firstMembership.account) {
+        // Account membership - set both tenant and account
+        localStorage.setItem("freshflow:tenantId", firstMembership.account.tenantId);
+        localStorage.setItem("freshflow:accountId", firstMembership.account.id);
+      } else if (firstMembership.tenant) {
+        // Tenant membership - set only tenant
+        localStorage.setItem("freshflow:tenantId", firstMembership.tenant.id);
+      }
+    }
+  }, [sessionQuery.data]);
+
   useEffect(() => {
     // Development mode bypass
     if (import.meta.env.DEV) {

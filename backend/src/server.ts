@@ -1,5 +1,4 @@
 import express from "express";
-import cors from "cors";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "./router.js";
 import { createContext } from "./trpc.js";
@@ -8,27 +7,68 @@ import { authenticateRequest } from "./auth.js";
 import { canAccessAccount } from "./rbac.js";
 import { prisma } from "./db/prisma.js";
 import { handleIncomingMessage } from "./lib/whatsapp.js";
+import { cache } from "./lib/cache.js";
+import { auditLogger, AuditEventType, AuditSeverity } from "./lib/audit-logger.js";
+
+// Import middleware
+import { rateLimiters, adaptiveRateLimit } from "./middleware/rate-limit.js";
+import {
+  securityHeaders,
+  corsMiddleware,
+  requestId,
+  sanitizeInput,
+  jsonParser,
+  errorHandler,
+  notFoundHandler,
+} from "./middleware/security.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
-app.use(cors({
-  origin: process.env.VITE_API_URL || "http://localhost:5173",
-  credentials: true,
-}));
-app.use(express.json());
+// ========== Security Middleware (order matters!) ==========
 
-// Health check endpoint
+// 1. Request ID for tracing
+app.use(requestId);
+
+// 2. Security headers
+app.use(securityHeaders);
+
+// 3. CORS configuration
+app.use(corsMiddleware({
+  origins: process.env.ALLOWED_ORIGINS?.split(",") || [
+    "http://localhost:5173",
+    "http://localhost:3000",
+  ],
+}));
+
+// 4. JSON body parser with size limit
+app.use(express.json({ limit: "10mb" }));
+app.use(jsonParser("10mb"));
+
+// 5. Input sanitization
+app.use(sanitizeInput);
+
+// 6. Global rate limiting
+app.use(adaptiveRateLimit);
+
+// ========== Health Check (no auth required) ==========
 app.get("/health", (_req, res) => {
   res.json({
     status: "ok",
     timestamp: new Date().toISOString(),
+    cache: cache.isAvailable() ? "connected" : "memory-only",
+    version: process.env.npm_package_version || "1.0.0",
   });
 });
 
-// PDF delivery note endpoint
-app.get("/api/delivery-note/:orderId.pdf", async (req, res) => {
+// ========== API Versioning ==========
+// All API routes go under /api/v1
+const apiV1 = express.Router();
+
+// ========== PDF Delivery Note Endpoint ==========
+apiV1.get("/delivery-note/:orderId.pdf", rateLimiters.read, async (req, res) => {
+  const requestIdHeader = (req as any).requestId;
+
   try {
     const { orderId } = req.params;
     const authHeader = req.headers.authorization as string | undefined;
@@ -38,9 +78,16 @@ app.get("/api/delivery-note/:orderId.pdf", async (req, res) => {
     try {
       userId = await authenticateRequest(authHeader);
     } catch (error) {
+      auditLogger.logRequest(req, AuditEventType.AUTH_FAILED, "pdf_access", {
+        success: false,
+        severity: AuditSeverity.WARNING,
+        details: { orderId },
+      });
+
       return res.status(401).json({
         error: "Authentication required",
         message: error instanceof Error ? error.message : "Unknown error",
+        requestId: requestIdHeader,
       });
     }
 
@@ -55,21 +102,41 @@ app.get("/api/delivery-note/:orderId.pdf", async (req, res) => {
     });
 
     if (!order) {
-      return res.status(404).json({ error: "Order not found" });
+      return res.status(404).json({
+        error: "Order not found",
+        requestId: requestIdHeader,
+      });
     }
 
     // Check if user can access this order's account
     const hasAccess = await canAccessAccount(userId, order.accountId);
 
     if (!hasAccess) {
+      auditLogger.logRequest(req, AuditEventType.SECURITY_VIOLATION, "unauthorized_pdf_access", {
+        success: false,
+        severity: AuditSeverity.WARNING,
+        resourceType: "Order",
+        resourceId: orderId,
+        details: { userId, accountId: order.accountId },
+      });
+
       return res.status(403).json({
         error: "Access denied",
         message: "You do not have permission to access this order",
+        requestId: requestIdHeader,
       });
     }
 
     // Generate PDF
     const pdfBuffer = await generateDeliveryNotePDF(orderId);
+
+    // Log successful access
+    auditLogger.logRequest(req, AuditEventType.ORDER_UPDATED, "pdf_generated", {
+      success: true,
+      resourceType: "Order",
+      resourceId: orderId,
+      details: { orderNumber: order.orderNumber },
+    });
 
     // Send PDF response
     res.setHeader("Content-Type", "application/pdf");
@@ -78,19 +145,26 @@ app.get("/api/delivery-note/:orderId.pdf", async (req, res) => {
       `inline; filename="delivery-note-${order.orderNumber}.pdf"`
     );
     res.setHeader("Content-Length", pdfBuffer.length);
+    res.setHeader("Cache-Control", "private, max-age=300"); // Cache for 5 minutes
 
     return res.send(pdfBuffer);
   } catch (error) {
     console.error("Error generating PDF:", error);
+
+    auditLogger.logError("pdf_generation", error instanceof Error ? error.message : "Unknown error", {
+      orderId: req.params.orderId,
+    });
+
     return res.status(500).json({
       error: "PDF generation failed",
       message: error instanceof Error ? error.message : "Unknown error",
+      requestId: requestIdHeader,
     });
   }
 });
 
-// WhatsApp webhook endpoint (Twilio)
-app.post("/api/whatsapp/webhook", async (req, res) => {
+// ========== WhatsApp Webhook Endpoint ==========
+apiV1.post("/whatsapp/webhook", rateLimiters.webhook, async (req, res) => {
   try {
     const { From, Body } = req.body;
 
@@ -119,6 +193,9 @@ app.post("/api/whatsapp/webhook", async (req, res) => {
     }
   } catch (error) {
     console.error("WhatsApp webhook error:", error);
+
+    auditLogger.logError("whatsapp_webhook", error instanceof Error ? error.message : "Unknown error");
+
     return res.status(500).json({
       error: "Webhook processing failed",
       message: error instanceof Error ? error.message : "Unknown error",
@@ -126,48 +203,85 @@ app.post("/api/whatsapp/webhook", async (req, res) => {
   }
 });
 
-// tRPC endpoint
+// Mount API v1 routes
+app.use("/api/v1", apiV1);
+
+// Also support legacy routes (without /api/v1 prefix) for backward compatibility
+app.use("/api", apiV1);
+
+// ========== tRPC Endpoint ==========
 app.use(
   "/trpc",
+  rateLimiters.standard,
   createExpressMiddleware({
     router: appRouter,
     createContext,
+    onError: ({ error, path }) => {
+      console.error(`tRPC Error on ${path}:`, error);
+
+      auditLogger.logError(`trpc_${path}`, error.message, {
+        path,
+        code: error.code,
+      });
+    },
   })
 );
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({
-    error: "Not found",
-    path: req.path,
+// ========== Error Handling ==========
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+// ========== Server Startup ==========
+async function startServer() {
+  // Initialize cache connection
+  await cache.connect();
+
+  // Start server
+  app.listen(PORT, () => {
+    console.log(`\n🚀 FreshFlow Backend v1.0.0`);
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    console.log(`📡 Server:     http://localhost:${PORT}`);
+    console.log(`📊 tRPC:       http://localhost:${PORT}/trpc`);
+    console.log(`📄 API v1:     http://localhost:${PORT}/api/v1`);
+    console.log(`🏥 Health:     http://localhost:${PORT}/health`);
+    console.log(`🔒 Security:   Headers, CORS, Rate Limiting enabled`);
+    console.log(`📦 Cache:      ${cache.isAvailable() ? "Redis connected" : "In-memory mode"}`);
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
   });
+}
+
+// ========== Graceful Shutdown ==========
+async function shutdown(signal: string) {
+  console.log(`\n👋 Received ${signal}, shutting down gracefully...`);
+
+  try {
+    await cache.disconnect();
+    await prisma.$disconnect();
+    console.log("✅ All connections closed");
+    process.exit(0);
+  } catch (error) {
+    console.error("Error during shutdown:", error);
+    process.exit(1);
+  }
+}
+
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+// Handle uncaught exceptions
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught Exception:", error);
+  auditLogger.logError("uncaught_exception", error.message, { stack: error.stack });
+  shutdown("uncaughtException");
 });
 
-// Error handler
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error("Server error:", err);
-  res.status(500).json({
-    error: "Internal server error",
-    message: process.env.NODE_ENV === "development" ? err.message : undefined,
-  });
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled Rejection:", reason);
+  auditLogger.logError("unhandled_rejection", String(reason));
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 FreshFlow backend running on http://localhost:${PORT}`);
-  console.log(`📊 tRPC endpoint: http://localhost:${PORT}/trpc`);
-  console.log(`🏥 Health check: http://localhost:${PORT}/health`);
-});
-
-// Graceful shutdown
-process.on("SIGINT", async () => {
-  console.log("\n👋 Shutting down gracefully...");
-  await prisma.$disconnect();
-  process.exit(0);
-});
-
-process.on("SIGTERM", async () => {
-  console.log("\n👋 Shutting down gracefully...");
-  await prisma.$disconnect();
-  process.exit(0);
+// Start the server
+startServer().catch((error) => {
+  console.error("Failed to start server:", error);
+  process.exit(1);
 });

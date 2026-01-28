@@ -303,6 +303,7 @@ export function OrdersPage() {
                       </div>
                     )}
                   </div>
+                  </div>
                 </div>
               </div>
 

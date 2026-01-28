@@ -92,16 +92,6 @@ export function StockManagementPage() {
     },
   });
 
-  const toggleAvailabilityMutation = trpc.stock.toggleAvailability.useMutation({
-    onSuccess: () => {
-      toast.success("Availability updated");
-      utils.stock.getStockLevels.invalidate();
-    },
-    onError: (error) => {
-      toast.error("Failed to update availability", { description: error.message });
-    },
-  });
-
   const openModal = (
     type: "add" | "remove" | "adjust",
     option: {

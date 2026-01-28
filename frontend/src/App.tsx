@@ -6,8 +6,17 @@ import { ProtectedRoute } from "./components/protected-route";
 import { ToastProvider } from "./components/toast";
 import { Toaster } from "./components/ui/sonner";
 
+// Smart redirect: goes to dashboard if logged in, login if not
+function RootRedirect() {
+  const isLoggedIn =
+    !!localStorage.getItem("freshflow:dev-user-email") ||
+    !!localStorage.getItem("freshflow:tenantId");
+  return <Navigate to={isLoggedIn ? "/dashboard" : "/login"} replace />;
+}
+
 // Pages
 import { LoginPage } from "./pages/login";
+import { DashboardPage } from "./pages/dashboard";
 import { CatalogPage } from "./pages/chef/catalog";
 import { CartPage } from "./pages/chef/cart";
 import { OrdersPage } from "./pages/chef/orders";
@@ -24,7 +33,7 @@ function App() {
         defaultOptions: {
           queries: {
             staleTime: 1000 * 60 * 5, // 5 minutes - data stays fresh for 5 min
-            cacheTime: 1000 * 60 * 30, // 30 minutes - cache persists even if unused
+            gcTime: 1000 * 60 * 30, // 30 minutes - cache persists even if unused
             retry: 1, // Retry failed queries once
             refetchOnWindowFocus: true, // Refetch when user returns to tab
             refetchOnReconnect: true, // Refetch when internet reconnects
@@ -47,6 +56,16 @@ function App() {
             <Routes>
             {/* Public routes */}
             <Route path="/login" element={<LoginPage />} />
+
+            {/* Dashboard (protected, all roles) */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Chef routes (protected) */}
             <Route
@@ -74,11 +93,11 @@ function App() {
               }
             />
 
-            {/* Admin routes (protected) */}
+            {/* Admin routes (protected, admin roles only) */}
             <Route
               path="/admin/products"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requireAdmin>
                   <ProductsManagementPage />
                 </ProtectedRoute>
               }
@@ -86,7 +105,7 @@ function App() {
             <Route
               path="/admin/customers"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requireAdmin>
                   <CustomersManagementPage />
                 </ProtectedRoute>
               }
@@ -94,7 +113,7 @@ function App() {
             <Route
               path="/admin/stock"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requireAdmin>
                   <StockManagementPage />
                 </ProtectedRoute>
               }
@@ -102,7 +121,7 @@ function App() {
             <Route
               path="/admin/weighing/:orderId"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requireAdmin>
                   <WeighingPage />
                 </ProtectedRoute>
               }
@@ -110,15 +129,15 @@ function App() {
             <Route
               path="/admin/finalize/:orderId"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requireAdmin>
                   <FinalizePage />
                 </ProtectedRoute>
               }
             />
 
-            {/* Default redirect */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
+            {/* Default redirect - dashboard if logged in, login if not */}
+            <Route path="/" element={<RootRedirect />} />
+            <Route path="*" element={<RootRedirect />} />
             </Routes>
           </BrowserRouter>
         </ToastProvider>

@@ -11,13 +11,13 @@ import { toast } from "sonner";
 import { Calendar, MessageSquare, Trash2 } from "lucide-react";
 
 export function CartPage() {
-  const { items, updateQuantity, updateNotes, removeItem, clear, subtotal } = useCart();
+  const { items, updateQuantity, updateNotes, removeItem, subtotal, draftOrderId } = useCart();
   const [submitting, setSubmitting] = useState(false);
   const [orderNotes, setOrderNotes] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
   const navigate = useNavigate();
 
-  const createOrderMutation = trpc.orders.create.useMutation();
+  const submitDraftMutation = trpc.orders.submitDraft.useMutation();
 
   // Set default delivery date to tomorrow
   useState(() => {
@@ -27,35 +27,30 @@ export function CartPage() {
   });
 
   const handleSubmit = async () => {
-    if (items.length === 0) return;
+    if (items.length === 0) {
+      toast.error("Cart is empty");
+      return;
+    }
+
+    if (!draftOrderId) {
+      toast.error("Draft order not found");
+      return;
+    }
 
     setSubmitting(true);
     try {
-      const notesText = [
-        orderNotes.trim(),
-        deliveryDate ? `Delivery Date: ${new Date(deliveryDate).toLocaleDateString("pt-BR")}` : "",
-      ]
-        .filter(Boolean)
-        .join(" | ");
-
-      const order = await createOrderMutation.mutateAsync({
-        notes: notesText || undefined,
-        items: items.map((item) => ({
-          productOptionId: item.productOptionId,
-          requestedQty: item.requestedQty,
-          isExtra: false,
-        })),
+      const order = await submitDraftMutation.mutateAsync({
+        orderId: draftOrderId,
       });
 
-      clear();
-      toast.success(`Order created: ${order.orderNumber}`, {
+      toast.success(`Order submitted: ${order.orderNumber}`, {
         description: deliveryDate
           ? `Scheduled for ${new Date(deliveryDate).toLocaleDateString("pt-BR")}`
           : undefined,
       });
       navigate("/chef/orders");
     } catch (error) {
-      toast.error("Failed to create order", {
+      toast.error("Failed to submit order", {
         description: error instanceof Error ? error.message : "Unknown error",
       });
     } finally {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/hooks/use-auth";
 import { useCart } from "@/hooks/use-cart";
 import { useFavorites } from "@/hooks/use-favorites";
 import { PageLayout } from "@/components/page-layout";
@@ -8,12 +9,13 @@ import { ProductCardSkeleton } from "@/components/ui/skeleton";
 import { CartPreview } from "@/components/cart-preview";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Clock, Plus, Minus, Check, Star, AlertTriangle, XCircle, CheckCircle } from "lucide-react";
+import { X, Clock, Plus, Minus, Check, Star, AlertTriangle, XCircle, CheckCircle, Tag } from "lucide-react";
 
 const RECENT_SEARCHES_KEY = "freshflow:recent-searches";
 const MAX_RECENT_SEARCHES = 5;
 
 export function CatalogPage() {
+  const { session } = useAuth();
   const [search, setSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [showRecentSearches, setShowRecentSearches] = useState(false);
@@ -25,10 +27,17 @@ export function CatalogPage() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
-  const { items, addItem, updateQuantity, count } = useCart();
+  const { items, addItem, updateQuantity, count, isSyncing } = useCart();
   const { toggleFavorite, isFavorite, count: favoritesCount } = useFavorites();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Get customer ID from session
+  const accountId = localStorage.getItem("freshflow:accountId");
+  const currentMembership = session?.memberships?.find(
+    (m: any) => m.account?.id === accountId
+  );
+  const customerId = currentMembership?.account?.customerId;
 
   // Load recent searches from localStorage
   useEffect(() => {
@@ -97,6 +106,7 @@ export function CatalogPage() {
     unitType: unitType || undefined,
     sortBy,
     sortOrder,
+    customerId: customerId || undefined,
   });
 
   return (
@@ -307,7 +317,7 @@ export function CatalogPage() {
                 optionName: option.name,
                 unitType: option.unitType,
                 requestedQty: 1,
-                price: option.basePrice,
+                price: (option as any).resolvedPrice || option.basePrice,
               });
               setJustAddedId(option.id);
               setTimeout(() => setJustAddedId(null), 2000);
@@ -372,9 +382,17 @@ export function CatalogPage() {
                     <span className="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-700">
                       {option.unitType === "FIXED" ? "Fixed unit" : "By weight"}
                     </span>
-                    <p className="text-lg font-bold text-primary">
-                      R$ {(option.basePrice / 100).toFixed(2)}
-                    </p>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-primary">
+                        R$ {(((option as any).resolvedPrice || option.basePrice) / 100).toFixed(2)}
+                      </p>
+                      {(option as any).hasCustomerPrice && (
+                        <div className="flex items-center gap-1 text-xs text-green-600">
+                          <Tag className="h-3 w-3" />
+                          <span>Special price</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Quick Quantity Picker */}
@@ -382,18 +400,18 @@ export function CatalogPage() {
                     <div className="mt-4 flex items-center gap-2">
                       <button
                         onClick={() => updateQuantity(option.id, Math.max(0.1, cartItem.requestedQty - 1))}
-                        disabled={isOutOfStock}
+                        disabled={isOutOfStock || isSyncing}
                         className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary text-primary hover:bg-primary hover:text-white transition-colors flex items-center justify-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Minus className="h-4 w-4" />
                       </button>
                       <div className="flex-1 text-center">
                         <p className="text-lg font-bold text-primary">{cartItem.requestedQty}</p>
-                        <p className="text-xs text-gray-500">in cart</p>
+                        <p className="text-xs text-gray-500">{isSyncing ? "syncing..." : "in cart"}</p>
                       </div>
                       <button
                         onClick={() => updateQuantity(option.id, cartItem.requestedQty + 1)}
-                        disabled={isOutOfStock}
+                        disabled={isOutOfStock || isSyncing}
                         className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary bg-primary text-white hover:bg-primary/90 transition-colors flex items-center justify-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Plus className="h-4 w-4" />
@@ -402,7 +420,7 @@ export function CatalogPage() {
                   ) : (
                     <button
                       onClick={handleAddToCart}
-                      disabled={isOutOfStock}
+                      disabled={isOutOfStock || isSyncing}
                       className={`mt-4 w-full px-4 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                         isOutOfStock
                           ? "bg-gray-300 text-gray-600"
@@ -420,6 +438,11 @@ export function CatalogPage() {
                         <>
                           <Check className="h-5 w-5" />
                           Added!
+                        </>
+                      ) : isSyncing ? (
+                        <>
+                          <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Adding...
                         </>
                       ) : (
                         <>
