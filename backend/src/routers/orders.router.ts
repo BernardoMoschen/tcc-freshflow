@@ -16,6 +16,10 @@ import {
   sendOrderCreatedNotification,
   sendOrderFinalizedNotification,
 } from "../lib/whatsapp.js";
+import {
+  validateStockAvailability,
+  deductStockForOrder,
+} from "../lib/stock-manager.js";
 
 export const ordersRouter = router({
   /**
@@ -436,6 +440,12 @@ export const ordersRouter = router({
 
       // Validate can finalize
       validateOrderCanFinalize(order);
+
+      // Validate stock availability
+      await validateStockAvailability(ctx.prisma, input.id);
+
+      // Deduct stock and create movement records
+      await deductStockForOrder(ctx.prisma, input.id, ctx.userId);
 
       // Update order status to FINALIZED
       const finalizedOrder = await ctx.prisma.order.update({

@@ -127,6 +127,7 @@ model ProductOption {
   updatedAt         DateTime        @updatedAt
   customerPrices    CustomerPrice[]
   orderItems        OrderItem[]
+  stockMovements    StockMovement[]
 
   @@index([productId])
   @@index([unitType])
@@ -233,4 +234,31 @@ model DeliveryNote {
   generatedBy String // userId
 
   @@index([orderId])
+}
+
+// StockMovement - audit trail for all stock changes
+model StockMovement {
+  id              String             @id @default(uuid())
+  productOptionId String
+  productOption   ProductOption      @relation(fields: [productOptionId], references: [id], onDelete: Cascade)
+  type            StockMovementType
+  quantity        Float // positive for additions, negative for deductions
+  orderId         String? // if related to an order
+  orderItemId     String? // specific order item for traceability
+  notes           String?
+  userId          String // who performed the action
+  createdAt       DateTime           @default(now())
+
+  @@index([productOptionId])
+  @@index([orderId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum StockMovementType {
+  ORDER_FINALIZED // Stock deducted when order finalized
+  MANUAL_ADDITION // Manual stock increase
+  MANUAL_DEDUCTION // Manual stock decrease
+  ADJUSTMENT // Inventory reconciliation
+  RETURN // Customer return
 }
