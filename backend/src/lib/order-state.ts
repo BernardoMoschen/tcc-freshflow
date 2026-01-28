@@ -1,5 +1,6 @@
 import { OrderStatus, RoleType } from "@prisma/client";
 import type { Order, OrderItem, ProductOption } from "@prisma/client";
+import { Errors } from "./errors.js";
 
 /**
  * Valid order status transitions
@@ -29,7 +30,7 @@ export function validateOrderTransition(
   targetStatus: OrderStatus
 ): void {
   if (!canTransition(order.status, targetStatus)) {
-    throw new Error(
+    throw Errors.badRequest(
       `Invalid transition from ${order.status} to ${targetStatus}`
     );
   }
@@ -48,7 +49,7 @@ export function isOrderImmutable(order: Order): boolean {
  */
 export function validateOrderMutable(order: Order): void {
   if (isOrderImmutable(order)) {
-    throw new Error(
+    throw Errors.badRequest(
       `Order ${order.orderNumber} is ${order.status} and cannot be modified`
     );
   }
@@ -64,7 +65,7 @@ export function validateOrderCanFinalize(
   }
 ): void {
   if (order.status === OrderStatus.FINALIZED) {
-    throw new Error(`Order ${order.orderNumber} is already finalized`);
+    throw Errors.orderAlreadyFinalized(order.orderNumber);
   }
 
   // Check all WEIGHT items have actualWeight
@@ -81,8 +82,8 @@ export function validateOrderCanFinalize(
       .map((item) => item.productOption.name)
       .join(", ");
 
-    throw new Error(
-      `Cannot finalize order: ${unweighedItems.length} item(s) not yet weighed: ${itemDescriptions}`
+    throw Errors.orderNotReady(
+      `${unweighedItems.length} item(s) not yet weighed: ${itemDescriptions}`
     );
   }
 }
@@ -96,16 +97,12 @@ export function validateCanWeighItem(
 ): void {
   // Cannot weigh finalized orders
   if (order.status === OrderStatus.FINALIZED) {
-    throw new Error(
-      `Cannot weigh items in finalized order ${order.orderNumber}`
-    );
+    throw Errors.orderAlreadyFinalized(order.orderNumber);
   }
 
   // Only WEIGHT type items can be weighed
   if (orderItem.productOption.unitType !== "WEIGHT") {
-    throw new Error(
-      `Cannot weigh FIXED item: ${orderItem.productOption.name}`
-    );
+    throw Errors.cannotWeighFixedItem();
   }
 }
 

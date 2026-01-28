@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import { logger } from "./logger.js";
 
 /**
  * Custom error class for business logic errors
@@ -82,9 +83,21 @@ export const Errors = {
 };
 
 /**
+ * Error context type for structured logging
+ */
+interface ErrorContext {
+  operation?: string;
+  userId?: string;
+  tenantId?: string;
+  accountId?: string;
+  resourceId?: string;
+  [key: string]: string | number | boolean | undefined;
+}
+
+/**
  * Log error with structured format
  */
-export function logError(error: unknown, context?: Record<string, any>) {
+export function logError(error: unknown, context?: ErrorContext): void {
   const errorInfo = {
     message: error instanceof Error ? error.message : String(error),
     stack: error instanceof Error ? error.stack : undefined,
@@ -92,7 +105,7 @@ export function logError(error: unknown, context?: Record<string, any>) {
     timestamp: new Date().toISOString(),
   };
 
-  console.error("🚨 Backend Error:", errorInfo);
+  logger.error("🚨 Backend Error:", errorInfo);
 
   // In production, send to error tracking service (Sentry, etc.)
   // if (process.env.NODE_ENV === "production") {
@@ -105,7 +118,7 @@ export function logError(error: unknown, context?: Record<string, any>) {
  */
 export async function withErrorLogging<T>(
   operation: () => Promise<T>,
-  context?: Record<string, any>
+  context?: ErrorContext
 ): Promise<T> {
   try {
     return await operation();
@@ -113,4 +126,34 @@ export async function withErrorLogging<T>(
     logError(error, context);
     throw error;
   }
+}
+
+/**
+ * Convert any error to TRPCError for consistent handling
+ */
+export function toTRPCError(error: unknown): TRPCError {
+  if (error instanceof TRPCError) {
+    return error;
+  }
+
+  if (error instanceof BusinessError) {
+    return new TRPCError({
+      code: "BAD_REQUEST",
+      message: error.message,
+      cause: error,
+    });
+  }
+
+  if (error instanceof Error) {
+    return new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: error.message,
+      cause: error,
+    });
+  }
+
+  return new TRPCError({
+    code: "INTERNAL_SERVER_ERROR",
+    message: String(error),
+  });
 }

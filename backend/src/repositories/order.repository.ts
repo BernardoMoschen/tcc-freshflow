@@ -1,5 +1,6 @@
 import { PrismaClient, OrderStatus, Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma.js";
+import { Errors } from "../lib/errors.js";
 
 export interface CreateOrderInput {
   accountId: string;
@@ -76,23 +77,32 @@ export class OrderRepository {
 
   /**
    * Get or create draft order for a user
+   * Uses transaction with row-level locking to prevent race conditions (TOCTOU)
    */
   async getOrCreateDraft(accountId: string, customerId: string, createdBy: string) {
-    // Find existing draft
-    let draft = await this.db.order.findFirst({
-      where: {
-        accountId,
-        status: OrderStatus.DRAFT,
-        createdBy,
-      },
-      include: this.orderInclude,
-      orderBy: { updatedAt: "desc" },
-    });
+    return this.db.$transaction(async (tx) => {
+      // Use FOR UPDATE to lock any existing draft row and prevent concurrent creation
+      const existingDrafts = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM "Order"
+        WHERE "accountId" = ${accountId}::uuid
+          AND "createdBy" = ${createdBy}::uuid
+          AND status = 'DRAFT'
+        FOR UPDATE
+        LIMIT 1
+      `;
 
-    if (!draft) {
-      draft = await this.db.order.create({
+      if (existingDrafts.length > 0) {
+        // Return the existing draft with full includes
+        return tx.order.findUnique({
+          where: { id: existingDrafts[0].id },
+          include: this.orderInclude,
+        });
+      }
+
+      // No existing draft found (and we hold the lock), create new one
+      return tx.order.create({
         data: {
-          orderNumber: `DRAFT-${Date.now()}`,
+          orderNumber: `DRAFT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           accountId,
           customerId,
           status: OrderStatus.DRAFT,
@@ -100,9 +110,9 @@ export class OrderRepository {
         },
         include: this.orderInclude,
       });
-    }
-
-    return draft;
+    }, {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    });
   }
 
   /**
@@ -175,7 +185,7 @@ export class OrderRepository {
   }) {
     const { accountId, status, skip = 0, take = 20 } = params;
 
-    const where: any = {};
+    const where: Prisma.OrderWhereInput = {};
     if (accountId) where.accountId = accountId;
     if (status) where.status = status;
 
@@ -207,11 +217,11 @@ export class OrderRepository {
       `;
 
       if (!locked) {
-        throw new Error(`Order not found: ${orderId}`);
+        throw Errors.notFound("Order", orderId);
       }
 
       if (locked.status === OrderStatus.FINALIZED) {
-        throw new Error("Order is already finalized");
+        throw Errors.badRequest("Order is already finalized");
       }
 
       return tx.order.update({

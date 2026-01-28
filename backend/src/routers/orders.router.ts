@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure, accountProcedure, tenantAdminProcedure } from "../trpc.js";
-import { OrderStatus } from "@prisma/client";
+import { OrderStatus, Prisma } from "@prisma/client";
+import { logger } from "../lib/logger.js";
 import {
   resolvePrice,
   calculateFixedItemPrice,
@@ -140,7 +141,7 @@ export const ordersRouter = router({
             order.customer.account.name
           );
         } catch (error) {
-          console.error("Failed to send WhatsApp notification:", error);
+          logger.error("Failed to send WhatsApp notification:", error);
           // Don't fail the order creation if notification fails
         }
       }
@@ -442,7 +443,7 @@ export const ordersRouter = router({
           );
         }
       } catch (error) {
-        console.error("Failed to send WhatsApp notification:", error);
+        logger.error("Failed to send WhatsApp notification:", error);
       }
 
       return submittedOrder;
@@ -559,7 +560,7 @@ export const ordersRouter = router({
       const { status, search, skip, take } = input;
 
       // Build where clause for orders in this tenant
-      const where: any = {
+      const where: Prisma.OrderWhereInput = {
         account: {
           tenantId: ctx.tenantId,
         },
@@ -622,6 +623,7 @@ export const ordersRouter = router({
 
   /**
    * Get single order with full details
+   * Access: user must belong to order's account OR be tenant admin of order's tenant
    */
   get: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
@@ -657,6 +659,39 @@ export const ordersRouter = router({
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Order not found",
+        });
+      }
+
+      // Security: Verify user has access to this order
+      // Check 1: User belongs to the order's account
+      const isAccountMember = ctx.accountId && order.accountId === ctx.accountId;
+
+      // Check 2: User is a tenant admin for the order's tenant
+      let isTenantAdmin = false;
+      if (ctx.tenantId) {
+        const membership = await ctx.prisma.membership.findFirst({
+          where: {
+            userId: ctx.userId,
+            OR: [
+              { tenantId: ctx.tenantId },
+              { role: { name: "PLATFORM_ADMIN" } },
+            ],
+          },
+          include: { role: true },
+        });
+        const adminRoles = ["PLATFORM_ADMIN", "TENANT_OWNER", "TENANT_ADMIN"];
+        isTenantAdmin = !!membership && adminRoles.includes(membership.role.name);
+
+        // Also verify order belongs to this tenant
+        if (isTenantAdmin && order.customer.account.tenantId !== ctx.tenantId) {
+          isTenantAdmin = false;
+        }
+      }
+
+      if (!isAccountMember && !isTenantAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Access denied to this order",
         });
       }
 
@@ -913,7 +948,7 @@ export const ordersRouter = router({
             pdfUrl
           );
         } catch (error) {
-          console.error("Failed to send WhatsApp notification:", error);
+          logger.error("Failed to send WhatsApp notification:", error);
           // Don't fail the finalization if notification fails
         }
       }
@@ -940,6 +975,14 @@ export const ordersRouter = router({
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Order not found",
+        });
+      }
+
+      // Security: Verify user owns this draft order
+      if (order.createdBy !== ctx.userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You can only edit your own draft orders",
         });
       }
 
@@ -1222,7 +1265,12 @@ export const ordersRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      const where: any = {};
+      // Security: Always filter by tenant to prevent cross-tenant data exposure
+      const where: Prisma.OrderWhereInput = {
+        account: {
+          tenantId: ctx.tenantId,
+        },
+      };
 
       if (input.orderIds && input.orderIds.length > 0) {
         where.id = { in: input.orderIds };

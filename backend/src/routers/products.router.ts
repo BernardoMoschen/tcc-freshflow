@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { router, protectedProcedure, tenantProcedure, tenantAdminProcedure } from "../trpc.js";
+import { Prisma } from "@prisma/client";
+import { router, tenantProcedure, tenantAdminProcedure } from "../trpc.js";
+import { resolvePricesBatch } from "../lib/price-engine.js";
 
 export const productsRouter = router({
   /**
@@ -24,7 +26,7 @@ export const productsRouter = router({
       const { skip, take, search, category, minPrice, maxPrice, unitType, sortBy, sortOrder, customerId } = input;
 
       // Build base where clause for products
-      const where: any = {
+      const where: Prisma.ProductWhereInput = {
         tenantId: ctx.tenantId,
         ...(search && {
           OR: [
@@ -36,7 +38,7 @@ export const productsRouter = router({
       };
 
       // Add filters for product options (price range, unit type)
-      const optionsFilter: any = {};
+      const optionsFilter: Prisma.ProductOptionWhereInput = {};
       if (minPrice !== undefined || maxPrice !== undefined || unitType !== undefined) {
         if (minPrice !== undefined || maxPrice !== undefined) {
           optionsFilter.basePrice = {};
@@ -50,21 +52,19 @@ export const productsRouter = router({
       }
 
       // Build orderBy clause
-      let orderBy: any;
-      if (sortBy === "price") {
-        // Sort by minimum option price
-        // Note: Prisma doesn't support direct sorting by aggregated fields,
-        // so we'll fetch all matching products and sort in memory for price
-        orderBy = { name: sortOrder };
-      } else {
-        orderBy = { name: sortOrder };
-      }
+      const orderBy: { name: "asc" | "desc" } = { name: sortOrder };
+
+      // Performance: When sorting by price, we need to fetch products and sort in memory
+      // because Prisma doesn't support sorting by aggregated related fields.
+      // To prevent unbounded queries, we limit to 500 products max for price sorting.
+      const PRICE_SORT_MAX_PRODUCTS = 500;
+      const isPriceSorting = sortBy === "price";
 
       const [items, total] = await Promise.all([
         ctx.prisma.product.findMany({
           where,
-          skip: sortBy === "price" ? 0 : skip,
-          take: sortBy === "price" ? undefined : take,
+          skip: isPriceSorting ? 0 : skip,
+          take: isPriceSorting ? PRICE_SORT_MAX_PRODUCTS : take,
           include: {
             options: {
               include: {
@@ -83,30 +83,20 @@ export const productsRouter = router({
         ctx.prisma.product.count({ where }),
       ]);
 
-      // Resolve customer prices
+      // Resolve customer prices using centralized price engine
       const itemsWithResolvedPrices = items.map((product) => ({
         ...product,
-        options: product.options.map((option: any) => {
-          const customerPrice =
-            option.customerPrices && option.customerPrices.length > 0
-              ? option.customerPrices[0].price
-              : null;
-
-          return {
-            ...option,
-            resolvedPrice: customerPrice || option.basePrice,
-            hasCustomerPrice: !!customerPrice,
-          };
-        }),
+        options: resolvePricesBatch(product.options),
       }));
 
       // Post-process for price sorting
       let processedItems = itemsWithResolvedPrices;
-      if (sortBy === "price") {
+      if (isPriceSorting) {
         // Calculate min price for each product
         const itemsWithMinPrice = itemsWithResolvedPrices.map((product) => {
-          const minPrice = Math.min(...product.options.map((opt) => opt.resolvedPrice));
-          return { ...product, minPrice };
+          const prices = product.options.map((opt) => opt.resolvedPrice);
+          const minOptionPrice = prices.length > 0 ? Math.min(...prices) : 0;
+          return { ...product, minPrice: minOptionPrice };
         });
 
         // Sort by min price
@@ -127,7 +117,7 @@ export const productsRouter = router({
   /**
    * Get single product with options and customer prices
    */
-  get: protectedProcedure
+  get: tenantProcedure
     .input(
       z.object({
         id: z.string().uuid(),
@@ -163,23 +153,15 @@ export const productsRouter = router({
         throw new Error("Product not found");
       }
 
-      // Format options with resolved prices
-      const optionsWithPrices = product.options.map((option) => {
-        const customerPrice =
-          option.customerPrices && option.customerPrices.length > 0
-            ? option.customerPrices[0].price
-            : null;
+      // Security: Verify product belongs to the requesting tenant
+      if (product.tenant.id !== ctx.tenantId) {
+        throw new Error("Product not found");
+      }
 
-        return {
-          ...option,
-          resolvedPrice: customerPrice || option.basePrice,
-          hasCustomerPrice: !!customerPrice,
-        };
-      });
-
+      // Format options with resolved prices using centralized price engine
       return {
         ...product,
-        options: optionsWithPrices,
+        options: resolvePricesBatch(product.options),
       };
     }),
 

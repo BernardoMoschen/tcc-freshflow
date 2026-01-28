@@ -1,6 +1,14 @@
 import { Request, Response, NextFunction } from "express";
 
 /**
+ * Extended Express Request with optional auth properties
+ */
+interface AuthenticatedRequest extends Request {
+  userId?: string;
+  requestId?: string;
+}
+
+/**
  * Rate limiter configuration
  */
 interface RateLimitConfig {
@@ -66,6 +74,16 @@ class RateLimitStore {
       }
     }
   }
+
+  /**
+   * Decrement the count for a key (used when skipping failed requests)
+   */
+  decrementCount(key: string): void {
+    const record = this.store.get(key);
+    if (record) {
+      record.count = Math.max(0, record.count - 1);
+    }
+  }
 }
 
 // Global store instance
@@ -110,10 +128,7 @@ export function rateLimit(config: RateLimitConfig) {
       res.on("finish", () => {
         if (res.statusCode >= 400) {
           // Decrement count for failed requests
-          const record = rateLimitStore["store"].get(key);
-          if (record) {
-            record.count = Math.max(0, record.count - 1);
-          }
+          rateLimitStore.decrementCount(key);
         }
       });
     }
@@ -187,8 +202,8 @@ export const rateLimiters = {
     maxRequests: 100,
     keyGenerator: (req) => {
       // Try to get user ID from request (set by auth middleware)
-      const userId = (req as any).userId;
-      if (userId) return `user:${userId}`;
+      const authReq = req as AuthenticatedRequest;
+      if (authReq.userId) return `user:${authReq.userId}`;
       return req.ip || "unknown";
     },
   }),

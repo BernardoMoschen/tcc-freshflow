@@ -16,7 +16,9 @@ import {
 import {
   sendOrderCreatedNotification,
   sendOrderFinalizedNotification,
+  OrderWithItems,
 } from "../lib/whatsapp.js";
+import { logger } from "../lib/logger.js";
 
 export interface CreateOrderInput {
   accountId: string;
@@ -114,7 +116,7 @@ export class OrderService {
 
     // Send notification (non-blocking)
     this.sendOrderCreatedNotification(order).catch((err) =>
-      console.error("Failed to send order notification:", err)
+      logger.error("Failed to send order notification:", err)
     );
 
     return order;
@@ -251,7 +253,7 @@ export class OrderService {
 
     // Send notification (non-blocking)
     this.sendOrderCreatedNotification(submittedOrder).catch((err) =>
-      console.error("Failed to send order notification:", err)
+      logger.error("Failed to send order notification:", err)
     );
 
     return submittedOrder;
@@ -453,7 +455,7 @@ export class OrderService {
 
     // Send notification (non-blocking)
     this.sendOrderFinalizedNotification(finalizedOrder, totalAmount).catch((err) =>
-      console.error("Failed to send finalization notification:", err)
+      logger.error("Failed to send finalization notification:", err)
     );
 
     return finalizedOrder;
@@ -519,21 +521,21 @@ export class OrderService {
   /**
    * Send order created notification
    */
-  private async sendOrderCreatedNotification(order: any) {
+  private async sendOrderCreatedNotification(order: OrderWithItems) {
     const phoneNumber = process.env.WHATSAPP_DEFAULT_PHONE;
     if (!phoneNumber) return;
 
     await sendOrderCreatedNotification(
       phoneNumber,
       order,
-      order.customer?.account?.name || "Unknown"
+      (order as OrderWithItems & { customer?: { account?: { name?: string } } }).customer?.account?.name || "Unknown"
     );
   }
 
   /**
    * Send order finalized notification
    */
-  private async sendOrderFinalizedNotification(order: any, totalAmount: number) {
+  private async sendOrderFinalizedNotification(order: OrderWithItems, totalAmount: number) {
     const phoneNumber = process.env.WHATSAPP_DEFAULT_PHONE;
     if (!phoneNumber) return;
 
@@ -544,7 +546,7 @@ export class OrderService {
     await sendOrderFinalizedNotification(
       phoneNumber,
       order,
-      order.customer?.account?.name || "Unknown",
+      (order as OrderWithItems & { customer?: { account?: { name?: string } } }).customer?.account?.name || "Unknown",
       totalAmount,
       pdfUrl
     );

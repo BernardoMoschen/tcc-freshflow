@@ -3,6 +3,7 @@ import type { CreateExpressContextOptions } from "@trpc/server/adapters/express"
 import { authenticateRequest } from "./auth.js";
 import { requireTenantAccess, requireAccountAccess } from "./rbac.js";
 import { prisma } from "./db/prisma.js";
+import { logger } from "./lib/logger.js";
 
 /**
  * Create tRPC context from Express request
@@ -26,14 +27,14 @@ export async function createContext({ req, res }: CreateExpressContextOptions) {
       });
       if (user) {
         userId = user.id;
-        console.log(`🔧 [DEV MODE] Authenticated as: ${devUserEmail}`);
+        logger.debug(`🔧 [DEV MODE] Authenticated as: ${devUserEmail}`);
       } else {
-        console.warn(`🔧 [DEV MODE] User not found: ${devUserEmail}`);
+        logger.warn(`🔧 [DEV MODE] User not found: ${devUserEmail}`);
       }
     }
   } catch (error) {
     // Don't throw here - let individual procedures decide if auth is required
-    console.error("Auth error:", error);
+    logger.error("Auth error:", error);
   }
 
   return {

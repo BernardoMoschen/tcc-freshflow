@@ -1,5 +1,46 @@
 import { prisma } from "../db/prisma.js";
-import type { OrderItem, ProductOption } from "@prisma/client";
+import type { OrderItem, ProductOption, CustomerPrice } from "@prisma/client";
+import { Errors } from "./errors.js";
+
+/**
+ * Type for product option with customer prices for batch resolution
+ */
+export interface ProductOptionWithCustomerPrices {
+  id: string;
+  basePrice: number;
+  customerPrices?: CustomerPrice[] | false;
+}
+
+/**
+ * Resolved price information for a product option
+ */
+export interface ResolvedPrice {
+  resolvedPrice: number;
+  hasCustomerPrice: boolean;
+}
+
+/**
+ * Resolve prices for multiple product options in batch
+ * More efficient than calling resolvePrice individually
+ */
+export function resolvePricesBatch<T extends ProductOptionWithCustomerPrices>(
+  options: T[]
+): (T & ResolvedPrice)[] {
+  return options.map((option) => {
+    const customerPrice =
+      option.customerPrices &&
+      Array.isArray(option.customerPrices) &&
+      option.customerPrices.length > 0
+        ? option.customerPrices[0].price
+        : null;
+
+    return {
+      ...option,
+      resolvedPrice: customerPrice ?? option.basePrice,
+      hasCustomerPrice: customerPrice !== null,
+    };
+  });
+}
 
 /**
  * Resolve price for a product option
@@ -38,7 +79,7 @@ export async function resolvePrice(
   });
 
   if (!productOption) {
-    throw new Error(`Product option ${productOptionId} not found`);
+    throw Errors.notFound("Product option", productOptionId);
   }
 
   return productOption.basePrice;

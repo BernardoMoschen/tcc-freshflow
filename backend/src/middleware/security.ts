@@ -1,4 +1,23 @@
 import { Request, Response, NextFunction } from "express";
+import { logger } from "../lib/logger.js";
+
+/**
+ * Extended Express Request with custom properties
+ */
+export interface ExtendedRequest extends Request {
+  requestId?: string;
+  userId?: string;
+}
+
+/**
+ * Input validation error thrown when input exceeds limits
+ */
+class InputValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InputValidationError";
+  }
+}
 
 /**
  * Security headers middleware (replaces helmet for simplicity)
@@ -119,8 +138,8 @@ export function corsMiddleware(config: Partial<CorsConfig> = {}) {
  * Request ID middleware for tracing
  */
 export function requestId(req: Request, res: Response, next: NextFunction) {
-  const id = req.headers["x-request-id"] as string || generateRequestId();
-  (req as any).requestId = id;
+  const id = (req.headers["x-request-id"] as string) || generateRequestId();
+  (req as ExtendedRequest).requestId = id;
   res.setHeader("X-Request-Id", id);
   next();
 }
@@ -137,41 +156,57 @@ function generateRequestId(): string {
 /**
  * Input sanitization middleware
  */
-export function sanitizeInput(req: Request, _res: Response, next: NextFunction): void {
-  // Sanitize body
-  if (req.body && typeof req.body === "object") {
-    sanitizeObject(req.body);
-  }
+export function sanitizeInput(req: Request, res: Response, next: NextFunction): void {
+  try {
+    // Sanitize body
+    if (req.body && typeof req.body === "object") {
+      sanitizeObject(req.body);
+    }
 
-  // Sanitize query params
-  if (req.query && typeof req.query === "object") {
-    sanitizeObject(req.query as Record<string, any>);
-  }
+    // Sanitize query params
+    if (req.query && typeof req.query === "object") {
+      sanitizeObject(req.query as Record<string, unknown>);
+    }
 
-  // Sanitize params
-  if (req.params && typeof req.params === "object") {
-    sanitizeObject(req.params as Record<string, any>);
-  }
+    // Sanitize params
+    if (req.params && typeof req.params === "object") {
+      sanitizeObject(req.params as Record<string, unknown>);
+    }
 
-  next();
+    next();
+  } catch (error) {
+    if (error instanceof InputValidationError) {
+      res.status(400).json({
+        error: "Bad Request",
+        message: error.message,
+      });
+      return;
+    }
+    throw error;
+  }
 }
+
+const MAX_STRING_LENGTH = 100000; // 100KB limit
 
 /**
  * Recursively sanitize object values
+ * @throws InputValidationError if string exceeds maximum length
  */
-function sanitizeObject(obj: Record<string, any>): void {
+function sanitizeObject(obj: Record<string, unknown>): void {
   for (const key of Object.keys(obj)) {
     const value = obj[key];
 
     if (typeof value === "string") {
+      // Reject strings that exceed the limit
+      if (value.length > MAX_STRING_LENGTH) {
+        throw new InputValidationError(
+          `Input field '${key}' exceeds maximum allowed length of ${MAX_STRING_LENGTH} characters`
+        );
+      }
       // Remove null bytes
       obj[key] = value.replace(/\0/g, "");
-      // Limit string length to prevent DoS
-      if (obj[key].length > 100000) {
-        obj[key] = obj[key].substring(0, 100000);
-      }
     } else if (typeof value === "object" && value !== null) {
-      sanitizeObject(value);
+      sanitizeObject(value as Record<string, unknown>);
     }
   }
 }
@@ -229,7 +264,7 @@ export function errorHandler(
   const requestId = (req as any).requestId || "unknown";
 
   // Log error with context
-  console.error({
+  logger.error("Request error", {
     error: err.message,
     stack: err.stack,
     requestId,

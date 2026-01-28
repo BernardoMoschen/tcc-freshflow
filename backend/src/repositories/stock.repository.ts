@@ -1,5 +1,6 @@
 import { PrismaClient, StockMovementType, Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma.js";
+import { Errors } from "../lib/errors.js";
 
 export interface StockMovementInput {
   productOptionId: string;
@@ -44,7 +45,7 @@ export class StockRepository {
       `;
 
       if (!locked) {
-        throw new Error(`Product option not found: ${productOptionId}`);
+        throw Errors.notFound("Product option", productOptionId);
       }
 
       const previousQuantity = locked.stockQuantity ?? 0;
@@ -97,13 +98,13 @@ export class StockRepository {
       `;
 
       if (!locked) {
-        throw new Error(`Product option not found: ${productOptionId}`);
+        throw Errors.notFound("Product option", productOptionId);
       }
 
       const previousQuantity = locked.stockQuantity ?? 0;
 
       if (previousQuantity < quantity) {
-        throw new Error(
+        throw Errors.badRequest(
           `Insufficient stock. Available: ${previousQuantity}, Requested: ${quantity}`
         );
       }
@@ -157,7 +158,7 @@ export class StockRepository {
       `;
 
       if (!locked) {
-        throw new Error(`Product option not found: ${productOptionId}`);
+        throw Errors.notFound("Product option", productOptionId);
       }
 
       const previousQuantity = locked.stockQuantity ?? 0;
@@ -219,13 +220,13 @@ export class StockRepository {
         `;
 
         if (!locked) {
-          throw new Error(`Product option not found: ${item.productOptionId}`);
+          throw Errors.notFound("Product option", item.productOptionId);
         }
 
         const previousQuantity = locked.stockQuantity ?? 0;
 
         if (previousQuantity < item.quantity) {
-          throw new Error(
+          throw Errors.badRequest(
             `Insufficient stock for item. Available: ${previousQuantity}, Required: ${item.quantity}`
           );
         }
@@ -292,7 +293,7 @@ export class StockRepository {
         `;
 
         if (!locked) {
-          throw new Error(`Product option not found: ${item.productOptionId}`);
+          throw Errors.notFound("Product option", item.productOptionId);
         }
 
         const previousQuantity = locked.stockQuantity ?? 0;
@@ -333,16 +334,25 @@ export class StockRepository {
 
   /**
    * Get stock movements with pagination
+   * Security: tenantId is required to prevent cross-tenant data exposure
    */
   async getMovements(params: {
+    tenantId: string;
     productOptionId?: string;
     type?: StockMovementType;
     skip?: number;
     take?: number;
   }) {
-    const { productOptionId, type, skip = 0, take = 50 } = params;
+    const { tenantId, productOptionId, type, skip = 0, take = 50 } = params;
 
-    const where: any = {};
+    // Build where clause with tenant filter through productOption -> product -> tenantId
+    const where: Prisma.StockMovementWhereInput = {
+      productOption: {
+        product: {
+          tenantId,
+        },
+      },
+    };
     if (productOptionId) where.productOptionId = productOptionId;
     if (type) where.type = type;
 
@@ -380,7 +390,7 @@ export class StockRepository {
   }) {
     const { tenantId, category, lowStockOnly = false, skip = 0, take = 50 } = params;
 
-    const where: any = { tenantId };
+    const where: Prisma.ProductWhereInput = { tenantId };
     if (category) where.category = category;
 
     const products = await this.db.product.findMany({

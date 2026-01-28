@@ -9,6 +9,8 @@ import { prisma } from "./db/prisma.js";
 import { handleIncomingMessage } from "./lib/whatsapp.js";
 import { cache } from "./lib/cache.js";
 import { auditLogger, AuditEventType, AuditSeverity } from "./lib/audit-logger.js";
+import { validateEnv } from "./lib/env.js";
+import { logger } from "./lib/logger.js";
 
 // Import middleware
 import { rateLimiters, adaptiveRateLimit } from "./middleware/rate-limit.js";
@@ -22,8 +24,11 @@ import {
   notFoundHandler,
 } from "./middleware/security.js";
 
+// Validate environment variables at startup (fail fast)
+const env = validateEnv();
+
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = env.PORT || 3001;
 
 // ========== Security Middleware (order matters!) ==========
 
@@ -149,7 +154,7 @@ apiV1.get("/delivery-note/:orderId.pdf", rateLimiters.read, async (req, res) => 
 
     return res.send(pdfBuffer);
   } catch (error) {
-    console.error("Error generating PDF:", error);
+    logger.error("Error generating PDF:", error);
 
     auditLogger.logError("pdf_generation", error instanceof Error ? error.message : "Unknown error", {
       orderId: req.params.orderId,
@@ -175,7 +180,7 @@ apiV1.post("/whatsapp/webhook", rateLimiters.webhook, async (req, res) => {
       });
     }
 
-    console.log(`[WhatsApp Webhook] Received message from ${From}: ${Body}`);
+    logger.info(`[WhatsApp Webhook] Received message from ${From}: ${Body}`);
 
     // Process incoming message and get auto-reply if available
     const reply = await handleIncomingMessage(From, Body);
@@ -192,7 +197,7 @@ apiV1.post("/whatsapp/webhook", rateLimiters.webhook, async (req, res) => {
       return res.status(200).json({ status: "received" });
     }
   } catch (error) {
-    console.error("WhatsApp webhook error:", error);
+    logger.error("WhatsApp webhook error:", error);
 
     auditLogger.logError("whatsapp_webhook", error instanceof Error ? error.message : "Unknown error");
 
@@ -217,7 +222,7 @@ app.use(
     router: appRouter,
     createContext,
     onError: ({ error, path }) => {
-      console.error(`tRPC Error on ${path}:`, error);
+      logger.error(`tRPC Error on ${path}:`, error);
 
       auditLogger.logError(`trpc_${path}`, error.message, {
         path,
@@ -238,29 +243,31 @@ async function startServer() {
 
   // Start server
   app.listen(PORT, () => {
-    console.log(`\n🚀 FreshFlow Backend v1.0.0`);
-    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`📡 Server:     http://localhost:${PORT}`);
-    console.log(`📊 tRPC:       http://localhost:${PORT}/trpc`);
-    console.log(`📄 API v1:     http://localhost:${PORT}/api/v1`);
-    console.log(`🏥 Health:     http://localhost:${PORT}/health`);
-    console.log(`🔒 Security:   Headers, CORS, Rate Limiting enabled`);
-    console.log(`📦 Cache:      ${cache.isAvailable() ? "Redis connected" : "In-memory mode"}`);
-    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+    logger.banner([
+      `\n🚀 FreshFlow Backend v1.0.0`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `📡 Server:     http://localhost:${PORT}`,
+      `📊 tRPC:       http://localhost:${PORT}/trpc`,
+      `📄 API v1:     http://localhost:${PORT}/api/v1`,
+      `🏥 Health:     http://localhost:${PORT}/health`,
+      `🔒 Security:   Headers, CORS, Rate Limiting enabled`,
+      `📦 Cache:      ${cache.isAvailable() ? "Redis connected" : "In-memory mode"}`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`,
+    ]);
   });
 }
 
 // ========== Graceful Shutdown ==========
 async function shutdown(signal: string) {
-  console.log(`\n👋 Received ${signal}, shutting down gracefully...`);
+  logger.info(`\n👋 Received ${signal}, shutting down gracefully...`);
 
   try {
     await cache.disconnect();
     await prisma.$disconnect();
-    console.log("✅ All connections closed");
+    logger.info("✅ All connections closed");
     process.exit(0);
   } catch (error) {
-    console.error("Error during shutdown:", error);
+    logger.error("Error during shutdown:", error);
     process.exit(1);
   }
 }
@@ -270,18 +277,18 @@ process.on("SIGTERM", () => shutdown("SIGTERM"));
 
 // Handle uncaught exceptions
 process.on("uncaughtException", (error) => {
-  console.error("Uncaught Exception:", error);
+  logger.error("Uncaught Exception:", error);
   auditLogger.logError("uncaught_exception", error.message, { stack: error.stack });
   shutdown("uncaughtException");
 });
 
 process.on("unhandledRejection", (reason) => {
-  console.error("Unhandled Rejection:", reason);
+  logger.error("Unhandled Rejection:", reason);
   auditLogger.logError("unhandled_rejection", String(reason));
 });
 
 // Start the server
 startServer().catch((error) => {
-  console.error("Failed to start server:", error);
+  logger.error("Failed to start server:", error);
   process.exit(1);
 });

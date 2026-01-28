@@ -1,4 +1,51 @@
 import { createClient, RedisClientType } from "redis";
+import { logger } from "./logger.js";
+
+/**
+ * Memory cache entry type
+ */
+interface CacheEntry {
+  value: unknown;
+  expiry: number;
+}
+
+/**
+ * Product list cached data type
+ */
+export interface ProductListData {
+  items: unknown[];
+  total: number;
+}
+
+/**
+ * Session cached data type
+ */
+export interface SessionData {
+  userId: string;
+  tenantId: string | null;
+  accountId: string | null;
+  roles: string[];
+}
+
+/**
+ * Stock levels cached data type
+ */
+export interface StockLevelsData {
+  levels: Array<{
+    productOptionId: string;
+    quantity: number;
+  }>;
+}
+
+/**
+ * Customer prices cached data type
+ */
+export interface CustomerPricesData {
+  prices: Array<{
+    productOptionId: string;
+    price: number;
+  }>;
+}
 
 /**
  * Cache configuration
@@ -27,7 +74,7 @@ const CACHE_PREFIX = {
  */
 class CacheManager {
   private redis: RedisClientType | null = null;
-  private memoryCache: Map<string, { value: any; expiry: number }> = new Map();
+  private memoryCache: Map<string, CacheEntry> = new Map();
   private isRedisAvailable = false;
 
   /**
@@ -37,7 +84,7 @@ class CacheManager {
     const redisUrl = process.env.REDIS_URL;
 
     if (!redisUrl) {
-      console.log("📦 Cache: Using in-memory cache (REDIS_URL not configured)");
+      logger.info("📦 Cache: Using in-memory cache (REDIS_URL not configured)");
       return;
     }
 
@@ -45,23 +92,23 @@ class CacheManager {
       this.redis = createClient({ url: redisUrl });
 
       this.redis.on("error", (err) => {
-        console.error("Redis connection error:", err);
+        logger.error("Redis connection error:", err);
         this.isRedisAvailable = false;
       });
 
       this.redis.on("connect", () => {
-        console.log("🔴 Redis: Connected successfully");
+        logger.info("🔴 Redis: Connected successfully");
         this.isRedisAvailable = true;
       });
 
       this.redis.on("reconnecting", () => {
-        console.log("🔴 Redis: Reconnecting...");
+        logger.info("🔴 Redis: Reconnecting...");
       });
 
       await this.redis.connect();
       this.isRedisAvailable = true;
     } catch (error) {
-      console.warn("⚠️ Redis connection failed, using in-memory cache:", error);
+      logger.warn("⚠️ Redis connection failed, using in-memory cache:", error);
       this.isRedisAvailable = false;
     }
   }
@@ -100,7 +147,7 @@ class CacheManager {
 
       return null;
     } catch (error) {
-      console.error("Cache get error:", error);
+      logger.error("Cache get error:", error);
       return null;
     }
   }
@@ -108,7 +155,7 @@ class CacheManager {
   /**
    * Set value in cache with TTL
    */
-  async set(key: string, value: any, ttlSeconds: number): Promise<void> {
+  async set<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
     try {
       const serialized = JSON.stringify(value);
 
@@ -123,7 +170,7 @@ class CacheManager {
         expiry: Date.now() + ttlSeconds * 1000,
       });
     } catch (error) {
-      console.error("Cache set error:", error);
+      logger.error("Cache set error:", error);
     }
   }
 
@@ -139,7 +186,7 @@ class CacheManager {
 
       this.memoryCache.delete(key);
     } catch (error) {
-      console.error("Cache delete error:", error);
+      logger.error("Cache delete error:", error);
     }
   }
 
@@ -157,14 +204,16 @@ class CacheManager {
       }
 
       // Fallback: delete matching keys from memory cache
-      const regex = new RegExp(pattern.replace("*", ".*"));
+      // Escape special regex characters except *, then convert * to .*
+      const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(`^${escaped.replace(/\*/g, ".*")}$`);
       for (const key of this.memoryCache.keys()) {
         if (regex.test(key)) {
           this.memoryCache.delete(key);
         }
       }
     } catch (error) {
-      console.error("Cache deletePattern error:", error);
+      logger.error("Cache deletePattern error:", error);
     }
   }
 
@@ -203,7 +252,7 @@ class CacheManager {
 
       this.memoryCache.clear();
     } catch (error) {
-      console.error("Cache clear error:", error);
+      logger.error("Cache clear error:", error);
     }
   }
 
@@ -221,8 +270,8 @@ class CacheManager {
    */
   async cacheProducts(
     tenantId: string,
-    params: Record<string, any>,
-    products: any
+    params: Record<string, unknown>,
+    products: ProductListData
   ): Promise<void> {
     const key = `${CACHE_PREFIX.PRODUCTS}${tenantId}:${this.hashParams(params)}`;
     await this.set(key, products, CACHE_TTL.PRODUCTS);
@@ -233,16 +282,16 @@ class CacheManager {
    */
   async getCachedProducts(
     tenantId: string,
-    params: Record<string, any>
-  ): Promise<any | null> {
+    params: Record<string, unknown>
+  ): Promise<ProductListData | null> {
     const key = `${CACHE_PREFIX.PRODUCTS}${tenantId}:${this.hashParams(params)}`;
-    return this.get(key);
+    return this.get<ProductListData>(key);
   }
 
   /**
    * Cache single product
    */
-  async cacheProduct(productId: string, product: any): Promise<void> {
+  async cacheProduct<T>(productId: string, product: T): Promise<void> {
     const key = `${CACHE_PREFIX.PRODUCT}${productId}`;
     await this.set(key, product, CACHE_TTL.PRODUCT_DETAIL);
   }
@@ -250,9 +299,9 @@ class CacheManager {
   /**
    * Get cached product
    */
-  async getCachedProduct(productId: string): Promise<any | null> {
+  async getCachedProduct<T>(productId: string): Promise<T | null> {
     const key = `${CACHE_PREFIX.PRODUCT}${productId}`;
-    return this.get(key);
+    return this.get<T>(key);
   }
 
   /**
@@ -260,7 +309,7 @@ class CacheManager {
    */
   async cacheCustomerPrices(
     customerId: string,
-    prices: any
+    prices: CustomerPricesData
   ): Promise<void> {
     const key = `${CACHE_PREFIX.CUSTOMER_PRICES}${customerId}`;
     await this.set(key, prices, CACHE_TTL.CUSTOMER_PRICES);
@@ -269,15 +318,15 @@ class CacheManager {
   /**
    * Get cached customer prices
    */
-  async getCachedCustomerPrices(customerId: string): Promise<any | null> {
+  async getCachedCustomerPrices(customerId: string): Promise<CustomerPricesData | null> {
     const key = `${CACHE_PREFIX.CUSTOMER_PRICES}${customerId}`;
-    return this.get(key);
+    return this.get<CustomerPricesData>(key);
   }
 
   /**
    * Cache user session
    */
-  async cacheSession(userId: string, session: any): Promise<void> {
+  async cacheSession(userId: string, session: SessionData): Promise<void> {
     const key = `${CACHE_PREFIX.SESSION}${userId}`;
     await this.set(key, session, CACHE_TTL.SESSION);
   }
@@ -285,9 +334,9 @@ class CacheManager {
   /**
    * Get cached session
    */
-  async getCachedSession(userId: string): Promise<any | null> {
+  async getCachedSession(userId: string): Promise<SessionData | null> {
     const key = `${CACHE_PREFIX.SESSION}${userId}`;
-    return this.get(key);
+    return this.get<SessionData>(key);
   }
 
   /**
@@ -301,7 +350,7 @@ class CacheManager {
   /**
    * Cache stock levels
    */
-  async cacheStockLevels(tenantId: string, levels: any): Promise<void> {
+  async cacheStockLevels(tenantId: string, levels: StockLevelsData): Promise<void> {
     const key = `${CACHE_PREFIX.STOCK}${tenantId}`;
     await this.set(key, levels, CACHE_TTL.STOCK_LEVELS);
   }
@@ -309,9 +358,9 @@ class CacheManager {
   /**
    * Get cached stock levels
    */
-  async getCachedStockLevels(tenantId: string): Promise<any | null> {
+  async getCachedStockLevels(tenantId: string): Promise<StockLevelsData | null> {
     const key = `${CACHE_PREFIX.STOCK}${tenantId}`;
-    return this.get(key);
+    return this.get<StockLevelsData>(key);
   }
 
   /**
@@ -345,7 +394,7 @@ class CacheManager {
   /**
    * Hash params for cache key
    */
-  private hashParams(params: Record<string, any>): string {
+  private hashParams(params: Record<string, unknown>): string {
     const sorted = Object.keys(params)
       .sort()
       .map((k) => `${k}:${JSON.stringify(params[k])}`)

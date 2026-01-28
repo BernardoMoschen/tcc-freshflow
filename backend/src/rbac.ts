@@ -1,5 +1,6 @@
 import { RoleType } from "@prisma/client";
 import { prisma } from "./db/prisma.js";
+import { Errors } from "./lib/errors.js";
 
 /**
  * Role hierarchy (higher = more permissions)
@@ -196,7 +197,7 @@ export async function requireRole(
   const hasRequiredRole = await hasRole(userId, requiredRole, context);
 
   if (!hasRequiredRole) {
-    throw new Error(
+    throw Errors.forbidden(
       `Insufficient permissions. Required role: ${requiredRole}${
         context?.tenantId ? ` in tenant ${context.tenantId}` : ""
       }${context?.accountId ? ` in account ${context.accountId}` : ""}`
@@ -211,7 +212,7 @@ export async function requireTenantAccess(userId: string, tenantId: string): Pro
   const hasAccess = await canAccessTenant(userId, tenantId);
 
   if (!hasAccess) {
-    throw new Error(`Access denied to tenant ${tenantId}`);
+    throw Errors.forbidden(`Access denied to tenant ${tenantId}`);
   }
 }
 
@@ -222,6 +223,6 @@ export async function requireAccountAccess(userId: string, accountId: string): P
   const hasAccess = await canAccessAccount(userId, accountId);
 
   if (!hasAccess) {
-    throw new Error(`Access denied to account ${accountId}`);
+    throw Errors.forbidden(`Access denied to account ${accountId}`);
   }
 }

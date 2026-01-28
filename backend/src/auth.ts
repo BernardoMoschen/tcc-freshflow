@@ -1,6 +1,18 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import type { JWTPayload } from "jose";
 import { prisma } from "./db/prisma.js";
+import { logger } from "./lib/logger.js";
+import { Errors } from "./lib/errors.js";
+
+/**
+ * Configuration error - thrown during server startup, not request handling
+ */
+class AuthConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AuthConfigError";
+  }
+}
 
 // Supabase JWKS URL (derived from SUPABASE_URL)
 const getJWKSUrl = (supabaseUrl: string): URL => {
@@ -19,7 +31,7 @@ export async function verifySupabaseToken(token: string): Promise<JWTPayload> {
   const supabaseJwtSecret = process.env.SUPABASE_JWT_SECRET;
 
   if (!supabaseUrl && !supabaseJwtSecret) {
-    throw new Error("SUPABASE_URL or SUPABASE_JWT_SECRET must be set");
+    throw new AuthConfigError("SUPABASE_URL or SUPABASE_JWT_SECRET must be set");
   }
 
   try {
@@ -44,12 +56,13 @@ export async function verifySupabaseToken(token: string): Promise<JWTPayload> {
       return payload;
     }
 
-    throw new Error("No JWT verification method available");
+    throw new AuthConfigError("No JWT verification method available");
   } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`JWT verification failed: ${error.message}`);
+    if (error instanceof AuthConfigError) {
+      throw error;
     }
-    throw error;
+    const message = error instanceof Error ? error.message : String(error);
+    throw Errors.unauthorized(`JWT verification failed: ${message}`);
   }
 }
 
@@ -77,7 +90,7 @@ export async function provisionUser(payload: JWTPayload): Promise<string> {
   const name = (payload.user_metadata as { full_name?: string })?.full_name;
 
   if (!supabaseId || !email) {
-    throw new Error("Invalid JWT payload: missing sub or email");
+    throw Errors.unauthorized("Invalid JWT payload: missing sub or email");
   }
 
   // Find or create user
@@ -93,7 +106,7 @@ export async function provisionUser(payload: JWTPayload): Promise<string> {
         name: name || email.split("@")[0],
       },
     });
-    console.log(`✨ Auto-provisioned user: ${email}`);
+    logger.info(`✨ Auto-provisioned user: ${email}`);
   }
 
   return user.id;
@@ -107,7 +120,7 @@ export async function authenticateRequest(authHeader?: string): Promise<string> 
   const token = extractToken(authHeader);
 
   if (!token) {
-    throw new Error("No authentication token provided");
+    throw Errors.unauthorized("No authentication token provided");
   }
 
   const payload = await verifySupabaseToken(token);

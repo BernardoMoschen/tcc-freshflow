@@ -104,8 +104,9 @@ export const stockRouter = router({
 
   /**
    * Get stock movements history for a product option
+   * Security: Restricted to tenant users, filters by tenant to prevent cross-tenant exposure
    */
-  getMovements: protectedProcedure
+  getMovements: tenantProcedure
     .input(
       z.object({
         productOptionId: z.string().uuid().optional(),
@@ -114,8 +115,9 @@ export const stockRouter = router({
         take: z.number().min(1).max(100).default(50),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       return stockService.getMovements({
+        tenantId: ctx.tenantId,
         productOptionId: input.productOptionId,
         type: input.type,
         skip: input.skip,

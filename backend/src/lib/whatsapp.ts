@@ -1,5 +1,6 @@
 import twilio from "twilio";
 import type { Order, OrderItem, ProductOption, Product } from "@prisma/client";
+import { logger } from "./logger.js";
 
 /**
  * WhatsApp Business API integration using Twilio
@@ -21,7 +22,7 @@ let twilioClient: ReturnType<typeof twilio> | null = null;
  */
 function getTwilioClient() {
   if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_WHATSAPP_NUMBER) {
-    console.warn(
+    logger.warn(
       "WhatsApp integration not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_WHATSAPP_NUMBER to enable."
     );
     return null;
@@ -47,7 +48,7 @@ function formatPrice(priceInCents: number): string {
 async function sendWhatsAppMessage(to: string, body: string): Promise<void> {
   const client = getTwilioClient();
   if (!client) {
-    console.log(`[WhatsApp] Would send to ${to}: ${body}`);
+    logger.debug(`[WhatsApp] Would send to ${to}: ${body}`);
     return;
   }
 
@@ -58,9 +59,9 @@ async function sendWhatsAppMessage(to: string, body: string): Promise<void> {
       body,
     });
 
-    console.log(`[WhatsApp] Message sent: ${message.sid}`);
+    logger.info(`[WhatsApp] Message sent: ${message.sid}`);
   } catch (error) {
-    console.error(`[WhatsApp] Failed to send message:`, error);
+    logger.error(`[WhatsApp] Failed to send message:`, error);
     throw error;
   }
 }
@@ -69,7 +70,7 @@ async function sendWhatsAppMessage(to: string, body: string): Promise<void> {
  * Message Templates
  */
 
-interface OrderWithItems extends Order {
+export interface OrderWithItems extends Order {
   items: Array<
     OrderItem & {
       productOption: ProductOption & {

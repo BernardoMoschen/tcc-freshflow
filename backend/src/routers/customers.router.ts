@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { router, tenantAdminProcedure } from "../trpc.js";
 import { Errors } from "../lib/errors.js";
 
@@ -15,7 +16,7 @@ export const customersRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      const where: any = {
+      const where: Prisma.CustomerWhereInput = {
         account: {
           tenantId: ctx.tenantId,
         },
@@ -23,7 +24,7 @@ export const customersRouter = router({
 
       if (input.search) {
         where.account = {
-          ...where.account,
+          tenantId: ctx.tenantId,
           name: {
             contains: input.search,
             mode: "insensitive" as const,
@@ -130,6 +131,11 @@ export const customersRouter = router({
         throw Errors.notFound("Customer", input.id);
       }
 
+      // Security: Verify customer belongs to the requesting tenant
+      if (customer.account.tenantId !== ctx.tenantId) {
+        throw Errors.notFound("Customer", input.id);
+      }
+
       return customer;
     }),
 
@@ -145,13 +151,15 @@ export const customersRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Verify customer and product option exist
+      // Verify customer and product option exist with tenant info
       const [customer, productOption] = await Promise.all([
         ctx.prisma.customer.findUnique({
           where: { id: input.customerId },
+          include: { account: { select: { tenantId: true } } },
         }),
         ctx.prisma.productOption.findUnique({
           where: { id: input.productOptionId },
+          include: { product: { select: { tenantId: true } } },
         }),
       ]);
 
@@ -159,7 +167,17 @@ export const customersRouter = router({
         throw Errors.notFound("Customer", input.customerId);
       }
 
+      // Security: Verify customer belongs to the requesting tenant
+      if (customer.account.tenantId !== ctx.tenantId) {
+        throw Errors.notFound("Customer", input.customerId);
+      }
+
       if (!productOption) {
+        throw Errors.notFound("Product option", input.productOptionId);
+      }
+
+      // Security: Verify product belongs to the requesting tenant
+      if (productOption.product.tenantId !== ctx.tenantId) {
         throw Errors.notFound("Product option", input.productOptionId);
       }
 
@@ -202,6 +220,20 @@ export const customersRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // Security: Verify customer belongs to the requesting tenant
+      const customer = await ctx.prisma.customer.findUnique({
+        where: { id: input.customerId },
+        include: { account: { select: { tenantId: true } } },
+      });
+
+      if (!customer) {
+        throw Errors.notFound("Customer", input.customerId);
+      }
+
+      if (customer.account.tenantId !== ctx.tenantId) {
+        throw Errors.notFound("Customer", input.customerId);
+      }
+
       await ctx.prisma.customerPrice.delete({
         where: {
           customerId_productOptionId: {
@@ -216,58 +248,58 @@ export const customersRouter = router({
 
   /**
    * Get customer statistics (tenant admin only)
+   * Performance: Uses database aggregation instead of fetching all orders
    */
   getStats: tenantAdminProcedure
     .input(z.object({ customerId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      const [totalOrders, orders] = await Promise.all([
+      // Security: Verify customer belongs to the requesting tenant
+      const customer = await ctx.prisma.customer.findUnique({
+        where: { id: input.customerId },
+        include: { account: { select: { tenantId: true } } },
+      });
+
+      if (!customer) {
+        throw Errors.notFound("Customer", input.customerId);
+      }
+
+      if (customer.account.tenantId !== ctx.tenantId) {
+        throw Errors.notFound("Customer", input.customerId);
+      }
+
+      // Use parallel queries with database aggregation for better performance
+      const [totalOrders, lastOrder, revenueResult] = await Promise.all([
+        // Count orders
         ctx.prisma.order.count({
           where: { customerId: input.customerId },
         }),
-        ctx.prisma.order.findMany({
+        // Get only the most recent order
+        ctx.prisma.order.findFirst({
           where: { customerId: input.customerId },
-          include: {
-            items: {
-              select: {
-                finalPrice: true,
-                requestedQty: true,
-                actualWeight: true,
-                productOption: {
-                  select: {
-                    unitType: true,
-                  },
-                },
-              },
-            },
-          },
+          orderBy: { createdAt: "desc" },
+          select: { createdAt: true },
         }),
+        // Calculate total revenue using raw SQL for efficiency
+        // This calculates: SUM(finalPrice * COALESCE(actualWeight, requestedQty))
+        ctx.prisma.$queryRaw<Array<{ total: number | null }>>`
+          SELECT COALESCE(SUM(
+            oi."finalPrice" * COALESCE(oi."actualWeight", oi."requestedQty")
+          ), 0) as total
+          FROM "OrderItem" oi
+          INNER JOIN "Order" o ON o.id = oi."orderId"
+          WHERE o."customerId" = ${input.customerId}::uuid
+            AND oi."finalPrice" IS NOT NULL
+        `,
       ]);
 
-      // Calculate total revenue
-      let totalRevenue = 0;
-      orders.forEach((order) => {
-        order.items.forEach((item) => {
-          if (item.finalPrice) {
-            if (item.productOption.unitType === "WEIGHT" && item.actualWeight) {
-              totalRevenue += item.finalPrice * item.actualWeight;
-            } else {
-              totalRevenue += item.finalPrice * item.requestedQty;
-            }
-          }
-        });
-      });
-
-      // Find last order date
-      const lastOrder = orders.length > 0 ? orders[0].createdAt : null;
-
-      // Calculate average order value
+      const totalRevenue = revenueResult[0]?.total ?? 0;
       const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
       return {
         totalOrders,
         totalRevenue,
         averageOrderValue,
-        lastOrderDate: lastOrder,
+        lastOrderDate: lastOrder?.createdAt ?? null,
       };
     }),
 });
