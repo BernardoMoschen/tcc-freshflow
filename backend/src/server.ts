@@ -7,6 +7,7 @@ import { generateDeliveryNotePDF } from "./pdf/statement.js";
 import { authenticateRequest } from "./auth.js";
 import { canAccessAccount } from "./rbac.js";
 import { prisma } from "./db/prisma.js";
+import { handleIncomingMessage } from "./lib/whatsapp.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -83,6 +84,43 @@ app.get("/api/delivery-note/:orderId.pdf", async (req, res) => {
     console.error("Error generating PDF:", error);
     res.status(500).json({
       error: "PDF generation failed",
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});
+
+// WhatsApp webhook endpoint (Twilio)
+app.post("/api/whatsapp/webhook", async (req, res) => {
+  try {
+    const { From, Body } = req.body;
+
+    if (!From || !Body) {
+      return res.status(400).json({
+        error: "Missing required fields",
+        message: "From and Body are required",
+      });
+    }
+
+    console.log(`[WhatsApp Webhook] Received message from ${From}: ${Body}`);
+
+    // Process incoming message and get auto-reply if available
+    const reply = await handleIncomingMessage(From, Body);
+
+    if (reply) {
+      // Twilio expects TwiML response for auto-reply
+      res.setHeader("Content-Type", "text/xml");
+      res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Message>${reply}</Message>
+</Response>`);
+    } else {
+      // No auto-reply, just acknowledge receipt
+      res.status(200).json({ status: "received" });
+    }
+  } catch (error) {
+    console.error("WhatsApp webhook error:", error);
+    res.status(500).json({
+      error: "Webhook processing failed",
       message: error instanceof Error ? error.message : "Unknown error",
     });
   }

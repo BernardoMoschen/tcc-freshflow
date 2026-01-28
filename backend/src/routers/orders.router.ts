@@ -12,6 +12,10 @@ import {
   validateOrderCanFinalize,
   validateCanWeighItem,
 } from "../lib/order-state.js";
+import {
+  sendOrderCreatedNotification,
+  sendOrderFinalizedNotification,
+} from "../lib/whatsapp.js";
 
 export const ordersRouter = router({
   /**
@@ -119,6 +123,21 @@ export const ordersRouter = router({
           },
         },
       });
+
+      // Send WhatsApp notification (if configured)
+      const phoneNumber = process.env.WHATSAPP_DEFAULT_PHONE;
+      if (phoneNumber) {
+        try {
+          await sendOrderCreatedNotification(
+            phoneNumber,
+            order,
+            order.customer.account.name
+          );
+        } catch (error) {
+          console.error("Failed to send WhatsApp notification:", error);
+          // Don't fail the order creation if notification fails
+        }
+      }
 
       return order;
     }),
@@ -439,6 +458,33 @@ export const ordersRouter = router({
           },
         },
       });
+
+      // Calculate total amount
+      const totalAmount = finalizedOrder.items.reduce((sum, item) => {
+        return sum + (item.finalPrice || 0);
+      }, 0);
+
+      // Send WhatsApp notification (if configured)
+      const phoneNumber = process.env.WHATSAPP_DEFAULT_PHONE;
+      if (phoneNumber) {
+        try {
+          // Generate PDF URL if available
+          const pdfUrl = process.env.API_BASE_URL
+            ? `${process.env.API_BASE_URL}/api/delivery-note/${finalizedOrder.id}.pdf`
+            : undefined;
+
+          await sendOrderFinalizedNotification(
+            phoneNumber,
+            finalizedOrder,
+            finalizedOrder.customer.account.name,
+            totalAmount,
+            pdfUrl
+          );
+        } catch (error) {
+          console.error("Failed to send WhatsApp notification:", error);
+          // Don't fail the finalization if notification fails
+        }
+      }
 
       return finalizedOrder;
     }),
