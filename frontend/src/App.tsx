@@ -37,14 +37,37 @@ function shouldRetry(failureCount: number, error: unknown): boolean {
 
   // Check for tRPC error with HTTP status
   if (error && typeof error === "object") {
-    const err = error as { data?: { httpStatus?: number }; message?: string };
-    const status = err.data?.httpStatus;
+    const err = error as {
+      data?: { httpStatus?: number; code?: string };
+      message?: string;
+      shape?: { data?: { httpStatus?: number } };
+      cause?: { status?: number };
+    };
+
+    // Extract HTTP status from various tRPC error structures
+    const status =
+      err.data?.httpStatus ||
+      err.shape?.data?.httpStatus ||
+      err.cause?.status ||
+      // Parse status from error message like "429" or "Too Many Requests"
+      (err.message?.includes("429") ? 429 : undefined) ||
+      (err.message?.toLowerCase().includes("too many requests") ? 429 : undefined);
 
     // Don't retry client errors (4xx) - they won't succeed
     if (status && status >= 400 && status < 500) return false;
 
+    // Don't retry specific tRPC error codes
+    const code = err.data?.code;
+    if (code === "UNAUTHORIZED" || code === "FORBIDDEN" || code === "BAD_REQUEST") {
+      return false;
+    }
+
     // Don't retry auth errors
     if (err.message?.includes("UNAUTHORIZED")) return false;
+
+    // Don't retry rate limit errors (check message patterns)
+    if (err.message?.toLowerCase().includes("rate limit")) return false;
+    if (err.message?.toLowerCase().includes("too many")) return false;
   }
 
   // Retry server errors (5xx) and network errors

@@ -53,8 +53,14 @@ app.use(jsonParser("10mb"));
 // 5. Input sanitization
 app.use(sanitizeInput);
 
-// 6. Global rate limiting
-app.use(adaptiveRateLimit);
+// 6. Global rate limiting (skip tRPC - it has its own rate limit)
+app.use((req, res, next) => {
+  // Skip rate limiting for tRPC routes - they have their own procedure-level limits
+  if (req.path.startsWith("/trpc")) {
+    return next();
+  }
+  return adaptiveRateLimit(req, res, next);
+});
 
 // ========== Health Check (no auth required) ==========
 app.get("/health", (_req, res) => {
@@ -288,9 +294,11 @@ app.use("/api/v1", apiV1);
 app.use("/api", apiV1);
 
 // ========== tRPC Endpoint ==========
+// Use read limiter (200/min) since tRPC uses POST for both queries and mutations
+// Individual procedures have their own stricter limits for sensitive operations
 app.use(
   "/trpc",
-  rateLimiters.standard,
+  rateLimiters.read,
   createExpressMiddleware({
     router: appRouter,
     createContext,

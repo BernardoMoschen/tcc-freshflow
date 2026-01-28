@@ -9,11 +9,38 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // Track rate limit state
+  const [isRateLimited, setIsRateLimited] = useState(false);
+
   // Get session data from tRPC
   const sessionQuery = trpc.auth.session.useQuery(undefined, {
-    enabled: !!user,
+    enabled: !!user && !isRateLimited,
     retry: false,
+    // Prevent rapid re-fetching
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 30, // 30 minutes
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
+
+  // Handle rate limit errors
+  useEffect(() => {
+    if (sessionQuery.error) {
+      const errorMessage = sessionQuery.error.message?.toLowerCase() || "";
+      if (
+        errorMessage.includes("too many") ||
+        errorMessage.includes("rate limit") ||
+        errorMessage.includes("429")
+      ) {
+        setIsRateLimited(true);
+        // Auto-retry after 60 seconds
+        const timer = setTimeout(() => {
+          setIsRateLimited(false);
+        }, 60000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [sessionQuery.error]);
 
   // Auto-set context when session data is loaded
   useEffect(() => {
@@ -226,6 +253,7 @@ export function useAuth() {
     session: sessionQuery.data,
     loading: isInitialLoading,
     error: sessionQuery.error,
+    isRateLimited,
     signIn,
     signOut,
     setContext,
