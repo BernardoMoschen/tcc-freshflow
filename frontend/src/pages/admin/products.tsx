@@ -64,11 +64,17 @@ export function ProductsManagementPage() {
 
   const utils = trpc.useUtils();
 
-  const productsQuery = trpc.products.list.useQuery({
-    search: search || undefined,
-    category: category || undefined,
-    take: 100,
-  });
+  // Ensure tenant context exists before querying
+  const hasTenantContext = !!localStorage.getItem("freshflow:tenantId");
+
+  const productsQuery = trpc.products.list.useQuery(
+    {
+      search: search || undefined,
+      category: category || undefined,
+      take: 100,
+    },
+    { enabled: hasTenantContext }
+  );
 
   const createMutation = trpc.products.create.useMutation({
     onSuccess: () => {

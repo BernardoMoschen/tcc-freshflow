@@ -16,24 +16,25 @@ export const DEV_USERS: Record<string, DevUser> = {
     email: "admin@freshflow.com",
     name: "Platform Admin",
     role: "PLATFORM_ADMIN",
+    // No tenant/account - platform admin has global access, context auto-resolved from session
   },
   owner: {
     email: "owner@freshco.com",
     name: "FreshCo Owner",
     role: "TENANT_OWNER",
-    tenantId: "f13052ec-6c8f-4433-aad9-b4da43bf6f55",
+    // tenantId auto-resolved from session memberships
   },
   chef: {
     email: "chef@chefstable.com",
     name: "Head Chef",
     role: "ACCOUNT_OWNER",
-    tenantId: "f13052ec-6c8f-4433-aad9-b4da43bf6f55",
-    accountId: "get-from-database", // Will be set dynamically
+    // tenantId and accountId auto-resolved from session memberships
   },
 };
 
 /**
  * Set up development mode with a specific user
+ * Context (tenantId/accountId) is auto-resolved from session memberships
  */
 export function setupDevMode(userKey: keyof typeof DEV_USERS) {
   if (!import.meta.env.DEV) {
@@ -47,25 +48,17 @@ export function setupDevMode(userKey: keyof typeof DEV_USERS) {
     return false;
   }
 
+  // Clear any existing context - will be auto-resolved from session
+  localStorage.removeItem("freshflow:tenantId");
+  localStorage.removeItem("freshflow:accountId");
+
   // Set dev user email
   localStorage.setItem("freshflow:dev-user-email", user.email);
-
-  // Set tenant ID if available
-  if (user.tenantId) {
-    localStorage.setItem("freshflow:tenantId", user.tenantId);
-  }
-
-  // Set account ID if available
-  if (user.accountId && user.accountId !== "get-from-database") {
-    localStorage.setItem("freshflow:accountId", user.accountId);
-  }
 
   console.log(`✅ Dev mode configured for: ${user.name} (${user.email})`);
   console.log(`📧 Email: ${user.email}`);
   console.log(`👤 Role: ${user.role}`);
-  if (user.tenantId) console.log(`🏢 Tenant ID: ${user.tenantId}`);
-  if (user.accountId) console.log(`🏪 Account ID: ${user.accountId}`);
-  console.log("\n🔄 Reload the page to apply changes");
+  console.log(`💡 Context will be auto-resolved from session memberships`);
 
   return true;
 }

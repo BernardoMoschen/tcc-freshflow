@@ -4,6 +4,7 @@ import { productsRouter } from "./routers/products.router.js";
 import { ordersRouter } from "./routers/orders.router.js";
 import { stockRouter } from "./routers/stock.router.js";
 import { customersRouter } from "./routers/customers.router.js";
+import { tenantsRouter } from "./routers/tenants.router.js";
 
 /**
  * Root tRPC router
@@ -15,6 +16,7 @@ export const appRouter = router({
   orders: ordersRouter,
   stock: stockRouter,
   customers: customersRouter,
+  tenants: tenantsRouter,
 });
 
 export type AppRouter = typeof appRouter;

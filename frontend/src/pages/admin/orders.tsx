@@ -38,12 +38,18 @@ export function AdminOrdersPage() {
 
   const utils = trpc.useUtils();
 
-  const ordersQuery = trpc.orders.adminList.useQuery({
-    status: statusFilter === "all" ? undefined : (statusFilter as any),
-    search: searchQuery || undefined,
-    skip: currentPage * PAGE_SIZE,
-    take: PAGE_SIZE,
-  });
+  // Ensure tenant context exists before querying
+  const hasTenantContext = !!localStorage.getItem("freshflow:tenantId");
+
+  const ordersQuery = trpc.orders.adminList.useQuery(
+    {
+      status: statusFilter === "all" ? undefined : (statusFilter as any),
+      search: searchQuery || undefined,
+      skip: currentPage * PAGE_SIZE,
+      take: PAGE_SIZE,
+    },
+    { enabled: hasTenantContext }
+  );
 
   const bulkUpdateMutation = trpc.orders.bulkUpdateStatus.useMutation({
     onSuccess: (data) => {

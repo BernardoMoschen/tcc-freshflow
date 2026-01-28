@@ -25,24 +25,31 @@ export function CustomersManagementPage() {
 
   const utils = trpc.useUtils();
 
-  const customersQuery = trpc.customers.list.useQuery({
-    search: search || undefined,
-    take: 100,
-  });
+  // Ensure tenant context exists before querying
+  const hasTenantContext = !!localStorage.getItem("freshflow:tenantId");
+
+  const customersQuery = trpc.customers.list.useQuery(
+    {
+      search: search || undefined,
+      take: 100,
+    },
+    { enabled: hasTenantContext }
+  );
 
   const customerDetailsQuery = trpc.customers.get.useQuery(
     { id: selectedCustomer?.id! },
-    { enabled: !!selectedCustomer }
+    { enabled: !!selectedCustomer && hasTenantContext }
   );
 
   const statsQuery = trpc.customers.getStats.useQuery(
     { customerId: selectedCustomer?.id! },
-    { enabled: !!selectedCustomer }
+    { enabled: !!selectedCustomer && hasTenantContext }
   );
 
-  const productsQuery = trpc.products.list.useQuery({
-    take: 100,
-  });
+  const productsQuery = trpc.products.list.useQuery(
+    { take: 100 },
+    { enabled: hasTenantContext }
+  );
 
   const setCustomPriceMutation = trpc.customers.setCustomPrice.useMutation({
     onSuccess: () => {

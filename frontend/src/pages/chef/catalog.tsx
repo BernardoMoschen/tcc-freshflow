@@ -15,7 +15,7 @@ const RECENT_SEARCHES_KEY = "freshflow:recent-searches";
 const MAX_RECENT_SEARCHES = 5;
 
 export function CatalogPage() {
-  const { session } = useAuth();
+  const { session, isAccountUser } = useAuth();
   const [search, setSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [showRecentSearches, setShowRecentSearches] = useState(false);
@@ -31,6 +31,10 @@ export function CatalogPage() {
   const { toggleFavorite, isFavorite, count: favoritesCount } = useFavorites();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Tenant admins should use the admin products page instead
+  // They can still browse here but won't see cart functionality
+  const canAddToCart = isAccountUser;
 
   // Get customer ID from session
   const accountId = localStorage.getItem("freshflow:accountId");
@@ -97,28 +101,43 @@ export function CatalogPage() {
     localStorage.removeItem(RECENT_SEARCHES_KEY);
   };
 
-  const productsQuery = trpc.products.list.useQuery({
-    skip: 0,
-    take: 20,
-    search: search || undefined,
-    minPrice: minPrice ? parseFloat(minPrice) * 100 : undefined,
-    maxPrice: maxPrice ? parseFloat(maxPrice) * 100 : undefined,
-    unitType: unitType || undefined,
-    sortBy,
-    sortOrder,
-    customerId: customerId || undefined,
-  });
+  // Ensure tenant context exists before querying products
+  const hasTenantContext = !!localStorage.getItem("freshflow:tenantId");
+
+  const productsQuery = trpc.products.list.useQuery(
+    {
+      skip: 0,
+      take: 20,
+      search: search || undefined,
+      minPrice: minPrice ? parseFloat(minPrice) * 100 : undefined,
+      maxPrice: maxPrice ? parseFloat(maxPrice) * 100 : undefined,
+      unitType: unitType || undefined,
+      sortBy,
+      sortOrder,
+      customerId: customerId || undefined,
+    },
+    { enabled: hasTenantContext }
+  );
 
   return (
     <PageLayout
       title="Catálogo"
       action={
-        <Link
-          to="/chef/cart"
-          className="hidden md:flex bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 items-center space-x-2"
-        >
-          <span>Carrinho ({count})</span>
-        </Link>
+        canAddToCart ? (
+          <Link
+            to="/chef/cart"
+            className="hidden md:flex bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 items-center space-x-2"
+          >
+            <span>Carrinho ({count})</span>
+          </Link>
+        ) : (
+          <Link
+            to="/admin/products"
+            className="hidden md:flex bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 items-center space-x-2"
+          >
+            <span>Gerenciar Produtos</span>
+          </Link>
+        )
       }
     >
       {/* Barra de busca - sempre visível */}
@@ -395,62 +414,64 @@ export function CatalogPage() {
                     </div>
                   </div>
 
-                  {/* Quick Quantity Picker */}
-                  {inCart ? (
-                    <div className="mt-4 flex items-center gap-2">
-                      <button
-                        onClick={() => updateQuantity(option.id, Math.max(0.1, cartItem.requestedQty - 1))}
-                        disabled={isOutOfStock || isSyncing}
-                        className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary text-primary hover:bg-primary hover:text-white transition-colors flex items-center justify-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Minus className="h-4 w-4" />
-                      </button>
-                      <div className="flex-1 text-center">
-                        <p className="text-lg font-bold text-primary">{cartItem.requestedQty}</p>
-                        <p className="text-xs text-gray-500">{isSyncing ? "sincronizando..." : "no carrinho"}</p>
+                  {/* Quick Quantity Picker - Only for account users who can add to cart */}
+                  {canAddToCart && (
+                    inCart ? (
+                      <div className="mt-4 flex items-center gap-2">
+                        <button
+                          onClick={() => updateQuantity(option.id, Math.max(0.1, cartItem.requestedQty - 1))}
+                          disabled={isOutOfStock || isSyncing}
+                          className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary text-primary hover:bg-primary hover:text-white transition-colors flex items-center justify-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
+                        <div className="flex-1 text-center">
+                          <p className="text-lg font-bold text-primary">{cartItem.requestedQty}</p>
+                          <p className="text-xs text-gray-500">{isSyncing ? "sincronizando..." : "no carrinho"}</p>
+                        </div>
+                        <button
+                          onClick={() => updateQuantity(option.id, cartItem.requestedQty + 1)}
+                          disabled={isOutOfStock || isSyncing}
+                          className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary bg-primary text-white hover:bg-primary/90 transition-colors flex items-center justify-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
                       </div>
+                    ) : (
                       <button
-                        onClick={() => updateQuantity(option.id, cartItem.requestedQty + 1)}
+                        onClick={handleAddToCart}
                         disabled={isOutOfStock || isSyncing}
-                        className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary bg-primary text-white hover:bg-primary/90 transition-colors flex items-center justify-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                        className={`mt-4 w-full px-4 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                          isOutOfStock
+                            ? "bg-gray-300 text-gray-600"
+                            : justAdded
+                            ? "bg-green-500 text-white"
+                            : "bg-primary text-white hover:bg-primary/90"
+                        }`}
                       >
-                        <Plus className="h-4 w-4" />
+                        {isOutOfStock ? (
+                          <>
+                            <XCircle className="h-5 w-5" />
+                            Esgotado
+                          </>
+                        ) : justAdded ? (
+                          <>
+                            <Check className="h-5 w-5" />
+                            Adicionado!
+                          </>
+                        ) : isSyncing ? (
+                          <>
+                            <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Adicionando...
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="h-5 w-5" />
+                            Adicionar
+                          </>
+                        )}
                       </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={handleAddToCart}
-                      disabled={isOutOfStock || isSyncing}
-                      className={`mt-4 w-full px-4 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                        isOutOfStock
-                          ? "bg-gray-300 text-gray-600"
-                          : justAdded
-                          ? "bg-green-500 text-white"
-                          : "bg-primary text-white hover:bg-primary/90"
-                      }`}
-                    >
-                      {isOutOfStock ? (
-                        <>
-                          <XCircle className="h-5 w-5" />
-                          Esgotado
-                        </>
-                      ) : justAdded ? (
-                        <>
-                          <Check className="h-5 w-5" />
-                          Adicionado!
-                        </>
-                      ) : isSyncing ? (
-                        <>
-                          <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          Adicionando...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="h-5 w-5" />
-                          Adicionar
-                        </>
-                      )}
-                    </button>
+                    )
                   )}
                 </div>
               </div>
@@ -467,8 +488,8 @@ export function CatalogPage() {
         </div>
       )}
 
-      {/* Floating Cart Preview */}
-      <CartPreview />
+      {/* Floating Cart Preview - Only for account users */}
+      {canAddToCart && <CartPreview />}
     </PageLayout>
   );
 }

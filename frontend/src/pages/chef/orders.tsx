@@ -27,13 +27,19 @@ export function OrdersPage() {
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<string>("");
 
+  // Ensure account context exists before querying
+  const hasAccountContext = !!localStorage.getItem("freshflow:accountId");
+
   const utils = trpc.useUtils();
 
-  const ordersQuery = trpc.orders.list.useQuery({
-    status: statusFilter === "all" ? undefined : (statusFilter as any),
-    skip: currentPage * PAGE_SIZE,
-    take: PAGE_SIZE,
-  });
+  const ordersQuery = trpc.orders.list.useQuery(
+    {
+      status: statusFilter === "all" ? undefined : (statusFilter as any),
+      skip: currentPage * PAGE_SIZE,
+      take: PAGE_SIZE,
+    },
+    { enabled: hasAccountContext }
+  );
 
   const bulkUpdateMutation = trpc.orders.bulkUpdateStatus.useMutation({
     onSuccess: (data) => {

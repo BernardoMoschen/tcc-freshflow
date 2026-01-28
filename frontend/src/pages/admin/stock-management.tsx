@@ -44,10 +44,16 @@ export function StockManagementPage() {
 
   const utils = trpc.useUtils();
 
-  const stockQuery = trpc.stock.getStockLevels.useQuery({
-    lowStockOnly,
-    take: 100,
-  });
+  // Ensure tenant context exists before querying
+  const hasTenantContext = !!localStorage.getItem("freshflow:tenantId");
+
+  const stockQuery = trpc.stock.getStockLevels.useQuery(
+    {
+      lowStockOnly,
+      take: 100,
+    },
+    { enabled: hasTenantContext }
+  );
 
   const movementsQuery = trpc.stock.getMovements.useQuery(
     {
@@ -55,7 +61,7 @@ export function StockManagementPage() {
       take: 20,
     },
     {
-      enabled: !!selectedOptionForMovements,
+      enabled: !!selectedOptionForMovements && hasTenantContext,
     }
   );
 

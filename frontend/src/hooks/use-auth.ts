@@ -21,34 +21,77 @@ export function useAuth() {
 
     const storedTenantId = localStorage.getItem("freshflow:tenantId");
     const storedAccountId = localStorage.getItem("freshflow:accountId");
+    const memberships = sessionQuery.data.memberships;
 
-    // Validate stored context against user's memberships
-    const validMembership = sessionQuery.data.memberships.find((m: any) => {
-      if (storedAccountId && m.account?.id === storedAccountId) return true;
-      if (storedTenantId && m.tenant?.id === storedTenantId) return true;
-      if (storedTenantId && m.account?.tenantId === storedTenantId) return true;
-      return false;
-    });
+    // Type for membership
+    type Membership = {
+      role: string;
+      tenant?: { id: string } | null;
+      account?: { id: string; tenantId: string } | null;
+    };
 
-    // If stored context is invalid or missing, set from first membership
-    if (!validMembership) {
-      const firstMembership = sessionQuery.data.memberships[0];
+    // Check if user is platform admin (no tenant/account context required for basic operations)
+    const isPlatformAdminUser = memberships.some(
+      (m: Membership) => m.role === "PLATFORM_ADMIN"
+    );
 
-      if (firstMembership.account) {
-        // Account membership - set both tenant and account
-        localStorage.setItem("freshflow:tenantId", firstMembership.account.tenantId);
-        localStorage.setItem("freshflow:accountId", firstMembership.account.id);
-        console.log("🔄 Context reset to:", firstMembership.account.tenantId);
-      } else if (firstMembership.tenant) {
-        // Tenant membership - set only tenant
-        localStorage.setItem("freshflow:tenantId", firstMembership.tenant.id);
-        localStorage.removeItem("freshflow:accountId");
-        console.log("🔄 Context reset to:", firstMembership.tenant.id);
+    // Find first membership with tenant or account context
+    const findContextMembership = (): Membership | undefined => {
+      // First priority: account memberships
+      const accountMembership = memberships.find((m: Membership) => m.account);
+      if (accountMembership) return accountMembership;
+
+      // Second priority: tenant memberships
+      const tenantMembership = memberships.find((m: Membership) => m.tenant);
+      if (tenantMembership) return tenantMembership;
+
+      return undefined;
+    };
+
+    // Check if stored context is valid
+    const isContextValid = (): boolean => {
+      // If user is platform admin and has no stored context, that's OK
+      if (isPlatformAdminUser && !storedTenantId && !storedAccountId) {
+        return true;
       }
 
-      // Force page reload to use new context
-      window.location.reload();
+      // Check if stored context matches any membership
+      return memberships.some((m: Membership) => {
+        if (storedAccountId && m.account?.id === storedAccountId) return true;
+        if (storedTenantId && m.tenant?.id === storedTenantId) return true;
+        if (storedTenantId && m.account?.tenantId === storedTenantId) return true;
+        return false;
+      });
+    };
+
+    // If context is already valid, no need to change
+    if (isContextValid()) {
+      return;
     }
+
+    // Context is invalid - try to set from memberships
+    const contextMembership = findContextMembership();
+
+    if (contextMembership?.account) {
+      // Account membership - set both tenant and account
+      localStorage.setItem("freshflow:tenantId", contextMembership.account.tenantId);
+      localStorage.setItem("freshflow:accountId", contextMembership.account.id);
+      console.log("🔄 Context set to account:", contextMembership.account.id);
+      window.location.reload();
+    } else if (contextMembership?.tenant) {
+      // Tenant membership - set only tenant
+      localStorage.setItem("freshflow:tenantId", contextMembership.tenant.id);
+      localStorage.removeItem("freshflow:accountId");
+      console.log("🔄 Context set to tenant:", contextMembership.tenant.id);
+      window.location.reload();
+    } else if (isPlatformAdminUser) {
+      // Platform admin with no tenant/account memberships - clear context and don't reload
+      localStorage.removeItem("freshflow:tenantId");
+      localStorage.removeItem("freshflow:accountId");
+      console.log("🔧 Platform admin with global access (no specific context)");
+      // Don't reload - let them access without context
+    }
+    // If no context found and not platform admin, let the protected routes handle the error
   }, [sessionQuery.data]);
 
   useEffect(() => {
@@ -137,7 +180,7 @@ export function useAuth() {
   const isInitialLoading = loading || (!!user && !sessionQuery.data && sessionQuery.isLoading && !sessionQuery.isError);
 
   // Extract user roles from memberships
-  const userRoles: string[] = sessionQuery.data?.memberships?.map((m: any) => m.role) || [];
+  const userRoles: string[] = sessionQuery.data?.memberships?.map((m: { role: string }) => m.role) || [];
 
   // Role check helpers
   const isPlatformAdmin = userRoles.includes("PLATFORM_ADMIN");

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { trpc } from "@/lib/trpc";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,24 +10,53 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, Building2, Store } from "lucide-react";
+import { ChevronDown, Building2, Store, Shield } from "lucide-react";
 import { toast } from "sonner";
 
+interface Tenant {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+interface Account {
+  id: string;
+  name: string;
+  slug: string;
+  tenantId: string;
+  customerId: string | null;
+  tenant: Tenant | null;
+}
+
+interface Membership {
+  id: string;
+  role: string;
+  tenant: Tenant | null;
+  account: Account | null;
+}
+
 export function ContextSwitcher() {
-  const { session, setContext } = useAuth();
+  const { session, setContext, isPlatformAdmin } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+
+  // Query all tenants for platform admins
+  const tenantsQuery = trpc.tenants.list.useQuery(undefined, {
+    enabled: isPlatformAdmin,
+  });
 
   if (!session?.memberships || session.memberships.length === 0) {
     return null;
   }
+
+  const memberships = session.memberships as Membership[];
 
   // Get current context from localStorage
   const currentTenantId = localStorage.getItem("freshflow:tenantId");
   const currentAccountId = localStorage.getItem("freshflow:accountId");
 
   // Find current membership
-  const currentMembership = session.memberships.find(
-    (m: any) =>
+  const currentMembership = memberships.find(
+    (m) =>
       m.tenant?.id === currentTenantId || m.account?.id === currentAccountId
   );
 
@@ -38,43 +68,57 @@ export function ContextSwitcher() {
     if (currentMembership?.tenant) {
       return currentMembership.tenant.name;
     }
-    // Default to first membership
-    const firstMembership = session.memberships[0];
-    if (firstMembership.account) {
-      return firstMembership.account.name;
-    }
-    if (firstMembership.tenant) {
-      return firstMembership.tenant.name;
+    // For platform admin, check if we have a tenant selected
+    if (isPlatformAdmin && currentTenantId && tenantsQuery.data) {
+      const tenant = tenantsQuery.data.find((t) => t.id === currentTenantId);
+      if (tenant) {
+        return tenant.name;
+      }
     }
     return "Selecionar contexto";
   };
 
-  const handleSwitchContext = (membership: any) => {
-    const tenantId = membership.tenant?.id;
+  const handleSwitchContext = (membership: Membership) => {
+    // For account memberships, get tenantId from account.tenantId or account.tenant.id
+    const tenantId =
+      membership.tenant?.id ||
+      membership.account?.tenantId ||
+      membership.account?.tenant?.id;
     const accountId = membership.account?.id;
 
     setContext(tenantId, accountId);
     setIsOpen(false);
 
-    // Refresh the page to reload data with new context
-    window.location.reload();
-
     toast.success(
       `Alterado para ${membership.account?.name || membership.tenant?.name}`
     );
+
+    // Refresh the page to reload data with new context
+    window.location.reload();
+  };
+
+  const handleSwitchToTenant = (tenant: Tenant) => {
+    setContext(tenant.id, undefined);
+    setIsOpen(false);
+
+    toast.success(`Alterado para ${tenant.name}`);
+
+    // Refresh the page to reload data with new context
+    window.location.reload();
   };
 
   // Group memberships by type
-  const tenantMemberships = session.memberships.filter(
-    (m: any) => m.tenant && !m.account
+  const tenantMemberships = memberships.filter(
+    (m) => m.tenant && !m.account
   );
-  const accountMemberships = session.memberships.filter((m: any) => m.account);
+  const accountMemberships = memberships.filter((m) => m.account);
 
-  // Only show switcher if user has multiple contexts
-  if (
-    tenantMemberships.length + accountMemberships.length <= 1 &&
-    !currentMembership?.tenant
-  ) {
+  // Calculate total options available
+  const totalMembershipOptions = tenantMemberships.length + accountMemberships.length;
+  const totalTenantOptions = isPlatformAdmin ? (tenantsQuery.data?.length || 0) : 0;
+
+  // Only show switcher if user has multiple contexts or is platform admin
+  if (totalMembershipOptions <= 1 && totalTenantOptions <= 1 && !isPlatformAdmin) {
     return null;
   }
 
@@ -85,7 +129,11 @@ export function ContextSwitcher() {
           variant="outline"
           className="flex items-center gap-2 max-w-[200px]"
         >
-          <Store className="h-4 w-4 flex-shrink-0" />
+          {isPlatformAdmin && !currentTenantId ? (
+            <Shield className="h-4 w-4 flex-shrink-0" />
+          ) : (
+            <Store className="h-4 w-4 flex-shrink-0" />
+          )}
           <span className="truncate text-sm">{getCurrentContextName()}</span>
           <ChevronDown className="h-4 w-4 flex-shrink-0" />
         </Button>
@@ -94,12 +142,40 @@ export function ContextSwitcher() {
         <DropdownMenuLabel>Trocar Contexto</DropdownMenuLabel>
         <DropdownMenuSeparator />
 
+        {/* Platform admin: show all tenants */}
+        {isPlatformAdmin && tenantsQuery.data && tenantsQuery.data.length > 0 && (
+          <>
+            <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+              Todos os Distribuidores
+            </DropdownMenuLabel>
+            {tenantsQuery.data.map((tenant) => (
+              <DropdownMenuItem
+                key={tenant.id}
+                onClick={() => handleSwitchToTenant(tenant)}
+                className="cursor-pointer"
+              >
+                <Building2 className="h-4 w-4 mr-2" />
+                <div className="flex flex-col">
+                  <span className="text-sm">{tenant.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    Admin Global
+                  </span>
+                </div>
+              </DropdownMenuItem>
+            ))}
+            {(tenantMemberships.length > 0 || accountMemberships.length > 0) && (
+              <DropdownMenuSeparator />
+            )}
+          </>
+        )}
+
+        {/* User's tenant memberships */}
         {tenantMemberships.length > 0 && (
           <>
             <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
-              Distribuidores
+              Meus Distribuidores
             </DropdownMenuLabel>
-            {tenantMemberships.map((membership: any) => (
+            {tenantMemberships.map((membership) => (
               <DropdownMenuItem
                 key={membership.id}
                 onClick={() => handleSwitchContext(membership)}
@@ -107,7 +183,7 @@ export function ContextSwitcher() {
               >
                 <Building2 className="h-4 w-4 mr-2" />
                 <div className="flex flex-col">
-                  <span className="text-sm">{membership.tenant.name}</span>
+                  <span className="text-sm">{membership.tenant!.name}</span>
                   <span className="text-xs text-muted-foreground">
                     {membership.role}
                   </span>
@@ -118,12 +194,13 @@ export function ContextSwitcher() {
           </>
         )}
 
+        {/* User's account memberships */}
         {accountMemberships.length > 0 && (
           <>
             <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
-              Contas
+              Minhas Contas
             </DropdownMenuLabel>
-            {accountMemberships.map((membership: any) => (
+            {accountMemberships.map((membership) => (
               <DropdownMenuItem
                 key={membership.id}
                 onClick={() => handleSwitchContext(membership)}
@@ -131,7 +208,7 @@ export function ContextSwitcher() {
               >
                 <Store className="h-4 w-4 mr-2" />
                 <div className="flex flex-col">
-                  <span className="text-sm">{membership.account.name}</span>
+                  <span className="text-sm">{membership.account!.name}</span>
                   <span className="text-xs text-muted-foreground">
                     {membership.role}
                   </span>
