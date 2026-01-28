@@ -12,8 +12,10 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
-    "test:unit": "vitest run --dir src",
-    "test:integration": "vitest run --dir tests/integration"
+    "test": "vitest",
+    "test:unit": "vitest run src/__tests__",
+    "test:integration": "vitest run tests/integration",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@prisma/client": "^7.0.0",
