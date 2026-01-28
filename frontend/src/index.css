@@ -13,13 +13,15 @@
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Improved contrast: changed from 46.9% to 40% lightness for WCAG AA compliance */
+    --muted-foreground: 215.4 16.3% 40%;
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    /* Improved contrast: darker border for better visibility */
+    --border: 214.3 31.8% 85%;
+    --input: 214.3 31.8% 85%;
     --ring: 142 76% 36%;
     --radius: 0.5rem;
   }
@@ -56,6 +58,44 @@
     @apply min-h-[44px];
   }
 
+  /* Improved placeholder contrast for accessibility */
+  input::placeholder,
+  textarea::placeholder {
+    color: hsl(215.4 16.3% 50%);
+    opacity: 1;
+  }
+
+  /* Focus states with visible outlines for accessibility */
+  *:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  /* Skip link for keyboard navigation */
+  .skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    padding: 8px 16px;
+    z-index: 100;
+    transition: top 0.3s;
+  }
+
+  .skip-link:focus {
+    top: 0;
+  }
+
+  /* Ensure links have sufficient contrast */
+  a {
+    color: hsl(142 76% 32%);
+  }
+
+  a:hover {
+    color: hsl(142 76% 25%);
+  }
+
   /* Toast animations */
   @keyframes slide-in {
     from {
@@ -70,5 +110,24 @@
 
   .animate-slide-in {
     animation: slide-in 0.3s ease-out;
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    :root {
+      --muted-foreground: 215.4 16.3% 30%;
+      --border: 214.3 31.8% 70%;
+    }
+  }
+
+  /* Reduced motion preference */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }

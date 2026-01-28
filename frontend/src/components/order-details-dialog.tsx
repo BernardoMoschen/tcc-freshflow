@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { OrderDetailsSkeleton } from "@/components/ui/skeleton";
 import { OrderStatusTimeline } from "@/components/order-status-timeline";
 import { ShoppingCart, Package, XCircle, Trash2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
@@ -163,16 +164,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
         </DialogHeader>
 
         {isLoading ? (
-          <div className="space-y-4 py-8">
-            <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
-            <div className="h-4 bg-gray-200 rounded animate-pulse w-1/3"></div>
-            <Separator />
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-20 bg-gray-200 rounded animate-pulse"></div>
-              ))}
-            </div>
-          </div>
+          <OrderDetailsSkeleton />
         ) : order ? (
           <div className="space-y-6">
             {/* Status Timeline */}

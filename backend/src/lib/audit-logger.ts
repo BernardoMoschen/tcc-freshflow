@@ -1,5 +1,6 @@
 import { Request } from "express";
 import { PrismaClient, AuditEventType, AuditSeverity } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 // Re-export enums for convenience
 export { AuditEventType, AuditSeverity };
@@ -67,7 +68,7 @@ class AuditLogger {
             accountId: entry.accountId || null,
             resourceType: entry.resourceType || null,
             resourceId: entry.resourceId || null,
-            details: entry.details || null,
+            details: entry.details ? (entry.details as Prisma.InputJsonValue) : Prisma.JsonNull,
             ipAddress: entry.ipAddress || null,
             userAgent: entry.userAgent || null,
             requestId: entry.requestId || null,
@@ -140,15 +141,23 @@ class AuditLogger {
    * Log authentication event
    */
   logAuth(
-    eventType: AuditEventType.AUTH_LOGIN | AuditEventType.AUTH_LOGOUT | AuditEventType.AUTH_FAILED,
+    eventType: AuditEventType,
     userId: string | undefined,
     success: boolean,
     ipAddress?: string,
     details?: Record<string, any>
   ): void {
+    // Map event type to action string
+    const actionMap: Record<string, string> = {
+      AUTH_LOGIN: "login",
+      AUTH_LOGOUT: "logout",
+      AUTH_FAILED: "failed",
+    };
+    const action = actionMap[eventType] || eventType.toLowerCase();
+
     this.log({
       eventType,
-      action: eventType.replace("AUTH_", "").toLowerCase(),
+      action,
       success,
       severity: success ? AuditSeverity.INFO : AuditSeverity.WARNING,
       userId,

@@ -208,6 +208,79 @@ apiV1.post("/whatsapp/webhook", rateLimiters.webhook, async (req, res) => {
   }
 });
 
+// ========== Frontend Error Reporting Endpoint ==========
+apiV1.post("/errors", rateLimiters.standard, async (req, res) => {
+  try {
+    const {
+      errorId,
+      message,
+      stack,
+      componentStack,
+      url,
+      userAgent,
+      timestamp,
+    } = req.body;
+
+    // Validate required fields
+    if (!errorId || !message) {
+      return res.status(400).json({
+        error: "Missing required fields",
+        message: "errorId and message are required",
+      });
+    }
+
+    // Get user info from auth header if available
+    let userId: string | undefined;
+    const authHeader = req.headers.authorization as string | undefined;
+    if (authHeader) {
+      try {
+        userId = await authenticateRequest(authHeader);
+      } catch {
+        // Continue without user ID if auth fails
+      }
+    }
+
+    // Log to audit system
+    auditLogger.log({
+      eventType: AuditEventType.SYSTEM_ERROR,
+      action: "frontend_error",
+      success: false,
+      severity: AuditSeverity.ERROR,
+      userId: userId || null,
+      details: {
+        errorId,
+        message,
+        stack: stack?.slice(0, 2000), // Limit stack trace length
+        componentStack: componentStack?.slice(0, 2000),
+        url,
+        userAgent,
+        reportedAt: timestamp || new Date().toISOString(),
+      },
+      ipAddress: req.ip || req.headers["x-forwarded-for"]?.toString(),
+      userAgent: req.headers["user-agent"],
+      requestId: (req as any).requestId,
+      errorMessage: message,
+    });
+
+    logger.error(`[Frontend Error] ${errorId}: ${message}`, {
+      errorId,
+      url,
+      userId,
+    });
+
+    return res.status(201).json({
+      success: true,
+      errorId,
+      message: "Error report received",
+    });
+  } catch (error) {
+    logger.error("Error processing frontend error report:", error);
+    return res.status(500).json({
+      error: "Failed to process error report",
+    });
+  }
+});
+
 // Mount API v1 routes
 app.use("/api/v1", apiV1);
 

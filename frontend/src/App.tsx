@@ -5,6 +5,9 @@ import { trpc, trpcClient } from "./lib/trpc";
 import { ProtectedRoute } from "./components/protected-route";
 import { ToastProvider } from "./components/toast";
 import { Toaster } from "./components/ui/sonner";
+import { ErrorBoundary } from "./components/error-boundary";
+import { PageErrorBoundary } from "./components/page-error-boundary";
+import { NavigationProgress } from "./components/navigation-progress";
 
 // Smart redirect: goes to dashboard if logged in, login if not
 function RootRedirect() {
@@ -74,8 +77,10 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
           <Toaster />
-          <BrowserRouter>
-            <Routes>
+          <ErrorBoundary>
+            <BrowserRouter>
+              <NavigationProgress />
+              <Routes>
             {/* Public routes */}
             <Route path="/login" element={<LoginPage />} />
 
@@ -97,7 +102,9 @@ function App() {
               path="/chef/catalog"
               element={
                 <ProtectedRoute>
-                  <CatalogPage />
+                  <PageErrorBoundary pageName="Catálogo">
+                    <CatalogPage />
+                  </PageErrorBoundary>
                 </ProtectedRoute>
               }
             />
@@ -110,7 +117,9 @@ function App() {
               path="/chef/cart"
               element={
                 <ProtectedRoute requireAccountUser>
-                  <CartPage />
+                  <PageErrorBoundary pageName="Carrinho">
+                    <CartPage />
+                  </PageErrorBoundary>
                 </ProtectedRoute>
               }
             />
@@ -123,7 +132,9 @@ function App() {
               path="/chef/orders"
               element={
                 <ProtectedRoute requireAccountUser>
-                  <OrdersPage />
+                  <PageErrorBoundary pageName="Pedidos">
+                    <OrdersPage />
+                  </PageErrorBoundary>
                 </ProtectedRoute>
               }
             />
@@ -136,7 +147,9 @@ function App() {
               path="/admin/products"
               element={
                 <ProtectedRoute requireTenantAdmin>
-                  <ProductsManagementPage />
+                  <PageErrorBoundary pageName="Produtos">
+                    <ProductsManagementPage />
+                  </PageErrorBoundary>
                 </ProtectedRoute>
               }
             />
@@ -144,7 +157,9 @@ function App() {
               path="/admin/customers"
               element={
                 <ProtectedRoute requireTenantAdmin>
-                  <CustomersManagementPage />
+                  <PageErrorBoundary pageName="Clientes">
+                    <CustomersManagementPage />
+                  </PageErrorBoundary>
                 </ProtectedRoute>
               }
             />
@@ -152,7 +167,9 @@ function App() {
               path="/admin/stock"
               element={
                 <ProtectedRoute requireTenantAdmin>
-                  <StockManagementPage />
+                  <PageErrorBoundary pageName="Estoque">
+                    <StockManagementPage />
+                  </PageErrorBoundary>
                 </ProtectedRoute>
               }
             />
@@ -160,7 +177,9 @@ function App() {
               path="/admin/orders"
               element={
                 <ProtectedRoute requireTenantAdmin>
-                  <AdminOrdersPage />
+                  <PageErrorBoundary pageName="Pedidos Admin">
+                    <AdminOrdersPage />
+                  </PageErrorBoundary>
                 </ProtectedRoute>
               }
             />
@@ -168,7 +187,9 @@ function App() {
               path="/admin/weighing/:orderId"
               element={
                 <ProtectedRoute requireTenantAdmin>
-                  <WeighingPage />
+                  <PageErrorBoundary pageName="Pesagem">
+                    <WeighingPage />
+                  </PageErrorBoundary>
                 </ProtectedRoute>
               }
             />
@@ -176,16 +197,19 @@ function App() {
               path="/admin/finalize/:orderId"
               element={
                 <ProtectedRoute requireTenantAdmin>
-                  <FinalizePage />
+                  <PageErrorBoundary pageName="Finalização">
+                    <FinalizePage />
+                  </PageErrorBoundary>
                 </ProtectedRoute>
               }
             />
 
-            {/* Default redirect - dashboard if logged in, login if not */}
-            <Route path="/" element={<RootRedirect />} />
-            <Route path="*" element={<RootRedirect />} />
-            </Routes>
-          </BrowserRouter>
+              {/* Default redirect - dashboard if logged in, login if not */}
+              <Route path="/" element={<RootRedirect />} />
+              <Route path="*" element={<RootRedirect />} />
+              </Routes>
+            </BrowserRouter>
+          </ErrorBoundary>
         </ToastProvider>
       </QueryClientProvider>
     </trpc.Provider>

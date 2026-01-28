@@ -587,6 +587,7 @@ export const ordersRouter = router({
               select: {
                 id: true,
                 name: true,
+                email: true,
               },
             },
             _count: {
@@ -702,6 +703,7 @@ export const ordersRouter = router({
               select: {
                 id: true,
                 name: true,
+                email: true,
               },
             },
             _count: {

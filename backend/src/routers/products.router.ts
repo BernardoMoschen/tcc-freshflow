@@ -98,7 +98,18 @@ export const productsRouter = router({
       // Get total count first (shared across both paths)
       const total = await ctx.prisma.product.count({ where });
 
-      let items;
+      // Type for product with options and customer prices
+      type ProductWithOptions = Prisma.ProductGetPayload<{
+        include: {
+          options: {
+            include: {
+              customerPrices: true;
+            };
+          };
+        };
+      }>;
+
+      let items: ProductWithOptions[];
 
       if (isPriceSorting && total > 0) {
         // Price sorting: Use two-phase approach for better efficiency

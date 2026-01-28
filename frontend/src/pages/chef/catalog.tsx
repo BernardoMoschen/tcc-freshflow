@@ -1,18 +1,35 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
 import { useCart } from "@/hooks/use-cart";
 import { useFavorites } from "@/hooks/use-favorites";
+import { useDebounce } from "@/hooks/use-debounce";
 import { PageLayout } from "@/components/page-layout";
 import { ProductCardSkeleton } from "@/components/ui/skeleton";
 import { CartPreview } from "@/components/cart-preview";
+import { PullToRefresh } from "@/components/pull-to-refresh";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { sanitizeSearchQuery } from "@/lib/sanitize";
 import { X, Clock, Plus, Minus, Check, Star, AlertTriangle, XCircle, CheckCircle, Tag } from "lucide-react";
 
 const RECENT_SEARCHES_KEY = "freshflow:recent-searches";
 const MAX_RECENT_SEARCHES = 5;
+
+// Type for product option from API response
+interface ProductOption {
+  id: string;
+  name: string;
+  sku: string;
+  unitType: "FIXED" | "WEIGHT";
+  basePrice: number;
+  resolvedPrice: number;
+  stockQuantity: number | null;
+  lowStockThreshold: number | null;
+  isAvailable: boolean;
+  customerPrices?: Array<{ price: number }>;
+}
 
 export function CatalogPage() {
   const { session, isAccountUser } = useAuth();
@@ -27,6 +44,10 @@ export function CatalogPage() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
+
+  // Debounce search to prevent excessive API calls
+  const debouncedSearch = useDebounce(search, 300);
+
   const { items, addItem, updateQuantity, count, isSyncing } = useCart();
   const { toggleFavorite, isFavorite, count: favoritesCount } = useFavorites();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -80,9 +101,11 @@ export function CatalogPage() {
   };
 
   const handleSearchChange = (value: string) => {
-    setSearch(value);
-    if (value.trim().length >= 2) {
-      saveRecentSearch(value);
+    // Sanitize search input
+    const sanitized = sanitizeSearchQuery(value);
+    setSearch(sanitized);
+    if (sanitized.trim().length >= 2) {
+      saveRecentSearch(sanitized);
     }
   };
 
@@ -108,7 +131,7 @@ export function CatalogPage() {
     {
       skip: 0,
       take: 20,
-      search: search || undefined,
+      search: debouncedSearch || undefined,
       minPrice: minPrice ? parseFloat(minPrice) * 100 : undefined,
       maxPrice: maxPrice ? parseFloat(maxPrice) * 100 : undefined,
       unitType: unitType || undefined,
@@ -118,6 +141,20 @@ export function CatalogPage() {
     },
     { enabled: hasTenantContext }
   );
+
+  // Pull-to-refresh handler
+  const handleRefresh = useCallback(async () => {
+    await productsQuery.refetch();
+  }, [productsQuery]);
+
+  // Check if on mobile (for pull-to-refresh)
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   return (
     <PageLayout
@@ -295,41 +332,54 @@ export function CatalogPage() {
         </div>
       </div>
 
-      {/* Loading and error states */}
-      {productsQuery.isLoading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          <ProductCardSkeleton />
-          <ProductCardSkeleton />
-          <ProductCardSkeleton />
-          <ProductCardSkeleton />
-          <ProductCardSkeleton />
-          <ProductCardSkeleton />
-        </div>
-      )}
-      {productsQuery.error && (
-        <div className="text-center py-12 bg-red-50 rounded-lg">
-          <AlertTriangle className="mx-auto h-12 w-12 text-red-400" aria-hidden="true" />
-          <p className="mt-3 text-lg font-medium text-red-800">Erro ao carregar produtos</p>
-          <p className="mt-1 text-sm text-red-600">
-            {productsQuery.error.message || "Não foi possível carregar os produtos. Tente novamente."}
-          </p>
-          <Button
-            onClick={() => productsQuery.refetch()}
-            variant="outline"
-            className="mt-4"
-          >
-            Tentar Novamente
-          </Button>
-        </div>
+      {/* Pull-to-refresh hint on mobile */}
+      {isMobile && !productsQuery.isLoading && (
+        <p className="text-center text-xs text-gray-400 mb-2 md:hidden">
+          Puxe para atualizar
+        </p>
       )}
 
-      {/* Product grid - single column on mobile, responsive grid on larger screens */}
-      {!productsQuery.isLoading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-        {productsQuery.data?.items.map((product) =>
-          product.options
-            .filter((option) => !showFavoritesOnly || isFavorite(option.id))
-            .map((option) => {
+      {/* Wrap content with PullToRefresh on mobile */}
+      <PullToRefresh
+        onRefresh={handleRefresh}
+        disabled={!isMobile}
+        className={isMobile ? "min-h-[50vh]" : ""}
+      >
+        {/* Loading and error states */}
+        {productsQuery.isLoading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            <ProductCardSkeleton />
+            <ProductCardSkeleton />
+            <ProductCardSkeleton />
+            <ProductCardSkeleton />
+            <ProductCardSkeleton />
+            <ProductCardSkeleton />
+          </div>
+        )}
+        {productsQuery.error && (
+          <div className="text-center py-12 bg-red-50 rounded-lg">
+            <AlertTriangle className="mx-auto h-12 w-12 text-red-400" aria-hidden="true" />
+            <p className="mt-3 text-lg font-medium text-red-800">Erro ao carregar produtos</p>
+            <p className="mt-1 text-sm text-red-600">
+              {productsQuery.error.message || "Não foi possível carregar os produtos. Tente novamente."}
+            </p>
+            <Button
+              onClick={() => productsQuery.refetch()}
+              variant="outline"
+              className="mt-4"
+            >
+              Tentar Novamente
+            </Button>
+          </div>
+        )}
+
+        {/* Product grid - single column on mobile, responsive grid on larger screens */}
+        {!productsQuery.isLoading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          {productsQuery.data?.items.map((product) =>
+            product.options
+              .filter((option: ProductOption) => !showFavoritesOnly || isFavorite(option.id))
+              .map((option: ProductOption) => {
             const cartItem = items.find((item) => item.productOptionId === option.id);
             const inCart = !!cartItem;
             const justAdded = justAddedId === option.id;
@@ -494,55 +544,56 @@ export function CatalogPage() {
                 </div>
               </div>
             );
-          })
-        )}
-        </div>
-      )}
-
-      {/* Estado vazio */}
-      {productsQuery.data?.items.length === 0 && (
-        <div className="text-center py-16 bg-gray-50 rounded-lg">
-          <svg
-            className="mx-auto h-16 w-16 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-            />
-          </svg>
-          <p className="mt-4 text-lg font-medium text-gray-700">
-            {search || minPrice || maxPrice || unitType || showFavoritesOnly
-              ? "Nenhum produto corresponde aos filtros"
-              : "Nenhum produto disponível"}
-          </p>
-          <p className="mt-1 text-sm text-gray-500">
-            {search || minPrice || maxPrice || unitType || showFavoritesOnly
-              ? "Tente ajustar seus filtros ou termos de busca"
-              : "Não há produtos cadastrados no momento"}
-          </p>
-          {(search || minPrice || maxPrice || unitType || showFavoritesOnly) && (
-            <Button
-              variant="outline"
-              className="mt-4"
-              onClick={() => {
-                setSearch("");
-                setMinPrice("");
-                setMaxPrice("");
-                setUnitType("");
-                setShowFavoritesOnly(false);
-              }}
-            >
-              Limpar Filtros
-            </Button>
+            })
           )}
-        </div>
-      )}
+          </div>
+        )}
+
+        {/* Estado vazio */}
+        {productsQuery.data?.items.length === 0 && (
+          <div className="text-center py-16 bg-gray-50 rounded-lg">
+            <svg
+              className="mx-auto h-16 w-16 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+              />
+            </svg>
+            <p className="mt-4 text-lg font-medium text-gray-700">
+              {search || minPrice || maxPrice || unitType || showFavoritesOnly
+                ? "Nenhum produto corresponde aos filtros"
+                : "Nenhum produto disponível"}
+            </p>
+            <p className="mt-1 text-sm text-gray-500">
+              {search || minPrice || maxPrice || unitType || showFavoritesOnly
+                ? "Tente ajustar seus filtros ou termos de busca"
+                : "Não há produtos cadastrados no momento"}
+            </p>
+            {(search || minPrice || maxPrice || unitType || showFavoritesOnly) && (
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={() => {
+                  setSearch("");
+                  setMinPrice("");
+                  setMaxPrice("");
+                  setUnitType("");
+                  setShowFavoritesOnly(false);
+                }}
+              >
+                Limpar Filtros
+              </Button>
+            )}
+          </div>
+        )}
+      </PullToRefresh>
 
       {/* Floating Cart Preview - Only for account users */}
       {canAddToCart && <CartPreview />}
