@@ -118,6 +118,7 @@ async function main() {
       name: "Tomatoes",
       description: "Fresh organic tomatoes",
       category: "Vegetables",
+      imageUrl: "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=400&h=300&fit=crop",
       tenantId: tenant.id,
       options: {
         create: {
@@ -136,6 +137,7 @@ async function main() {
       name: "Lettuce",
       description: "Crispy fresh lettuce",
       category: "Vegetables",
+      imageUrl: "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?w=400&h=300&fit=crop",
       tenantId: tenant.id,
       options: {
         create: {
@@ -154,6 +156,7 @@ async function main() {
       name: "Fresh Fish",
       description: "Daily catch fish",
       category: "Seafood",
+      imageUrl: "https://images.unsplash.com/photo-1544943910-4c1dc44aab44?w=400&h=300&fit=crop",
       tenantId: tenant.id,
       options: {
         create: {
@@ -172,6 +175,7 @@ async function main() {
       name: "Beef",
       description: "Premium beef cuts",
       category: "Meat",
+      imageUrl: "https://images.unsplash.com/photo-1603048588665-791ca8aea617?w=400&h=300&fit=crop",
       tenantId: tenant.id,
       options: {
         create: {
@@ -190,6 +194,7 @@ async function main() {
       name: "Potatoes",
       description: "Fresh potatoes",
       category: "Vegetables",
+      imageUrl: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400&h=300&fit=crop",
       tenantId: tenant.id,
       options: {
         create: {

@@ -99,6 +99,7 @@ model Product {
   name        String
   description String?
   category    String?
+  imageUrl    String?         // Product image URL
   tenantId    String
   tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt   DateTime        @default(now())

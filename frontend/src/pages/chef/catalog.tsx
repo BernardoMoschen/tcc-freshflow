@@ -46,30 +46,39 @@ export function CatalogPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {productsQuery.data?.items.map((product) =>
             product.options.map((option) => (
-              <div key={option.id} className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold">{product.name}</h3>
-                <p className="text-sm text-gray-600 mt-1">{option.name}</p>
-                <p className="text-sm text-gray-500 mt-1">
-                  Type: {option.unitType === "FIXED" ? "Fixed unit" : "By weight"}
-                </p>
-                <p className="text-lg font-bold text-primary mt-3">
-                  R$ {(option.basePrice / 100).toFixed(2)}
-                </p>
-                <button
-                  onClick={() =>
-                    addItem({
-                      productOptionId: option.id,
-                      productName: product.name,
-                      optionName: option.name,
-                      unitType: option.unitType,
-                      requestedQty: 1,
-                      price: option.basePrice,
-                    })
-                  }
-                  className="mt-4 w-full bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90"
-                >
-                  Add to Cart
-                </button>
+              <div key={option.id} className="bg-white rounded-lg shadow overflow-hidden">
+                {product.imageUrl && (
+                  <img
+                    src={product.imageUrl}
+                    alt={product.name}
+                    className="w-full h-48 object-cover"
+                  />
+                )}
+                <div className="p-6">
+                  <h3 className="text-lg font-semibold">{product.name}</h3>
+                  <p className="text-sm text-gray-600 mt-1">{option.name}</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Type: {option.unitType === "FIXED" ? "Fixed unit" : "By weight"}
+                  </p>
+                  <p className="text-lg font-bold text-primary mt-3">
+                    R$ {(option.basePrice / 100).toFixed(2)}
+                  </p>
+                  <button
+                    onClick={() =>
+                      addItem({
+                        productOptionId: option.id,
+                        productName: product.name,
+                        optionName: option.name,
+                        unitType: option.unitType,
+                        requestedQty: 1,
+                        price: option.basePrice,
+                      })
+                    }
+                    className="mt-4 w-full bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90"
+                  >
+                    Add to Cart
+                  </button>
+                </div>
               </div>
             ))
           )}
