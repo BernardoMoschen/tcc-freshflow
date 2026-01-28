@@ -20,7 +20,7 @@ app.use(cors({
 app.use(express.json());
 
 // Health check endpoint
-app.get("/health", (req, res) => {
+app.get("/health", (_req, res) => {
   res.json({
     status: "ok",
     timestamp: new Date().toISOString(),
@@ -79,10 +79,10 @@ app.get("/api/delivery-note/:orderId.pdf", async (req, res) => {
     );
     res.setHeader("Content-Length", pdfBuffer.length);
 
-    res.send(pdfBuffer);
+    return res.send(pdfBuffer);
   } catch (error) {
     console.error("Error generating PDF:", error);
-    res.status(500).json({
+    return res.status(500).json({
       error: "PDF generation failed",
       message: error instanceof Error ? error.message : "Unknown error",
     });
@@ -109,17 +109,17 @@ app.post("/api/whatsapp/webhook", async (req, res) => {
     if (reply) {
       // Twilio expects TwiML response for auto-reply
       res.setHeader("Content-Type", "text/xml");
-      res.send(`<?xml version="1.0" encoding="UTF-8"?>
+      return res.send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Message>${reply}</Message>
 </Response>`);
     } else {
       // No auto-reply, just acknowledge receipt
-      res.status(200).json({ status: "received" });
+      return res.status(200).json({ status: "received" });
     }
   } catch (error) {
     console.error("WhatsApp webhook error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       error: "Webhook processing failed",
       message: error instanceof Error ? error.message : "Unknown error",
     });
@@ -144,7 +144,7 @@ app.use((req, res) => {
 });
 
 // Error handler
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error("Server error:", err);
   res.status(500).json({
     error: "Internal server error",

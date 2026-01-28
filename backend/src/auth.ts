@@ -74,7 +74,7 @@ export function extractToken(authHeader?: string): string | null {
 export async function provisionUser(payload: JWTPayload): Promise<string> {
   const supabaseId = payload.sub;
   const email = payload.email as string;
-  const name = payload.user_metadata?.full_name as string | undefined;
+  const name = (payload.user_metadata as { full_name?: string })?.full_name;
 
   if (!supabaseId || !email) {
     throw new Error("Invalid JWT payload: missing sub or email");

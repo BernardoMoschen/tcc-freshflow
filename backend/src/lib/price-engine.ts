@@ -1,5 +1,5 @@
 import { prisma } from "../db/prisma.js";
-import type { Order, OrderItem, ProductOption, UnitType } from "@prisma/client";
+import type { OrderItem, ProductOption } from "@prisma/client";
 
 /**
  * Resolve price for a product option

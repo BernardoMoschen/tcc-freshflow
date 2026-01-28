@@ -194,7 +194,7 @@ export async function sendCustomMessage(
  * - Confirm delivery
  */
 export async function handleIncomingMessage(
-  from: string,
+  _from: string,
   body: string
 ): Promise<string | null> {
   const normalizedBody = body.toLowerCase().trim();

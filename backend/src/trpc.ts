@@ -137,5 +137,5 @@ export const accountProcedure = protectedProcedure.use(async ({ ctx, next }) => 
 /**
  * Export router and procedure helpers
  */
-export const router = t.router;
-export const middleware = t.middleware;
+export const router: typeof t.router = t.router;
+export const middleware: typeof t.middleware = t.middleware;

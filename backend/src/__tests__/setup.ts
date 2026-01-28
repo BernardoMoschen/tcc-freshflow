@@ -1,7 +1,7 @@
 import { beforeAll, afterAll, vi } from "vitest";
 
-// Mock Prisma client for unit tests
-export const mockPrisma = {
+// Mock Prisma client for unit tests - use any to allow flexible mocking in tests
+export const mockPrisma: any = {
   productOption: {
     findUnique: vi.fn(),
   },
@@ -11,6 +11,14 @@ export const mockPrisma = {
   },
   orderItem: {
     findMany: vi.fn(),
+  },
+  membership: {
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+  },
+  account: {
+    findUnique: vi.fn(),
+    findFirst: vi.fn(),
   },
 };
 

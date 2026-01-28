@@ -31,5 +31,28 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-size: 16px; /* Prevent iOS zoom on input focus */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Mobile-first: Ensure minimum touch target size */
+  button,
+  a,
+  input[type="button"],
+  input[type="submit"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Better mobile input styling */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: 16px; /* Prevent iOS zoom */
+    @apply min-h-[44px];
   }
 }
