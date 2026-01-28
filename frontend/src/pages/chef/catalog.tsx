@@ -1,19 +1,85 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { trpc } from "@/lib/trpc";
 import { useCart } from "@/hooks/use-cart";
 import { PageLayout } from "@/components/page-layout";
 import { ProductCardSkeleton } from "@/components/ui/skeleton";
+import { X, Clock } from "lucide-react";
+
+const RECENT_SEARCHES_KEY = "freshflow:recent-searches";
+const MAX_RECENT_SEARCHES = 5;
 
 export function CatalogPage() {
   const [search, setSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [showRecentSearches, setShowRecentSearches] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [unitType, setUnitType] = useState<"FIXED" | "WEIGHT" | "">("");
   const [sortBy, setSortBy] = useState<"name" | "price">("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const { addItem, count } = useCart();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Load recent searches from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem(RECENT_SEARCHES_KEY);
+    if (stored) {
+      setRecentSearches(JSON.parse(stored));
+    }
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchDropdownRef.current &&
+        !searchDropdownRef.current.contains(event.target as Node) &&
+        !searchInputRef.current?.contains(event.target as Node)
+      ) {
+        setShowRecentSearches(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const saveRecentSearch = (query: string) => {
+    if (!query.trim() || query.length < 2) return;
+
+    const updated = [
+      query,
+      ...recentSearches.filter((s) => s.toLowerCase() !== query.toLowerCase()),
+    ].slice(0, MAX_RECENT_SEARCHES);
+
+    setRecentSearches(updated);
+    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    if (value.trim().length >= 2) {
+      saveRecentSearch(value);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearch("");
+    searchInputRef.current?.focus();
+  };
+
+  const selectRecentSearch = (query: string) => {
+    setSearch(query);
+    setShowRecentSearches(false);
+  };
+
+  const clearRecentSearches = () => {
+    setRecentSearches([]);
+    localStorage.removeItem(RECENT_SEARCHES_KEY);
+  };
 
   const productsQuery = trpc.products.list.useQuery({
     skip: 0,
@@ -39,14 +105,55 @@ export function CatalogPage() {
       }
     >
       {/* Search bar - always visible */}
-      <div className="mb-4">
+      <div className="mb-4 relative">
         <input
+          ref={searchInputRef}
           type="text"
           placeholder="Search products..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+          onChange={(e) => handleSearchChange(e.target.value)}
+          onFocus={() => setShowRecentSearches(true)}
+          className="w-full px-4 py-3 pr-10 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
         />
+        {search && (
+          <button
+            onClick={clearSearch}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Clear search"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
+
+        {/* Recent Searches Dropdown */}
+        {showRecentSearches && !search && recentSearches.length > 0 && (
+          <div
+            ref={searchDropdownRef}
+            className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden"
+          >
+            <div className="p-2 border-b border-gray-100 flex items-center justify-between">
+              <span className="text-xs font-medium text-gray-500 uppercase">Recent Searches</span>
+              <button
+                onClick={clearRecentSearches}
+                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Clear All
+              </button>
+            </div>
+            <div className="max-h-60 overflow-y-auto">
+              {recentSearches.map((query, index) => (
+                <button
+                  key={index}
+                  onClick={() => selectRecentSearch(query)}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                >
+                  <Clock className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm text-gray-700">{query}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Filter toggle button - mobile only */}
