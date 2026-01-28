@@ -24,7 +24,7 @@ export function WeighingPage() {
     const persistPrice = persistFlags[orderItemId] || false;
 
     if (!actualWeight || actualWeight <= 0) {
-      showToast("Please enter a valid weight", "warning");
+      showToast("Por favor, insira um peso válido", "warning");
       return;
     }
 
@@ -36,7 +36,7 @@ export function WeighingPage() {
           finalPrice,
           persistPrice,
         });
-        showToast("Weight saved successfully!", "success");
+        showToast("Peso salvo com sucesso!", "success");
         orderQuery.refetch();
         // Clear the inputs for this item
         setWeights((prev) => ({ ...prev, [orderItemId]: 0 }));
@@ -49,11 +49,11 @@ export function WeighingPage() {
           finalPrice,
           persistPrice,
         });
-        showToast("Weight queued for sync when online", "info");
+        showToast("Peso na fila para sincronização quando online", "info");
       }
     } catch (error) {
       showToast(
-        "Failed to save weight: " + (error instanceof Error ? error.message : "Unknown error"),
+        "Falha ao salvar peso: " + (error instanceof Error ? error.message : "Erro desconhecido"),
         "error"
       );
     }
@@ -64,7 +64,7 @@ export function WeighingPage() {
       <div className="min-h-screen bg-gray-50">
         <nav className="bg-white shadow-sm sticky top-0 z-40">
           <div className="max-w-4xl mx-auto px-4 py-4">
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Weighing Station</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Estação de Pesagem</h1>
           </div>
         </nav>
         <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
@@ -75,8 +75,8 @@ export function WeighingPage() {
       </div>
     );
   }
-  if (orderQuery.error) return <div className="p-8 text-center text-red-600">Error loading order</div>;
-  if (!orderQuery.data) return <div className="p-8 text-center">Order not found</div>;
+  if (orderQuery.error) return <div className="p-8 text-center text-red-600">Erro ao carregar pedido</div>;
+  if (!orderQuery.data) return <div className="p-8 text-center">Pedido não encontrado</div>;
 
   const order = orderQuery.data;
   const weightItems = order.items.filter((item) => item.productOption.unitType === "WEIGHT");
@@ -87,7 +87,7 @@ export function WeighingPage() {
       <nav className="bg-white shadow-sm sticky top-0 z-40">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Weighing Station</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Estação de Pesagem</h1>
             <div className="flex items-center gap-3">
               {!isOnline && (
                 <span className="flex items-center gap-2 text-red-600 text-sm font-medium px-3 py-2 bg-red-50 rounded-lg">
@@ -99,7 +99,7 @@ export function WeighingPage() {
               )}
               {pending > 0 && (
                 <span className="bg-yellow-100 text-yellow-800 px-3 py-2 rounded-lg text-sm font-medium">
-                  {pending} pending
+                  {pending} pendente(s)
                 </span>
               )}
               {isOnline && pending === 0 && (
@@ -118,19 +118,19 @@ export function WeighingPage() {
       <div className="max-w-4xl mx-auto px-4 py-6">
         {/* Order info */}
         <div className="bg-white rounded-xl shadow-sm p-5 md:p-6 mb-6">
-          <h2 className="font-semibold text-lg md:text-xl mb-2">Order: {order.orderNumber}</h2>
+          <h2 className="font-semibold text-lg md:text-xl mb-2">Pedido: {order.orderNumber}</h2>
           <p className="text-sm text-gray-600">
-            Status: <span className="font-medium text-primary">{order.status}</span>
+            Status: <span className="font-medium text-primary">{order.status === "SENT" ? "Enviado" : order.status === "IN_SEPARATION" ? "Em Separação" : order.status === "FINALIZED" ? "Finalizado" : order.status}</span>
           </p>
           <p className="text-sm text-gray-600 mt-1">
-            Items to weigh: <span className="font-medium">{weightItems.length}</span>
+            Itens para pesar: <span className="font-medium">{weightItems.length}</span>
           </p>
         </div>
 
         {/* Weight items */}
         {weightItems.length === 0 ? (
           <div className="text-center py-12 text-gray-600">
-            <p>No weight-based items in this order</p>
+            <p>Nenhum item por peso neste pedido</p>
           </div>
         ) : (
           <div className="space-y-5">
@@ -140,7 +140,7 @@ export function WeighingPage() {
                   <h3 className="font-semibold text-lg md:text-xl">{item.productOption.product.name}</h3>
                   <p className="text-sm text-gray-600 mt-1">{item.productOption.name}</p>
                   <p className="text-sm text-gray-600 mt-1">
-                    Requested: <span className="font-medium text-primary">{item.requestedQty} kg</span>
+                    Solicitado: <span className="font-medium text-primary">{item.requestedQty} kg</span>
                   </p>
                 </div>
 
@@ -150,17 +150,17 @@ export function WeighingPage() {
                       <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
-                      Weighed: {item.actualWeight} kg
+                      Pesado: {item.actualWeight} kg
                     </div>
                     <p className="text-sm text-green-700">
-                      Price: R$ {item.finalPrice ? (item.finalPrice / 100).toFixed(2) : "N/A"} /kg
+                      Preço: R$ {item.finalPrice ? (item.finalPrice / 100).toFixed(2) : "N/D"} /kg
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-5">
                     <div>
                       <label htmlFor={`weight-${item.id}`} className="block text-base font-medium text-gray-700 mb-2">
-                        Actual Weight (kg) *
+                        Peso Real (kg) *
                       </label>
                       <input
                         id={`weight-${item.id}`}
@@ -179,7 +179,7 @@ export function WeighingPage() {
 
                     <div>
                       <label htmlFor={`price-${item.id}`} className="block text-base font-medium text-gray-700 mb-2">
-                        Price Override (R$ per kg)
+                        Substituir Preço (R$ por kg)
                       </label>
                       <input
                         id={`price-${item.id}`}
@@ -192,7 +192,7 @@ export function WeighingPage() {
                           setPrices({ ...prices, [item.id]: parseFloat(e.target.value || "0") * 100 })
                         }
                         className="block w-full px-5 py-4 text-xl border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent"
-                        placeholder="Optional"
+                        placeholder="Opcional"
                       />
                     </div>
 
@@ -207,7 +207,7 @@ export function WeighingPage() {
                         className="h-6 w-6 text-primary focus:ring-primary border-gray-300 rounded mt-0.5"
                       />
                       <span className="text-base text-gray-700 flex-1">
-                        Save this price for this customer (future orders)
+                        Salvar este preço para este cliente (pedidos futuros)
                       </span>
                     </label>
 
@@ -216,7 +216,7 @@ export function WeighingPage() {
                       disabled={weighMutation.isPending}
                       className="w-full bg-primary text-white px-6 py-5 rounded-xl hover:bg-primary/90 text-lg md:text-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
                     >
-                      {weighMutation.isPending ? "Saving..." : "Save Weight"}
+                      {weighMutation.isPending ? "Salvando..." : "Salvar Peso"}
                     </button>
                   </div>
                 )}

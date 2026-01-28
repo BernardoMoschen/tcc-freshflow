@@ -61,34 +61,34 @@ export function StockManagementPage() {
 
   const addStockMutation = trpc.stock.addStock.useMutation({
     onSuccess: () => {
-      toast.success("Stock added successfully");
+      toast.success("Estoque adicionado com sucesso");
       utils.stock.getStockLevels.invalidate();
       closeModal();
     },
     onError: (error) => {
-      toast.error("Failed to add stock", { description: error.message });
+      toast.error("Falha ao adicionar estoque", { description: error.message });
     },
   });
 
   const removeStockMutation = trpc.stock.removeStock.useMutation({
     onSuccess: () => {
-      toast.success("Stock removed successfully");
+      toast.success("Estoque removido com sucesso");
       utils.stock.getStockLevels.invalidate();
       closeModal();
     },
     onError: (error) => {
-      toast.error("Failed to remove stock", { description: error.message });
+      toast.error("Falha ao remover estoque", { description: error.message });
     },
   });
 
   const adjustStockMutation = trpc.stock.adjustStock.useMutation({
     onSuccess: () => {
-      toast.success("Stock adjusted successfully");
+      toast.success("Estoque ajustado com sucesso");
       utils.stock.getStockLevels.invalidate();
       closeModal();
     },
     onError: (error) => {
-      toast.error("Failed to adjust stock", { description: error.message });
+      toast.error("Falha ao ajustar estoque", { description: error.message });
     },
   });
 
@@ -119,7 +119,7 @@ export function StockManagementPage() {
 
     const qty = parseFloat(quantity);
     if (isNaN(qty) || qty <= 0) {
-      toast.error("Please enter a valid quantity");
+      toast.error("Por favor, insira uma quantidade válida");
       return;
     }
 
@@ -154,7 +154,7 @@ export function StockManagementPage() {
       return (
         <Badge variant="destructive" className="flex items-center gap-1">
           <XCircle className="h-3 w-3" />
-          Out of Stock
+          Sem Estoque
         </Badge>
       );
     }
@@ -162,20 +162,20 @@ export function StockManagementPage() {
       return (
         <Badge variant="secondary" className="flex items-center gap-1 bg-yellow-100 text-yellow-800">
           <AlertTriangle className="h-3 w-3" />
-          Low Stock
+          Estoque Baixo
         </Badge>
       );
     }
     return (
       <Badge variant="secondary" className="flex items-center gap-1 bg-green-100 text-green-800">
         <CheckCircle className="h-3 w-3" />
-        In Stock
+        Em Estoque
       </Badge>
     );
   };
 
   return (
-    <PageLayout title="Stock Management">
+    <PageLayout title="Gestão de Estoque">
       {/* Filters */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -185,12 +185,12 @@ export function StockManagementPage() {
             onClick={() => setLowStockOnly(!lowStockOnly)}
           >
             <AlertTriangle className="h-4 w-4 mr-2" />
-            {lowStockOnly ? "Showing Low Stock Only" : "Show All Stock"}
+            {lowStockOnly ? "Mostrando Estoque Baixo" : "Mostrar Todo Estoque"}
           </Button>
         </div>
 
         <div className="text-sm text-gray-600">
-          {stockQuery.data?.total} products
+          {stockQuery.data?.total} produtos
         </div>
       </div>
 
@@ -204,14 +204,14 @@ export function StockManagementPage() {
       )}
 
       {stockQuery.error && (
-        <p className="text-center py-8 text-red-600">Error loading stock levels</p>
+        <p className="text-center py-8 text-red-600">Erro ao carregar níveis de estoque</p>
       )}
 
       {stockQuery.data && stockQuery.data.items.length === 0 && (
         <div className="text-center py-16 bg-gray-50 rounded-lg">
           <Package className="mx-auto h-16 w-16 text-gray-400 mb-4" />
           <p className="text-lg text-gray-600">
-            {lowStockOnly ? "No low stock items" : "No products found"}
+            {lowStockOnly ? "Nenhum item com estoque baixo" : "Nenhum produto encontrado"}
           </p>
         </div>
       )}
@@ -222,19 +222,19 @@ export function StockManagementPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Product
+                  Produto
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   SKU
                 </th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Stock
+                  Estoque
                 </th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  Ações
                 </th>
               </tr>
             </thead>
@@ -248,10 +248,10 @@ export function StockManagementPage() {
                   <td className="px-6 py-4 text-sm text-gray-500">{item.sku}</td>
                   <td className="px-6 py-4 text-center">
                     <div className="text-sm font-semibold text-gray-900">
-                      {item.stockQuantity} {item.unitType === "WEIGHT" ? "kg" : "units"}
+                      {item.stockQuantity} {item.unitType === "WEIGHT" ? "kg" : "unidades"}
                     </div>
                     <div className="text-xs text-gray-500">
-                      Threshold: {item.lowStockThreshold}
+                      Limite: {item.lowStockThreshold}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-center">{getStockBadge(item)}</td>
@@ -269,7 +269,7 @@ export function StockManagementPage() {
                       }
                     >
                       <Plus className="h-4 w-4 mr-1" />
-                      Add
+                      Adicionar
                     </Button>
                     <Button
                       variant="outline"
@@ -285,7 +285,7 @@ export function StockManagementPage() {
                       disabled={item.stockQuantity === 0}
                     >
                       <Minus className="h-4 w-4 mr-1" />
-                      Remove
+                      Remover
                     </Button>
                     <Button
                       variant="outline"
@@ -300,7 +300,7 @@ export function StockManagementPage() {
                       }
                     >
                       <Edit className="h-4 w-4 mr-1" />
-                      Adjust
+                      Ajustar
                     </Button>
                     <Button
                       variant="outline"
@@ -322,25 +322,25 @@ export function StockManagementPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {modalType === "add" && "Add Stock"}
-              {modalType === "remove" && "Remove Stock"}
-              {modalType === "adjust" && "Adjust Stock"}
+              {modalType === "add" && "Adicionar Estoque"}
+              {modalType === "remove" && "Remover Estoque"}
+              {modalType === "adjust" && "Ajustar Estoque"}
             </DialogTitle>
           </DialogHeader>
 
           {selectedOption && (
             <div className="space-y-4">
               <div>
-                <p className="text-sm font-medium text-gray-700">Product</p>
+                <p className="text-sm font-medium text-gray-700">Produto</p>
                 <p className="text-sm text-gray-900">
                   {selectedOption.productName} - {selectedOption.name}
                 </p>
-                <p className="text-sm text-gray-500">Current: {selectedOption.currentStock}</p>
+                <p className="text-sm text-gray-500">Atual: {selectedOption.currentStock}</p>
               </div>
 
               <div>
                 <Label htmlFor="quantity">
-                  {modalType === "adjust" ? "New Quantity" : "Quantity"}
+                  {modalType === "adjust" ? "Nova Quantidade" : "Quantidade"}
                 </Label>
                 <Input
                   id="quantity"
@@ -349,17 +349,17 @@ export function StockManagementPage() {
                   step="0.01"
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
-                  placeholder="Enter quantity"
+                  placeholder="Insira a quantidade"
                 />
               </div>
 
               <div>
-                <Label htmlFor="notes">Notes (Optional)</Label>
+                <Label htmlFor="notes">Observações (Opcional)</Label>
                 <Textarea
                   id="notes"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Add notes about this stock change..."
+                  placeholder="Adicione observações sobre esta alteração de estoque..."
                   rows={3}
                 />
               </div>
@@ -368,7 +368,7 @@ export function StockManagementPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={closeModal}>
-              Cancel
+              Cancelar
             </Button>
             <Button
               onClick={handleSubmit}
@@ -378,9 +378,9 @@ export function StockManagementPage() {
                 adjustStockMutation.isPending
               }
             >
-              {modalType === "add" && "Add Stock"}
-              {modalType === "remove" && "Remove Stock"}
-              {modalType === "adjust" && "Adjust Stock"}
+              {modalType === "add" && "Adicionar Estoque"}
+              {modalType === "remove" && "Remover Estoque"}
+              {modalType === "adjust" && "Ajustar Estoque"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -390,10 +390,10 @@ export function StockManagementPage() {
       <Dialog open={showMovements} onOpenChange={(open) => !open && setShowMovements(false)}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Stock Movement History</DialogTitle>
+            <DialogTitle>Histórico de Movimentação de Estoque</DialogTitle>
           </DialogHeader>
 
-          {movementsQuery.isLoading && <p className="text-center py-4">Loading...</p>}
+          {movementsQuery.isLoading && <p className="text-center py-4">Carregando...</p>}
 
           {movementsQuery.data && (
             <div className="space-y-3">
@@ -422,7 +422,7 @@ export function StockManagementPage() {
                       </div>
                       <p className="text-sm text-gray-600">{movement.notes}</p>
                       {movement.orderId && (
-                        <p className="text-xs text-gray-500 mt-1">Order: {movement.orderId}</p>
+                        <p className="text-xs text-gray-500 mt-1">Pedido: {movement.orderId}</p>
                       )}
                     </div>
                     <div className="text-right text-xs text-gray-500">
@@ -433,14 +433,14 @@ export function StockManagementPage() {
               ))}
 
               {movementsQuery.data.items.length === 0 && (
-                <p className="text-center text-gray-500 py-8">No stock movements yet</p>
+                <p className="text-center text-gray-500 py-8">Nenhuma movimentação de estoque ainda</p>
               )}
             </div>
           )}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowMovements(false)}>
-              Close
+              Fechar
             </Button>
           </DialogFooter>
         </DialogContent>

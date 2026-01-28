@@ -72,33 +72,33 @@ export function ProductsManagementPage() {
 
   const createMutation = trpc.products.create.useMutation({
     onSuccess: () => {
-      toast.success("Product created successfully");
+      toast.success("Produto criado com sucesso");
       utils.products.list.invalidate();
       closeModal();
     },
     onError: (error) => {
-      toast.error("Failed to create product", { description: error.message });
+      toast.error("Falha ao criar produto", { description: error.message });
     },
   });
 
   const updateMutation = trpc.products.update.useMutation({
     onSuccess: () => {
-      toast.success("Product updated successfully");
+      toast.success("Produto atualizado com sucesso");
       utils.products.list.invalidate();
       closeModal();
     },
     onError: (error) => {
-      toast.error("Failed to update product", { description: error.message });
+      toast.error("Falha ao atualizar produto", { description: error.message });
     },
   });
 
   const deleteMutation = trpc.products.delete.useMutation({
     onSuccess: () => {
-      toast.success("Product deleted successfully");
+      toast.success("Produto excluído com sucesso");
       utils.products.list.invalidate();
     },
     onError: (error) => {
-      toast.error("Failed to delete product", { description: error.message });
+      toast.error("Falha ao excluir produto", { description: error.message });
     },
   });
 
@@ -152,18 +152,18 @@ export function ProductsManagementPage() {
 
     // Validate
     if (!formData.name.trim()) {
-      toast.error("Product name is required");
+      toast.error("Nome do produto é obrigatório");
       return;
     }
 
     if (formData.options.length === 0) {
-      toast.error("At least one product option is required");
+      toast.error("Pelo menos uma opção de produto é obrigatória");
       return;
     }
 
     for (const option of formData.options) {
       if (!option.name.trim() || !option.sku.trim() || !option.basePrice) {
-        toast.error("All option fields are required");
+        toast.error("Todos os campos da opção são obrigatórios");
         return;
       }
     }
@@ -198,7 +198,7 @@ export function ProductsManagementPage() {
   };
 
   const handleDelete = (productId: string, productName: string) => {
-    if (confirm(`Are you sure you want to delete "${productName}"? This will also delete all its options and cannot be undone.`)) {
+    if (confirm(`Tem certeza que deseja excluir "${productName}"? Isso também excluirá todas as opções e não pode ser desfeito.`)) {
       deleteMutation.mutate({ id: productId });
     }
   };
@@ -234,21 +234,21 @@ export function ProductsManagementPage() {
   };
 
   return (
-    <PageLayout title="Product Catalog">
+    <PageLayout title="Catálogo de Produtos">
       {/* Header Actions */}
       <div className="mb-6 flex flex-col sm:flex-row gap-3 justify-between">
         <div className="flex gap-3 flex-1">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Search products..."
+              placeholder="Buscar produtos..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
             />
           </div>
           <Input
-            placeholder="Category..."
+            placeholder="Categoria..."
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             className="max-w-[150px]"
@@ -256,7 +256,7 @@ export function ProductsManagementPage() {
         </div>
         <Button onClick={openCreateModal}>
           <Plus className="h-4 w-4 mr-2" />
-          New Product
+          Novo Produto
         </Button>
       </div>
 
@@ -270,14 +270,14 @@ export function ProductsManagementPage() {
       )}
 
       {productsQuery.error && (
-        <p className="text-center py-8 text-red-600">Error loading products</p>
+        <p className="text-center py-8 text-red-600">Erro ao carregar produtos</p>
       )}
 
       {productsQuery.data && productsQuery.data.items.length === 0 && (
         <div className="text-center py-16 bg-gray-50 rounded-lg">
           <Package className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-          <p className="text-lg text-gray-600">No products found</p>
-          <p className="text-sm text-gray-500 mt-1">Create your first product to get started</p>
+          <p className="text-lg text-gray-600">Nenhum produto encontrado</p>
+          <p className="text-sm text-gray-500 mt-1">Crie seu primeiro produto para começar</p>
         </div>
       )}
 
@@ -303,12 +303,12 @@ export function ProductsManagementPage() {
                   </Badge>
                 )}
                 <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                  {product.description || "No description"}
+                  {product.description || "Sem descrição"}
                 </p>
 
                 <div className="border-t pt-3 mb-3">
                   <p className="text-xs font-medium text-gray-500 mb-2">
-                    {product.options.length} option{product.options.length !== 1 ? "s" : ""}
+                    {product.options.length} opç{product.options.length !== 1 ? "ões" : "ão"}
                   </p>
                   {product.options.slice(0, 2).map((option: any) => (
                     <div key={option.id} className="text-xs text-gray-600 mb-1">
@@ -317,7 +317,7 @@ export function ProductsManagementPage() {
                   ))}
                   {product.options.length > 2 && (
                     <p className="text-xs text-gray-500">
-                      +{product.options.length - 2} more
+                      +{product.options.length - 2} mais
                     </p>
                   )}
                 </div>
@@ -330,7 +330,7 @@ export function ProductsManagementPage() {
                     onClick={() => openEditModal(product)}
                   >
                     <Edit className="h-4 w-4 mr-1" />
-                    Edit
+                    Editar
                   </Button>
                   <Button
                     variant="outline"
@@ -351,45 +351,45 @@ export function ProductsManagementPage() {
       <Dialog open={showCreateModal} onOpenChange={(open) => !open && closeModal()}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingProduct ? "Edit Product" : "Create New Product"}</DialogTitle>
+            <DialogTitle>{editingProduct ? "Editar Produto" : "Criar Novo Produto"}</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Basic Info */}
             <div className="space-y-4">
               <div>
-                <Label htmlFor="name">Product Name *</Label>
+                <Label htmlFor="name">Nome do Produto *</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., Tomatoes"
+                  placeholder="Ex: Tomates"
                 />
               </div>
 
               <div>
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description">Descrição</Label>
                 <Textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Product description..."
+                  placeholder="Descrição do produto..."
                   rows={3}
                 />
               </div>
 
               <div>
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="category">Categoria</Label>
                 <Input
                   id="category"
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  placeholder="e.g., Vegetables"
+                  placeholder="Ex: Vegetais"
                 />
               </div>
 
               <div>
-                <Label>Product Image</Label>
+                <Label>Imagem do Produto</Label>
                 <ImageUpload
                   value={formData.imageUrl}
                   onChange={(url) => setFormData({ ...formData, imageUrl: url })}
@@ -401,10 +401,10 @@ export function ProductsManagementPage() {
             {/* Product Options */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <Label>Product Options *</Label>
+                <Label>Opções do Produto *</Label>
                 <Button type="button" size="sm" variant="outline" onClick={addOption}>
                   <Plus className="h-4 w-4 mr-1" />
-                  Add Option
+                  Adicionar Opção
                 </Button>
               </div>
 
@@ -412,7 +412,7 @@ export function ProductsManagementPage() {
                 {formData.options.map((option, index) => (
                   <div key={index} className="border rounded-lg p-4 bg-gray-50">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-medium">Option {index + 1}</span>
+                      <span className="text-sm font-medium">Opção {index + 1}</span>
                       {formData.options.length > 1 && (
                         <Button
                           type="button"
@@ -428,12 +428,12 @@ export function ProductsManagementPage() {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Label htmlFor={`option-name-${index}`}>Name *</Label>
+                        <Label htmlFor={`option-name-${index}`}>Nome *</Label>
                         <Input
                           id={`option-name-${index}`}
                           value={option.name}
                           onChange={(e) => updateOption(index, "name", e.target.value)}
-                          placeholder="e.g., 1kg box"
+                          placeholder="Ex: Caixa 1kg"
                         />
                       </div>
                       <div>
@@ -442,11 +442,11 @@ export function ProductsManagementPage() {
                           id={`option-sku-${index}`}
                           value={option.sku}
                           onChange={(e) => updateOption(index, "sku", e.target.value)}
-                          placeholder="e.g., TOM-1KG"
+                          placeholder="Ex: TOM-1KG"
                         />
                       </div>
                       <div>
-                        <Label htmlFor={`option-unitType-${index}`}>Unit Type *</Label>
+                        <Label htmlFor={`option-unitType-${index}`}>Tipo de Unidade *</Label>
                         <Select
                           value={option.unitType}
                           onValueChange={(value) => updateOption(index, "unitType", value)}
@@ -455,13 +455,13 @@ export function ProductsManagementPage() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="FIXED">Fixed (by unit)</SelectItem>
-                            <SelectItem value="WEIGHT">Weight (by kg)</SelectItem>
+                            <SelectItem value="FIXED">Fixo (por unidade)</SelectItem>
+                            <SelectItem value="WEIGHT">Peso (por kg)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
-                        <Label htmlFor={`option-price-${index}`}>Price (R$) *</Label>
+                        <Label htmlFor={`option-price-${index}`}>Preço (R$) *</Label>
                         <Input
                           id={`option-price-${index}`}
                           type="number"
@@ -473,7 +473,7 @@ export function ProductsManagementPage() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor={`option-stock-${index}`}>Initial Stock</Label>
+                        <Label htmlFor={`option-stock-${index}`}>Estoque Inicial</Label>
                         <Input
                           id={`option-stock-${index}`}
                           type="number"
@@ -485,7 +485,7 @@ export function ProductsManagementPage() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor={`option-threshold-${index}`}>Low Stock Alert</Label>
+                        <Label htmlFor={`option-threshold-${index}`}>Alerta Estoque Baixo</Label>
                         <Input
                           id={`option-threshold-${index}`}
                           type="number"
@@ -506,13 +506,13 @@ export function ProductsManagementPage() {
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={closeModal}>
-                Cancel
+                Cancelar
               </Button>
               <Button
                 type="submit"
                 disabled={createMutation.isPending || updateMutation.isPending}
               >
-                {editingProduct ? "Update Product" : "Create Product"}
+                {editingProduct ? "Atualizar Produto" : "Criar Produto"}
               </Button>
             </DialogFooter>
           </form>

@@ -72,16 +72,27 @@ export function DashboardPage() {
   // Show error state if both queries failed
   const hasError = ordersQuery.isError || stockQuery.isError;
 
+  // Traduzir status do pedido
+  const translateStatus = (status: string) => {
+    const statusMap: Record<string, string> = {
+      DRAFT: "Rascunho",
+      SENT: "Enviado",
+      IN_SEPARATION: "Em Separação",
+      FINALIZED: "Finalizado",
+    };
+    return statusMap[status] || status;
+  };
+
   return (
-    <PageLayout title="Dashboard">
+    <PageLayout title="Painel">
       {hasError && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
           <div className="flex items-center gap-2 text-red-800">
             <AlertTriangle className="h-5 w-5" />
-            <span className="font-medium">Failed to load dashboard data</span>
+            <span className="font-medium">Falha ao carregar dados do painel</span>
           </div>
           <p className="text-sm text-red-600 mt-1">
-            {ordersQuery.error?.message || stockQuery.error?.message || "An error occurred"}
+            {ordersQuery.error?.message || stockQuery.error?.message || "Ocorreu um erro"}
           </p>
           <button
             onClick={() => {
@@ -90,15 +101,15 @@ export function DashboardPage() {
             }}
             className="mt-2 text-sm text-red-700 hover:text-red-900 underline"
           >
-            Try again
+            Tentar novamente
           </button>
         </div>
       )}
-      {/* Metrics Cards */}
+      {/* Cards de Métricas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Pedidos</CardTitle>
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -108,7 +119,7 @@ export function DashboardPage() {
               <>
                 <div className="text-2xl font-bold">{totalOrders}</div>
                 <p className="text-xs text-muted-foreground">
-                  {todayOrders} today
+                  {todayOrders} hoje
                 </p>
               </>
             )}
@@ -117,7 +128,7 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">Receita</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -127,7 +138,7 @@ export function DashboardPage() {
               <>
                 <div className="text-2xl font-bold">{formatPrice(totalRevenue)}</div>
                 <p className="text-xs text-muted-foreground">
-                  From {finalizedOrders} finalized orders
+                  De {finalizedOrders} pedidos finalizados
                 </p>
               </>
             )}
@@ -136,7 +147,7 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
+            <CardTitle className="text-sm font-medium">Pedidos Pendentes</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -146,7 +157,7 @@ export function DashboardPage() {
               <>
                 <div className="text-2xl font-bold">{pendingOrders}</div>
                 <p className="text-xs text-muted-foreground">
-                  Need processing
+                  Aguardando processamento
                 </p>
               </>
             )}
@@ -155,7 +166,7 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
+            <CardTitle className="text-sm font-medium">Estoque Baixo</CardTitle>
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -167,7 +178,7 @@ export function DashboardPage() {
                   {lowStockItems.length}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Requires attention
+                  Requer atenção
                 </p>
               </>
             )}
@@ -176,16 +187,16 @@ export function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Orders */}
+        {/* Pedidos Recentes */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>Recent Orders</span>
+              <span>Pedidos Recentes</span>
               <Link
                 to="/chef/orders"
                 className="text-sm text-primary hover:underline font-normal"
               >
-                View all
+                Ver todos
               </Link>
             </CardTitle>
           </CardHeader>
@@ -196,7 +207,7 @@ export function DashboardPage() {
                 <CardSkeleton />
               </div>
             ) : recentOrders.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">No orders yet</p>
+              <p className="text-center text-gray-500 py-8">Nenhum pedido ainda</p>
             ) : (
               <div className="space-y-3">
                 {recentOrders.map((order) => (
@@ -217,11 +228,11 @@ export function DashboardPage() {
                         }
                         className="text-xs"
                       >
-                        {order.status}
+                        {translateStatus(order.status)}
                       </Badge>
                     </div>
                     <p className="text-xs text-gray-500">
-                      {order.items.length} items •{" "}
+                      {order.items.length} itens •{" "}
                       {new Date(order.createdAt).toLocaleDateString("pt-BR")}
                     </p>
                   </Link>
@@ -231,16 +242,16 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Low Stock Alerts */}
+        {/* Alertas de Estoque Baixo */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>Low Stock Alerts</span>
+              <span>Alertas de Estoque</span>
               <Link
                 to="/admin/stock"
                 className="text-sm text-primary hover:underline font-normal"
               >
-                Manage stock
+                Gerenciar estoque
               </Link>
             </CardTitle>
           </CardHeader>
@@ -253,7 +264,7 @@ export function DashboardPage() {
             ) : lowStockItems.length === 0 ? (
               <div className="text-center py-8">
                 <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
-                <p className="text-gray-500">All stock levels good!</p>
+                <p className="text-gray-500">Estoque em dia!</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -271,12 +282,12 @@ export function DashboardPage() {
                         variant={item.isOutOfStock ? "destructive" : "secondary"}
                         className="text-xs"
                       >
-                        {item.isOutOfStock ? "Out" : `${item.stockQuantity}`}
+                        {item.isOutOfStock ? "Esgotado" : `${item.stockQuantity}`}
                       </Badge>
                     </div>
                     {!item.isOutOfStock && (
                       <p className="text-xs text-yellow-600">
-                        Below threshold ({item.lowStockThreshold})
+                        Abaixo do mínimo ({item.lowStockThreshold})
                       </p>
                     )}
                   </div>

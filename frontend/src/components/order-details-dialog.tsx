@@ -26,23 +26,23 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
 
   const cancelOrderMutation = trpc.orders.cancel.useMutation({
     onSuccess: () => {
-      toast.success("Order cancelled successfully");
+      toast.success("Pedido cancelado com sucesso");
       utils.orders.list.invalidate();
       onClose();
     },
     onError: (error) => {
-      toast.error("Failed to cancel order", { description: error.message });
+      toast.error("Falha ao cancelar pedido", { description: error.message });
     },
   });
 
   const removeItemMutation = trpc.orders.removeItem.useMutation({
     onSuccess: () => {
-      toast.success("Item removed from order");
+      toast.success("Item removido do pedido");
       utils.orders.get.invalidate();
       utils.orders.list.invalidate();
     },
     onError: (error) => {
-      toast.error("Failed to remove item", { description: error.message });
+      toast.error("Falha ao remover item", { description: error.message });
     },
   });
 
@@ -66,14 +66,14 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
     });
 
     if (itemsAdded > 0) {
-      toast.success(`Added ${itemsAdded} item${itemsAdded > 1 ? "s" : ""} to cart`, {
-        description: "You can review and adjust quantities in your cart",
+      toast.success(`${itemsAdded} item${itemsAdded > 1 ? "s" : ""} adicionado${itemsAdded > 1 ? "s" : ""} ao carrinho`, {
+        description: "Você pode revisar e ajustar quantidades no seu carrinho",
         duration: 3000,
       });
       onClose();
     } else {
-      toast.error("No items available to reorder", {
-        description: "This order has no items with final prices",
+      toast.error("Nenhum item disponível para repedir", {
+        description: "Este pedido não possui itens com preços finais",
         duration: 3000,
       });
     }
@@ -83,17 +83,17 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
     if (!order) return;
 
     const reason = prompt(
-      "Please provide a reason for cancelling this order (optional):"
+      "Por favor, forneça um motivo para o cancelamento (opcional):"
     );
 
     if (reason === null) return; // User clicked cancel
 
     if (
       confirm(
-        `Are you sure you want to cancel order ${order.orderNumber}? ${
+        `Tem certeza que deseja cancelar o pedido ${order.orderNumber}? ${
           order.status === "FINALIZED"
-            ? "Stock will be restored."
-            : "This action cannot be undone."
+            ? "O estoque será restaurado."
+            : "Esta ação não pode ser desfeita."
         }`
       )
     ) {
@@ -107,7 +107,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
   const handleRemoveItem = (itemId: string, itemName: string) => {
     if (
       confirm(
-        `Remove ${itemName} from this order? This action cannot be undone.`
+        `Remover ${itemName} deste pedido? Esta ação não pode ser desfeita.`
       )
     ) {
       removeItemMutation.mutate({ orderItemId: itemId });
@@ -153,10 +153,10 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>Order Details</span>
+            <span>Detalhes do Pedido</span>
             {order && (
               <Badge className={getStatusColor(order.status)}>
-                {order.status}
+                {order.status === "SENT" ? "Enviado" : order.status === "IN_SEPARATION" ? "Em Separação" : order.status === "FINALIZED" ? "Finalizado" : order.status}
               </Badge>
             )}
           </DialogTitle>
@@ -183,11 +183,11 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
             {/* Order Info */}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-gray-500">Order Number</p>
+                <p className="text-gray-500">Número do Pedido</p>
                 <p className="font-medium">{order.orderNumber}</p>
               </div>
               <div>
-                <p className="text-gray-500">Created</p>
+                <p className="text-gray-500">Criado</p>
                 <p className="font-medium">
                   {new Date(order.createdAt).toLocaleDateString("pt-BR", {
                     day: "2-digit",
@@ -199,14 +199,14 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
                 </p>
               </div>
               <div className="col-span-2">
-                <p className="text-gray-500">Created by</p>
+                <p className="text-gray-500">Criado por</p>
                 <p className="font-medium">
-                  {order.createdByUser?.name || order.createdByUser?.email || "Unknown"}
+                  {order.createdByUser?.name || order.createdByUser?.email || "Desconhecido"}
                 </p>
               </div>
               {order.sentAt && (
                 <div>
-                  <p className="text-gray-500">Sent</p>
+                  <p className="text-gray-500">Enviado</p>
                   <p className="font-medium">
                     {new Date(order.sentAt).toLocaleDateString("pt-BR", {
                       day: "2-digit",
@@ -219,7 +219,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
               )}
               {order.finalizedAt && (
                 <div>
-                  <p className="text-gray-500">Finalized</p>
+                  <p className="text-gray-500">Finalizado</p>
                   <p className="font-medium">
                     {new Date(order.finalizedAt).toLocaleDateString("pt-BR", {
                       day: "2-digit",
@@ -234,7 +234,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
 
             {order.notes && (
               <div>
-                <p className="text-sm text-gray-500 mb-1">Notes</p>
+                <p className="text-sm text-gray-500 mb-1">Observações</p>
                 <p className="text-sm bg-gray-50 p-3 rounded">{order.notes}</p>
               </div>
             )}
@@ -245,7 +245,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <Package className="h-5 w-5 text-gray-600" />
-                <h3 className="font-medium">Items ({order.items.length})</h3>
+                <h3 className="font-medium">Itens ({order.items.length})</h3>
               </div>
 
               <div className="space-y-3">
@@ -290,7 +290,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
 
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
-                        <span className="text-gray-500">Requested:</span>
+                        <span className="text-gray-500">Solicitado:</span>
                         <span className="ml-1 font-medium">
                           {item.requestedQty}
                           {item.productOption.unitType === "WEIGHT" ? " kg" : " un"}
@@ -299,7 +299,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
 
                       {item.productOption.unitType === "WEIGHT" && item.actualWeight && (
                         <div>
-                          <span className="text-gray-500">Actual:</span>
+                          <span className="text-gray-500">Real:</span>
                           <span className="ml-1 font-medium text-green-700">
                             {item.actualWeight} kg
                           </span>
@@ -309,7 +309,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
                       {item.finalPrice && (
                         <>
                           <div>
-                            <span className="text-gray-500">Price:</span>
+                            <span className="text-gray-500">Preço:</span>
                             <span className="ml-1 font-medium">
                               {formatPrice(item.finalPrice)}
                               {item.productOption.unitType === "WEIGHT" ? "/kg" : ""}
@@ -323,7 +323,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
                                 ? formatPrice(item.finalPrice)
                                 : item.actualWeight
                                 ? formatPrice(item.actualWeight * item.finalPrice)
-                                : "Pending"}
+                                : "Pendente"}
                             </span>
                           </div>
                         </>
@@ -336,7 +336,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
 
                     {item.isExtra && (
                       <Badge variant="outline" className="mt-2 text-xs">
-                        Extra Item
+                        Item Extra
                       </Badge>
                     )}
                   </div>
@@ -361,7 +361,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
                   variant="default"
                 >
                   <ShoppingCart className="mr-2 h-4 w-4" />
-                  Reorder
+                  Repedir
                 </Button>
 
                 {order.status !== "FINALIZED" && (
@@ -370,7 +370,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
                     variant="outline"
                     className="flex-1"
                   >
-                    {isEditing ? "Done Editing" : "Edit Items"}
+                    {isEditing ? "Concluir Edição" : "Editar Itens"}
                   </Button>
                 )}
 
@@ -379,7 +379,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
                   variant="outline"
                   className="flex-1"
                 >
-                  Close
+                  Fechar
                 </Button>
               </div>
 
@@ -391,7 +391,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
                   disabled={cancelOrderMutation.isPending}
                 >
                   <XCircle className="mr-2 h-4 w-4" />
-                  Cancel Order
+                  Cancelar Pedido
                 </Button>
               )}
             </div>
@@ -404,14 +404,14 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
                 className="block"
               >
                 <Button variant="secondary" className="w-full">
-                  Download PDF
+                  Baixar PDF
                 </Button>
               </a>
             )}
           </div>
         ) : (
           <div className="py-8 text-center text-gray-500">
-            Order not found
+            Pedido não encontrado
           </div>
         )}
       </DialogContent>

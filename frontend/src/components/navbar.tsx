@@ -40,16 +40,16 @@ export function Navbar() {
 
   const navLinks = {
     chef: [
-      { path: "/dashboard", label: "Dashboard", icon: Home },
-      { path: "/chef/catalog", label: "Catalog", icon: ShoppingCart },
-      { path: "/chef/orders", label: "My Orders", icon: ClipboardList },
+      { path: "/dashboard", label: "Painel", icon: Home },
+      { path: "/chef/catalog", label: "Catálogo", icon: ShoppingCart },
+      { path: "/chef/orders", label: "Meus Pedidos", icon: ClipboardList },
     ],
     admin: [
-      { path: "/dashboard", label: "Dashboard", icon: Home },
-      { path: "/admin/products", label: "Products", icon: Package },
-      { path: "/admin/customers", label: "Customers", icon: Users },
-      { path: "/admin/stock", label: "Stock", icon: PackageSearch },
-      { path: "/chef/orders", label: "All Orders", icon: ClipboardList },
+      { path: "/dashboard", label: "Painel", icon: Home },
+      { path: "/admin/products", label: "Produtos", icon: Package },
+      { path: "/admin/customers", label: "Clientes", icon: Users },
+      { path: "/admin/stock", label: "Estoque", icon: PackageSearch },
+      { path: "/chef/orders", label: "Todos Pedidos", icon: ClipboardList },
     ],
   };
 
@@ -99,7 +99,7 @@ export function Navbar() {
               className="ml-2 text-gray-700 hover:text-red-600"
             >
               <LogOut className="h-4 w-4 mr-2" />
-              Logout
+              Sair
             </Button>
           </div>
 
@@ -155,7 +155,7 @@ export function Navbar() {
               className="w-full justify-start text-gray-700 hover:text-red-600"
             >
               <LogOut className="h-5 w-5 mr-2" />
-              Logout
+              Sair
             </Button>
           </div>
         </div>

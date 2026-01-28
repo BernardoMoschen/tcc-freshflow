@@ -37,12 +37,12 @@ export function OrdersPage() {
 
   const bulkUpdateMutation = trpc.orders.bulkUpdateStatus.useMutation({
     onSuccess: (data) => {
-      toast.success(`Updated ${data.updated} order(s)`);
+      toast.success(`${data.updated} pedido(s) atualizado(s)`);
       setSelectedOrders(new Set());
       utils.orders.list.invalidate();
     },
     onError: (error) => {
-      toast.error("Failed to update orders", { description: error.message });
+      toast.error("Falha ao atualizar pedidos", { description: error.message });
     },
   });
 
@@ -74,11 +74,11 @@ export function OrdersPage() {
 
   const handleBulkUpdateStatus = () => {
     if (selectedOrders.size === 0) {
-      toast.error("No orders selected");
+      toast.error("Nenhum pedido selecionado");
       return;
     }
     if (!bulkStatus) {
-      toast.error("Please select a status");
+      toast.error("Por favor, selecione um status");
       return;
     }
 
@@ -108,7 +108,7 @@ export function OrdersPage() {
       a.download = `orders-export-${new Date().toISOString()}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("CSV exported successfully");
+      toast.success("CSV exportado com sucesso");
     }
   };
 
@@ -121,7 +121,7 @@ export function OrdersPage() {
   const totalPages = ordersQuery.data ? Math.ceil(ordersQuery.data.total / PAGE_SIZE) : 0;
 
   return (
-    <PageLayout title="My Orders">
+    <PageLayout title="Meus Pedidos">
       {/* Filters */}
       <div className="mb-6 space-y-3">
         <div className="flex flex-col sm:flex-row gap-3">
@@ -129,7 +129,7 @@ export function OrdersPage() {
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Search by order number..."
+              placeholder="Buscar por número do pedido..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -139,13 +139,13 @@ export function OrdersPage() {
           {/* Status Filter */}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Filter by status" />
+              <SelectValue placeholder="Filtrar por status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Orders</SelectItem>
-              <SelectItem value="SENT">Sent</SelectItem>
-              <SelectItem value="IN_SEPARATION">In Separation</SelectItem>
-              <SelectItem value="FINALIZED">Finalized</SelectItem>
+              <SelectItem value="all">Todos os Pedidos</SelectItem>
+              <SelectItem value="SENT">Enviado</SelectItem>
+              <SelectItem value="IN_SEPARATION">Em Separação</SelectItem>
+              <SelectItem value="FINALIZED">Finalizado</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -153,9 +153,9 @@ export function OrdersPage() {
         {/* Results count */}
         {ordersQuery.data && (
           <p className="text-sm text-gray-600">
-            Showing {filteredOrders.length} of {ordersQuery.data.total} order
+            Mostrando {filteredOrders.length} de {ordersQuery.data.total} pedido
             {ordersQuery.data.total !== 1 ? "s" : ""}
-            {selectedOrders.size > 0 && ` • ${selectedOrders.size} selected`}
+            {selectedOrders.size > 0 && ` • ${selectedOrders.size} selecionado(s)`}
           </p>
         )}
       </div>
@@ -164,18 +164,18 @@ export function OrdersPage() {
       {selectedOrders.size > 0 && (
         <div className="mb-4 p-4 bg-blue-50 rounded-lg flex flex-col sm:flex-row items-center gap-3">
           <span className="text-sm font-medium text-blue-900">
-            {selectedOrders.size} order{selectedOrders.size > 1 ? "s" : ""} selected
+            {selectedOrders.size} pedido{selectedOrders.size > 1 ? "s" : ""} selecionado{selectedOrders.size > 1 ? "s" : ""}
           </span>
 
           <div className="flex-1 flex items-center gap-2">
             <Select value={bulkStatus} onValueChange={setBulkStatus}>
               <SelectTrigger className="w-[180px] bg-white">
-                <SelectValue placeholder="Update status..." />
+                <SelectValue placeholder="Atualizar status..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="SENT">Sent</SelectItem>
-                <SelectItem value="IN_SEPARATION">In Separation</SelectItem>
-                <SelectItem value="FINALIZED">Finalized</SelectItem>
+                <SelectItem value="SENT">Enviado</SelectItem>
+                <SelectItem value="IN_SEPARATION">Em Separação</SelectItem>
+                <SelectItem value="FINALIZED">Finalizado</SelectItem>
               </SelectContent>
             </Select>
 
@@ -185,13 +185,13 @@ export function OrdersPage() {
               disabled={!bulkStatus || bulkUpdateMutation.isPending}
             >
               <RefreshCw className="h-4 w-4 mr-1" />
-              Update Status
+              Atualizar Status
             </Button>
           </div>
 
           <Button onClick={handleExportCSV} size="sm" variant="outline">
             <FileDown className="h-4 w-4 mr-1" />
-            Export CSV
+            Exportar CSV
           </Button>
 
           <Button
@@ -199,7 +199,7 @@ export function OrdersPage() {
             size="sm"
             variant="ghost"
           >
-            Clear Selection
+            Limpar Seleção
           </Button>
         </div>
       )}
@@ -213,7 +213,7 @@ export function OrdersPage() {
       )}
 
       {ordersQuery.error && (
-        <p className="text-center py-8 text-red-600">Error loading orders</p>
+        <p className="text-center py-8 text-red-600">Erro ao carregar pedidos</p>
       )}
 
       {ordersQuery.data && filteredOrders.length === 0 && (
@@ -232,12 +232,12 @@ export function OrdersPage() {
             />
           </svg>
           <p className="mt-4 text-lg text-gray-600">
-            {searchQuery || statusFilter !== "all" ? "No matching orders" : "No orders yet"}
+            {searchQuery || statusFilter !== "all" ? "Nenhum pedido encontrado" : "Nenhum pedido ainda"}
           </p>
           <p className="text-sm text-gray-500 mt-1">
             {searchQuery || statusFilter !== "all"
-              ? "Try adjusting your filters"
-              : "Start shopping to create your first order"}
+              ? "Tente ajustar seus filtros"
+              : "Comece a comprar para criar seu primeiro pedido"}
           </p>
         </div>
       )}
@@ -251,7 +251,7 @@ export function OrdersPage() {
             onCheckedChange={toggleSelectAll}
           />
           <label htmlFor="select-all" className="text-sm text-gray-600 cursor-pointer">
-            Select all ({filteredOrders.length})
+            Selecionar todos ({filteredOrders.length})
           </label>
         </div>
       )}
@@ -277,10 +277,10 @@ export function OrdersPage() {
                   <h3 className="font-semibold text-lg mb-2">{order.orderNumber}</h3>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-gray-600 mb-3">
                     <div>
-                      <span className="font-medium">Items:</span> {order.items.length}
+                      <span className="font-medium">Itens:</span> {order.items.length}
                     </div>
                     <div>
-                      <span className="font-medium">Created:</span>{" "}
+                      <span className="font-medium">Criado:</span>{" "}
                       {new Date(order.createdAt).toLocaleDateString("pt-BR", {
                         day: "2-digit",
                         month: "short",
@@ -288,12 +288,12 @@ export function OrdersPage() {
                       })}
                     </div>
                     <div className="col-span-2">
-                      <span className="font-medium">Created by:</span>{" "}
-                      {order.createdByUser?.name || order.createdByUser?.email || "Unknown"}
+                      <span className="font-medium">Criado por:</span>{" "}
+                      {order.createdByUser?.name || order.createdByUser?.email || "Desconhecido"}
                     </div>
                     {order.sentAt && (
                       <div className="col-span-2">
-                        <span className="font-medium">Sent:</span>{" "}
+                        <span className="font-medium">Enviado:</span>{" "}
                         {new Date(order.sentAt).toLocaleDateString("pt-BR", {
                           day: "2-digit",
                           month: "short",
@@ -319,7 +319,7 @@ export function OrdersPage() {
                   className="flex-1"
                 >
                   <Eye className="mr-2 h-4 w-4" />
-                  View Details
+                  Ver Detalhes
                 </Button>
 
                 {order.status === "FINALIZED" && (
@@ -331,7 +331,7 @@ export function OrdersPage() {
                   >
                     <Button variant="secondary" size="sm" className="w-full">
                       <Download className="mr-2 h-4 w-4" />
-                      Download PDF
+                      Baixar PDF
                     </Button>
                   </a>
                 )}
@@ -345,7 +345,7 @@ export function OrdersPage() {
       {ordersQuery.data && totalPages > 1 && (
         <div className="flex items-center justify-between mt-6 pt-6 border-t">
           <div className="text-sm text-gray-600">
-            Page {currentPage + 1} of {totalPages}
+            Página {currentPage + 1} de {totalPages}
           </div>
           <div className="flex gap-2">
             <Button
@@ -355,7 +355,7 @@ export function OrdersPage() {
               disabled={currentPage === 0}
             >
               <ChevronLeft className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Previous</span>
+              <span className="hidden sm:inline">Anterior</span>
             </Button>
             <Button
               variant="outline"
@@ -363,7 +363,7 @@ export function OrdersPage() {
               onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={currentPage >= totalPages - 1}
             >
-              <span className="hidden sm:inline">Next</span>
+              <span className="hidden sm:inline">Próximo</span>
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>

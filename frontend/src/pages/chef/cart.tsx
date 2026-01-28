@@ -28,12 +28,12 @@ export function CartPage() {
 
   const handleSubmit = async () => {
     if (items.length === 0) {
-      toast.error("Cart is empty");
+      toast.error("Carrinho vazio");
       return;
     }
 
     if (!draftOrderId) {
-      toast.error("Draft order not found");
+      toast.error("Rascunho do pedido não encontrado");
       return;
     }
 
@@ -43,15 +43,15 @@ export function CartPage() {
         orderId: draftOrderId,
       });
 
-      toast.success(`Order submitted: ${order.orderNumber}`, {
+      toast.success(`Pedido enviado: ${order.orderNumber}`, {
         description: deliveryDate
-          ? `Scheduled for ${new Date(deliveryDate).toLocaleDateString("pt-BR")}`
+          ? `Agendado para ${new Date(deliveryDate).toLocaleDateString("pt-BR")}`
           : undefined,
       });
       navigate("/chef/orders");
     } catch (error) {
-      toast.error("Failed to submit order", {
-        description: error instanceof Error ? error.message : "Unknown error",
+      toast.error("Falha ao enviar pedido", {
+        description: error instanceof Error ? error.message : "Erro desconhecido",
       });
     } finally {
       setSubmitting(false);
@@ -66,15 +66,15 @@ export function CartPage() {
   };
 
   const formatDateLabel = (daysFromNow: number) => {
-    if (daysFromNow === 0) return "Today";
-    if (daysFromNow === 1) return "Tomorrow";
+    if (daysFromNow === 0) return "Hoje";
+    if (daysFromNow === 1) return "Amanhã";
     const date = new Date();
     date.setDate(date.getDate() + daysFromNow);
     return date.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" });
   };
 
   return (
-    <PageLayout title="Shopping Cart">
+    <PageLayout title="Carrinho">
       {items.length === 0 ? (
         <div className="text-center py-16">
           <svg
@@ -90,9 +90,9 @@ export function CartPage() {
               d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
             />
           </svg>
-          <p className="mt-4 text-lg text-gray-600">Your cart is empty</p>
+          <p className="mt-4 text-lg text-gray-600">Seu carrinho está vazio</p>
           <Button onClick={() => navigate("/chef/catalog")} className="mt-6">
-            Browse Products
+            Ver Produtos
           </Button>
         </div>
       ) : (
@@ -123,10 +123,10 @@ export function CartPage() {
                     </Button>
                   </div>
 
-                  {/* Quantity controls */}
+                  {/* Controles de quantidade */}
                   <div className="flex items-center gap-3">
                     <Label htmlFor={`qty-${item.productOptionId}`} className="text-sm font-medium">
-                      Quantity:
+                      Quantidade:
                     </Label>
                     <Input
                       id={`qty-${item.productOptionId}`}
@@ -140,7 +140,7 @@ export function CartPage() {
                       className="w-24"
                     />
                     <span className="text-sm text-gray-600">
-                      {item.unitType === "WEIGHT" ? "kg" : "units"}
+                      {item.unitType === "WEIGHT" ? "kg" : "unidades"}
                     </span>
                     <div className="ml-auto text-right">
                       <span className="text-sm text-gray-500">Subtotal: </span>
@@ -150,18 +150,18 @@ export function CartPage() {
                     </div>
                   </div>
 
-                  {/* Item notes */}
+                  {/* Observações do item */}
                   <div className="space-y-2">
                     <Label
                       htmlFor={`notes-${item.productOptionId}`}
                       className="text-xs text-gray-600 flex items-center gap-1"
                     >
                       <MessageSquare className="h-3 w-3" />
-                      Special instructions (optional)
+                      Instruções especiais (opcional)
                     </Label>
                     <Textarea
                       id={`notes-${item.productOptionId}`}
-                      placeholder={`E.g., "Cut in half", "Extra fresh", "No substitutions"...`}
+                      placeholder={`Ex: "Cortar ao meio", "Bem fresco", "Sem substituições"...`}
                       value={item.notes || ""}
                       onChange={(e) => updateNotes(item.productOptionId, e.target.value)}
                       className="text-sm resize-none"
@@ -175,13 +175,13 @@ export function CartPage() {
 
           {/* Order details section */}
           <div className="bg-white rounded-lg shadow-sm p-6 space-y-6 mb-6">
-            <h3 className="font-semibold text-lg">Order Details</h3>
+            <h3 className="font-semibold text-lg">Detalhes do Pedido</h3>
 
             {/* Delivery Date */}
             <div className="space-y-3">
               <Label htmlFor="deliveryDate" className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                Delivery Date
+                Data de Entrega
               </Label>
 
               {/* Quick date buttons */}
@@ -214,11 +214,11 @@ export function CartPage() {
             <div className="space-y-2">
               <Label htmlFor="orderNotes" className="flex items-center gap-2">
                 <MessageSquare className="h-4 w-4" />
-                Order Notes (optional)
+                Observações do Pedido (opcional)
               </Label>
               <Textarea
                 id="orderNotes"
-                placeholder='E.g., "Deliver to back door", "Call before delivery", "Urgent order"...'
+                placeholder='Ex: "Entregar nos fundos", "Ligar antes da entrega", "Pedido urgente"...'
                 value={orderNotes}
                 onChange={(e) => setOrderNotes(e.target.value)}
                 className="resize-none"
@@ -236,10 +236,10 @@ export function CartPage() {
               </span>
             </div>
             <Button onClick={handleSubmit} disabled={submitting} className="w-full" size="lg">
-              {submitting ? "Submitting..." : "Send Order"}
+              {submitting ? "Enviando..." : "Enviar Pedido"}
             </Button>
             <p className="mt-3 text-xs text-center text-gray-600">
-              Weight-based items will be priced after weighing
+              Itens por peso serão precificados após pesagem
             </p>
           </div>
         </>

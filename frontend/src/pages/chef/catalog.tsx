@@ -111,22 +111,22 @@ export function CatalogPage() {
 
   return (
     <PageLayout
-      title="Catalog"
+      title="Catálogo"
       action={
         <Link
           to="/chef/cart"
           className="hidden md:flex bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 items-center space-x-2"
         >
-          <span>Cart ({count})</span>
+          <span>Carrinho ({count})</span>
         </Link>
       }
     >
-      {/* Search bar - always visible */}
+      {/* Barra de busca - sempre visível */}
       <div className="mb-4 relative">
         <input
           ref={searchInputRef}
           type="text"
-          placeholder="Search products..."
+          placeholder="Buscar produtos..."
           value={search}
           onChange={(e) => handleSearchChange(e.target.value)}
           onFocus={() => setShowRecentSearches(true)}
@@ -149,12 +149,12 @@ export function CatalogPage() {
             className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden"
           >
             <div className="p-2 border-b border-gray-100 flex items-center justify-between">
-              <span className="text-xs font-medium text-gray-500 uppercase">Recent Searches</span>
+              <span className="text-xs font-medium text-gray-500 uppercase">Buscas Recentes</span>
               <button
                 onClick={clearRecentSearches}
                 className="text-xs text-blue-600 hover:text-blue-800 font-medium"
               >
-                Clear All
+                Limpar
               </button>
             </div>
             <div className="max-h-60 overflow-y-auto">
@@ -182,16 +182,16 @@ export function CatalogPage() {
           className="flex-shrink-0"
         >
           <Star className={`h-4 w-4 mr-1 ${showFavoritesOnly ? "fill-current" : ""}`} />
-          Favorites {favoritesCount > 0 && `(${favoritesCount})`}
+          Favoritos {favoritesCount > 0 && `(${favoritesCount})`}
         </Button>
       </div>
 
-      {/* Filter toggle button - mobile only */}
+      {/* Botão de filtros - apenas mobile */}
       <button
         onClick={() => setShowFilters(!showFilters)}
         className="md:hidden w-full mb-4 px-4 py-3 bg-white border border-gray-300 rounded-lg text-left flex justify-between items-center"
       >
-        <span className="font-medium text-gray-700">More Filters</span>
+        <span className="font-medium text-gray-700">Mais Filtros</span>
         <svg
           className={`w-5 h-5 transition-transform ${showFilters ? "rotate-180" : ""}`}
           fill="none"
@@ -207,11 +207,11 @@ export function CatalogPage() {
         <div className="bg-white p-4 rounded-lg shadow-sm space-y-4 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-5 md:gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Min Price (R$)
+              Preço Mín. (R$)
             </label>
             <input
               type="number"
-              placeholder="0.00"
+              placeholder="0,00"
               value={minPrice}
               onChange={(e) => setMinPrice(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -220,11 +220,11 @@ export function CatalogPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Max Price (R$)
+              Preço Máx. (R$)
             </label>
             <input
               type="number"
-              placeholder="999.99"
+              placeholder="999,99"
               value={maxPrice}
               onChange={(e) => setMaxPrice(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -233,44 +233,44 @@ export function CatalogPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Unit Type
+              Tipo de Unidade
             </label>
             <select
               value={unitType}
               onChange={(e) => setUnitType(e.target.value as "FIXED" | "WEIGHT" | "")}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
             >
-              <option value="">All Types</option>
-              <option value="FIXED">Fixed Unit</option>
-              <option value="WEIGHT">By Weight</option>
+              <option value="">Todos</option>
+              <option value="FIXED">Unidade Fixa</option>
+              <option value="WEIGHT">Por Peso</option>
             </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Sort By
+              Ordenar Por
             </label>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as "name" | "price")}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
             >
-              <option value="name">Name</option>
-              <option value="price">Price</option>
+              <option value="name">Nome</option>
+              <option value="price">Preço</option>
             </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Order
+              Ordem
             </label>
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
             >
-              <option value="asc">Ascending</option>
-              <option value="desc">Descending</option>
+              <option value="asc">Crescente</option>
+              <option value="desc">Decrescente</option>
             </select>
           </div>
         </div>
@@ -288,7 +288,7 @@ export function CatalogPage() {
         </div>
       )}
       {productsQuery.error && (
-        <p className="text-center py-8 text-red-600">Error loading products</p>
+        <p className="text-center py-8 text-red-600">Erro ao carregar produtos</p>
       )}
 
       {/* Product grid - single column on mobile, responsive grid on larger screens */}
@@ -340,22 +340,22 @@ export function CatalogPage() {
                   />
                 </button>
 
-                {/* Stock Badge */}
+                {/* Badge de Estoque */}
                 <div className="absolute top-2 left-2 z-10">
                   {isOutOfStock ? (
                     <Badge variant="destructive" className="flex items-center gap-1">
                       <XCircle className="h-3 w-3" />
-                      Out of Stock
+                      Esgotado
                     </Badge>
                   ) : isLowStock ? (
                     <Badge variant="secondary" className="flex items-center gap-1 bg-yellow-100 text-yellow-800 border-yellow-300">
                       <AlertTriangle className="h-3 w-3" />
-                      Low Stock ({stockQty})
+                      Estoque Baixo ({stockQty})
                     </Badge>
                   ) : (
                     <Badge variant="secondary" className="flex items-center gap-1 bg-green-100 text-green-800 border-green-300">
                       <CheckCircle className="h-3 w-3" />
-                      In Stock
+                      Em Estoque
                     </Badge>
                   )}
                 </div>
@@ -380,7 +380,7 @@ export function CatalogPage() {
                   <p className="text-sm text-gray-600 mt-1">{option.name}</p>
                   <div className="flex items-center justify-between mt-3">
                     <span className="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-700">
-                      {option.unitType === "FIXED" ? "Fixed unit" : "By weight"}
+                      {option.unitType === "FIXED" ? "Unidade fixa" : "Por peso"}
                     </span>
                     <div className="text-right">
                       <p className="text-lg font-bold text-primary">
@@ -389,7 +389,7 @@ export function CatalogPage() {
                       {(option as any).hasCustomerPrice && (
                         <div className="flex items-center gap-1 text-xs text-green-600">
                           <Tag className="h-3 w-3" />
-                          <span>Special price</span>
+                          <span>Preço especial</span>
                         </div>
                       )}
                     </div>
@@ -407,7 +407,7 @@ export function CatalogPage() {
                       </button>
                       <div className="flex-1 text-center">
                         <p className="text-lg font-bold text-primary">{cartItem.requestedQty}</p>
-                        <p className="text-xs text-gray-500">{isSyncing ? "syncing..." : "in cart"}</p>
+                        <p className="text-xs text-gray-500">{isSyncing ? "sincronizando..." : "no carrinho"}</p>
                       </div>
                       <button
                         onClick={() => updateQuantity(option.id, cartItem.requestedQty + 1)}
@@ -432,22 +432,22 @@ export function CatalogPage() {
                       {isOutOfStock ? (
                         <>
                           <XCircle className="h-5 w-5" />
-                          Out of Stock
+                          Esgotado
                         </>
                       ) : justAdded ? (
                         <>
                           <Check className="h-5 w-5" />
-                          Added!
+                          Adicionado!
                         </>
                       ) : isSyncing ? (
                         <>
                           <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          Adding...
+                          Adicionando...
                         </>
                       ) : (
                         <>
                           <Plus className="h-5 w-5" />
-                          Add to Cart
+                          Adicionar
                         </>
                       )}
                     </button>
@@ -460,10 +460,10 @@ export function CatalogPage() {
         </div>
       )}
 
-      {/* Empty state */}
+      {/* Estado vazio */}
       {productsQuery.data?.items.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-gray-600">No products found</p>
+          <p className="text-gray-600">Nenhum produto encontrado</p>
         </div>
       )}
 

@@ -46,7 +46,7 @@ export function CustomersManagementPage() {
 
   const setCustomPriceMutation = trpc.customers.setCustomPrice.useMutation({
     onSuccess: () => {
-      toast.success("Custom price set successfully");
+      toast.success("Preço personalizado definido com sucesso");
       utils.customers.get.invalidate();
       utils.customers.list.invalidate();
       setShowPricingModal(false);
@@ -54,18 +54,18 @@ export function CustomersManagementPage() {
       setCustomPrice("");
     },
     onError: (error) => {
-      toast.error("Failed to set custom price", { description: error.message });
+      toast.error("Falha ao definir preço personalizado", { description: error.message });
     },
   });
 
   const removeCustomPriceMutation = trpc.customers.removeCustomPrice.useMutation({
     onSuccess: () => {
-      toast.success("Custom price removed");
+      toast.success("Preço personalizado removido");
       utils.customers.get.invalidate();
       utils.customers.list.invalidate();
     },
     onError: (error) => {
-      toast.error("Failed to remove custom price", { description: error.message });
+      toast.error("Falha ao remover preço personalizado", { description: error.message });
     },
   });
 
@@ -86,13 +86,13 @@ export function CustomersManagementPage() {
 
   const handleSetCustomPrice = () => {
     if (!selectedCustomer || !selectedProductOption || !customPrice) {
-      toast.error("Please fill in all fields");
+      toast.error("Por favor, preencha todos os campos");
       return;
     }
 
     const priceInCents = Math.round(parseFloat(customPrice) * 100);
     if (isNaN(priceInCents) || priceInCents <= 0) {
-      toast.error("Please enter a valid price");
+      toast.error("Por favor, insira um preço válido");
       return;
     }
 
@@ -104,7 +104,7 @@ export function CustomersManagementPage() {
   };
 
   const handleRemoveCustomPrice = (customerId: string, productOptionId: string) => {
-    if (confirm("Remove this custom price? The customer will use the base price.")) {
+    if (confirm("Remover este preço personalizado? O cliente usará o preço base.")) {
       removeCustomPriceMutation.mutate({
         customerId,
         productOptionId,
@@ -113,13 +113,13 @@ export function CustomersManagementPage() {
   };
 
   return (
-    <PageLayout title="Customer Management">
+    <PageLayout title="Gestão de Clientes">
       {/* Header */}
       <div className="mb-6 flex flex-col sm:flex-row gap-3 justify-between">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search customers..."
+            placeholder="Buscar clientes..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -137,13 +137,13 @@ export function CustomersManagementPage() {
       )}
 
       {customersQuery.error && (
-        <p className="text-center py-8 text-red-600">Error loading customers</p>
+        <p className="text-center py-8 text-red-600">Erro ao carregar clientes</p>
       )}
 
       {customersQuery.data && customersQuery.data.items.length === 0 && (
         <div className="text-center py-16 bg-gray-50 rounded-lg">
           <Users className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-          <p className="text-lg text-gray-600">No customers found</p>
+          <p className="text-lg text-gray-600">Nenhum cliente encontrado</p>
         </div>
       )}
 
@@ -158,17 +158,17 @@ export function CustomersManagementPage() {
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">{customer.account.name}</h3>
-                  <Badge variant="secondary">{customer.orders.length} orders</Badge>
+                  <Badge variant="secondary">{customer.orders.length} pedidos</Badge>
                 </div>
 
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center text-gray-600">
                     <DollarSign className="h-4 w-4 mr-2" />
-                    <span>{customer.customerPrices.length} custom prices</span>
+                    <span>{customer.customerPrices.length} preços personalizados</span>
                   </div>
                   {customer.orders.length > 0 && (
                     <div className="text-gray-600">
-                      Last order:{" "}
+                      Último pedido:{" "}
                       {new Date(customer.orders[0].createdAt).toLocaleDateString("pt-BR")}
                     </div>
                   )}
@@ -189,7 +189,7 @@ export function CustomersManagementPage() {
             <DialogTitle>{selectedCustomer?.account.name}</DialogTitle>
           </DialogHeader>
 
-          {customerDetailsQuery.isLoading && <p className="text-center py-4">Loading...</p>}
+          {customerDetailsQuery.isLoading && <p className="text-center py-4">Carregando...</p>}
 
           {customerDetailsQuery.data && statsQuery.data && (
             <div className="space-y-6">
@@ -198,7 +198,7 @@ export function CustomersManagementPage() {
                 <div className="bg-blue-50 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Package className="h-5 w-5 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-900">Total Orders</span>
+                    <span className="text-sm font-medium text-blue-900">Total de Pedidos</span>
                   </div>
                   <p className="text-2xl font-bold text-blue-900">{statsQuery.data.totalOrders}</p>
                 </div>
@@ -206,7 +206,7 @@ export function CustomersManagementPage() {
                 <div className="bg-green-50 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <DollarSign className="h-5 w-5 text-green-600" />
-                    <span className="text-sm font-medium text-green-900">Total Revenue</span>
+                    <span className="text-sm font-medium text-green-900">Receita Total</span>
                   </div>
                   <p className="text-2xl font-bold text-green-900">
                     {formatPrice(statsQuery.data.totalRevenue)}
@@ -216,7 +216,7 @@ export function CustomersManagementPage() {
                 <div className="bg-purple-50 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <TrendingUp className="h-5 w-5 text-purple-600" />
-                    <span className="text-sm font-medium text-purple-900">Avg Order</span>
+                    <span className="text-sm font-medium text-purple-900">Pedido Médio</span>
                   </div>
                   <p className="text-2xl font-bold text-purple-900">
                     {formatPrice(statsQuery.data.averageOrderValue)}
@@ -227,16 +227,16 @@ export function CustomersManagementPage() {
               {/* Custom Pricing */}
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Custom Pricing</h3>
+                  <h3 className="text-lg font-semibold">Preços Personalizados</h3>
                   <Button size="sm" onClick={() => setShowPricingModal(true)}>
                     <Plus className="h-4 w-4 mr-1" />
-                    Add Custom Price
+                    Adicionar Preço
                   </Button>
                 </div>
 
                 {customerDetailsQuery.data.customerPrices.length === 0 && (
                   <p className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
-                    No custom prices set. Using base prices for all products.
+                    Nenhum preço personalizado definido. Usando preços base para todos os produtos.
                   </p>
                 )}
 
@@ -282,11 +282,11 @@ export function CustomersManagementPage() {
 
               {/* Recent Orders */}
               <div>
-                <h3 className="text-lg font-semibold mb-4">Recent Orders</h3>
+                <h3 className="text-lg font-semibold mb-4">Pedidos Recentes</h3>
 
                 {customerDetailsQuery.data.orders.length === 0 && (
                   <p className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
-                    No orders yet
+                    Nenhum pedido ainda
                   </p>
                 )}
 
@@ -301,7 +301,7 @@ export function CustomersManagementPage() {
                           <p className="font-medium text-sm">{order.orderNumber}</p>
                           <p className="text-xs text-gray-500">
                             {new Date(order.createdAt).toLocaleDateString("pt-BR")} •{" "}
-                            {order.items.length} items
+                            {order.items.length} itens
                           </p>
                         </div>
                         <Badge
@@ -313,7 +313,7 @@ export function CustomersManagementPage() {
                               : "outline"
                           }
                         >
-                          {order.status}
+                          {order.status === "SENT" ? "Enviado" : order.status === "IN_SEPARATION" ? "Em Separação" : order.status === "FINALIZED" ? "Finalizado" : order.status}
                         </Badge>
                       </div>
                     ))}
@@ -325,7 +325,7 @@ export function CustomersManagementPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={closeCustomerDetails}>
-              Close
+              Fechar
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -335,19 +335,19 @@ export function CustomersManagementPage() {
       <Dialog open={showPricingModal} onOpenChange={setShowPricingModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Set Custom Price</DialogTitle>
+            <DialogTitle>Definir Preço Personalizado</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             <div>
-              <Label htmlFor="product">Product Option</Label>
+              <Label htmlFor="product">Opção do Produto</Label>
               <select
                 id="product"
                 value={selectedProductOption}
                 onChange={(e) => setSelectedProductOption(e.target.value)}
                 className="w-full p-2 border rounded-md"
               >
-                <option value="">Select a product option...</option>
+                <option value="">Selecione uma opção de produto...</option>
                 {productsQuery.data?.items.flatMap((product) =>
                   product.options.map((option: any) => (
                     <option key={option.id} value={option.id}>
@@ -359,7 +359,7 @@ export function CustomersManagementPage() {
             </div>
 
             <div>
-              <Label htmlFor="price">Custom Price (R$)</Label>
+              <Label htmlFor="price">Preço Personalizado (R$)</Label>
               <Input
                 id="price"
                 type="number"
@@ -381,13 +381,13 @@ export function CustomersManagementPage() {
                 setCustomPrice("");
               }}
             >
-              Cancel
+              Cancelar
             </Button>
             <Button
               onClick={handleSetCustomPrice}
               disabled={setCustomPriceMutation.isPending}
             >
-              Set Price
+              Definir Preço
             </Button>
           </DialogFooter>
         </DialogContent>

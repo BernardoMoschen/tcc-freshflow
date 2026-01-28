@@ -6,9 +6,9 @@ interface OrderStatusTimelineProps {
 }
 
 const statusSteps = [
-  { key: "SENT", label: "Sent", icon: Clock },
-  { key: "IN_SEPARATION", label: "In Separation", icon: Package },
-  { key: "FINALIZED", label: "Finalized", icon: Truck },
+  { key: "SENT", label: "Enviado", icon: Clock },
+  { key: "IN_SEPARATION", label: "Em Separação", icon: Package },
+  { key: "FINALIZED", label: "Finalizado", icon: Truck },
 ];
 
 export function OrderStatusTimeline({ status, compact = false }: OrderStatusTimelineProps) {
@@ -18,7 +18,7 @@ export function OrderStatusTimeline({ status, compact = false }: OrderStatusTime
   if (status === "DRAFT") {
     return (
       <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-        <p className="text-sm text-gray-600 text-center">Draft - Not yet submitted</p>
+        <p className="text-sm text-gray-600 text-center">Rascunho - Ainda não enviado</p>
       </div>
     );
   }
@@ -86,7 +86,7 @@ export function OrderStatusTimeline({ status, compact = false }: OrderStatusTime
                     </p>
                     {isCurrent && (
                       <p className="text-xs text-blue-600 mt-1 font-semibold">
-                        Current
+                        Atual
                       </p>
                     )}
                   </div>

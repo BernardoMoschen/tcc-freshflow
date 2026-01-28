@@ -66,11 +66,11 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             <h1 className="text-2xl font-bold text-gray-900 text-center mb-2">
-              Oops! Something went wrong
+              Ops! Algo deu errado
             </h1>
 
             <p className="text-gray-600 text-center mb-6">
-              We encountered an unexpected error. Please try refreshing the page or contact support if the problem persists.
+              Encontramos um erro inesperado. Por favor, tente atualizar a página ou entre em contato com o suporte se o problema persistir.
             </p>
 
             {process.env.NODE_ENV === "development" && this.state.error && (
@@ -88,7 +88,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 variant="default"
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
-                Refresh Page
+                Atualizar Página
               </Button>
 
               <Button
@@ -96,14 +96,14 @@ export class ErrorBoundary extends Component<Props, State> {
                 className="flex-1"
                 variant="outline"
               >
-                Go Home
+                Ir para Início
               </Button>
             </div>
 
             {process.env.NODE_ENV === "development" && this.state.error?.stack && (
               <details className="mt-6">
                 <summary className="text-sm text-gray-600 cursor-pointer hover:text-gray-900">
-                  View Error Details (Dev Only)
+                  Ver Detalhes do Erro (Dev)
                 </summary>
                 <pre className="mt-2 p-4 bg-gray-100 border border-gray-200 rounded text-xs overflow-auto max-h-64">
                   {this.state.error.stack}

@@ -46,7 +46,7 @@ export function ContextSwitcher() {
     if (firstMembership.tenant) {
       return firstMembership.tenant.name;
     }
-    return "Select context";
+    return "Selecionar contexto";
   };
 
   const handleSwitchContext = (membership: any) => {
@@ -60,7 +60,7 @@ export function ContextSwitcher() {
     window.location.reload();
 
     toast.success(
-      `Switched to ${membership.account?.name || membership.tenant?.name}`
+      `Alterado para ${membership.account?.name || membership.tenant?.name}`
     );
   };
 
@@ -91,13 +91,13 @@ export function ContextSwitcher() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[250px]">
-        <DropdownMenuLabel>Switch Context</DropdownMenuLabel>
+        <DropdownMenuLabel>Trocar Contexto</DropdownMenuLabel>
         <DropdownMenuSeparator />
 
         {tenantMemberships.length > 0 && (
           <>
             <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
-              Tenants
+              Distribuidores
             </DropdownMenuLabel>
             {tenantMemberships.map((membership: any) => (
               <DropdownMenuItem
@@ -121,7 +121,7 @@ export function ContextSwitcher() {
         {accountMemberships.length > 0 && (
           <>
             <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
-              Accounts
+              Contas
             </DropdownMenuLabel>
             {accountMemberships.map((membership: any) => (
               <DropdownMenuItem

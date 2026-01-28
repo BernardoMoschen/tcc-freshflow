@@ -24,11 +24,11 @@ export function FinalizePage() {
 
     try {
       await finalizeMutation.mutateAsync({ id: orderId });
-      showToast("Order finalized successfully!", "success");
+      showToast("Pedido finalizado com sucesso!", "success");
       orderQuery.refetch();
     } catch (error) {
       showToast(
-        "Failed to finalize: " + (error instanceof Error ? error.message : "Unknown error"),
+        "Falha ao finalizar: " + (error instanceof Error ? error.message : "Erro desconhecido"),
         "error"
       );
     }
@@ -39,7 +39,7 @@ export function FinalizePage() {
       <div className="min-h-screen bg-gray-50">
         <nav className="bg-white shadow-sm sticky top-0 z-40">
           <div className="max-w-4xl mx-auto px-4 py-4">
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Finalize Order</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Finalizar Pedido</h1>
           </div>
         </nav>
         <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
@@ -52,11 +52,11 @@ export function FinalizePage() {
   }
 
   if (orderQuery.error) {
-    return <div className="p-8 text-center text-red-600">Error loading order</div>;
+    return <div className="p-8 text-center text-red-600">Erro ao carregar pedido</div>;
   }
 
   if (!orderQuery.data) {
-    return <div className="p-8 text-center">Order not found</div>;
+    return <div className="p-8 text-center">Pedido não encontrado</div>;
   }
 
   const order = orderQuery.data;
@@ -86,7 +86,7 @@ export function FinalizePage() {
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Finalize Order</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Finalizar Pedido</h1>
           </div>
         </div>
       </nav>
@@ -96,7 +96,7 @@ export function FinalizePage() {
         <div className="bg-white rounded-xl shadow-sm p-5 md:p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="font-semibold text-lg md:text-xl">Order: {order.orderNumber}</h2>
+              <h2 className="font-semibold text-lg md:text-xl">Pedido: {order.orderNumber}</h2>
               <p className="text-sm text-gray-600 mt-1">
                 Status:{" "}
                 <span
@@ -104,18 +104,18 @@ export function FinalizePage() {
                     isFinalized ? "text-green-600" : "text-blue-600"
                   }`}
                 >
-                  {order.status}
+                  {order.status === "SENT" ? "Enviado" : order.status === "IN_SEPARATION" ? "Em Separação" : order.status === "FINALIZED" ? "Finalizado" : order.status}
                 </span>
               </p>
             </div>
             {isFinalized && (
               <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                Finalized
+                Finalizado
               </Badge>
             )}
           </div>
           <p className="text-sm text-gray-600">
-            Customer: <span className="font-medium">{order.customer.account.name}</span>
+            Cliente: <span className="font-medium">{order.customer.account.name}</span>
           </p>
         </div>
 
@@ -131,10 +131,10 @@ export function FinalizePage() {
             </svg>
             <div className="flex-1">
               <p className="text-sm font-medium text-yellow-800">
-                Not all weight items have been weighed
+                Nem todos os itens por peso foram pesados
               </p>
               <p className="text-xs text-yellow-700 mt-1">
-                Please complete weighing before finalizing this order
+                Por favor, complete a pesagem antes de finalizar este pedido
               </p>
             </div>
           </div>
@@ -142,7 +142,7 @@ export function FinalizePage() {
 
         {/* Order summary */}
         <div className="bg-white rounded-xl shadow-sm p-5 md:p-6 mb-6">
-          <h3 className="font-semibold text-lg mb-4">Order Summary</h3>
+          <h3 className="font-semibold text-lg mb-4">Resumo do Pedido</h3>
 
           <div className="space-y-3">
             {order.items.map((item) => {
@@ -168,10 +168,10 @@ export function FinalizePage() {
                     </p>
                     <p className="text-xs text-gray-600 mt-1">
                       {item.productOption.unitType === "FIXED"
-                        ? `Qty: ${item.requestedQty}`
+                        ? `Qtd: ${item.requestedQty}`
                         : item.actualWeight
-                        ? `Weight: ${item.actualWeight} kg`
-                        : "⚠️ Not weighed yet"}
+                        ? `Peso: ${item.actualWeight} kg`
+                        : "⚠️ Ainda não pesado"}
                     </p>
                   </div>
                   <span className="font-semibold text-primary text-base">
@@ -184,11 +184,11 @@ export function FinalizePage() {
 
           <div className="border-t-2 mt-6 pt-4 space-y-3">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Fixed Items:</span>
+              <span className="text-gray-600">Itens Fixos:</span>
               <span className="font-medium">R$ {(fixedTotal / 100).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Weight Items:</span>
+              <span className="text-gray-600">Itens por Peso:</span>
               <span className="font-medium">R$ {(weightTotal / 100).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-xl md:text-2xl font-bold text-primary pt-2 border-t">
@@ -208,10 +208,10 @@ export function FinalizePage() {
               size="lg"
             >
               {finalizeMutation.isPending
-                ? "Finalizing..."
+                ? "Finalizando..."
                 : allWeighed
-                ? "Finalize Order"
-                : "Complete Weighing First"}
+                ? "Finalizar Pedido"
+                : "Complete a Pesagem Primeiro"}
             </Button>
           ) : (
             <Button
@@ -225,7 +225,7 @@ export function FinalizePage() {
                 rel="noopener noreferrer"
               >
                 <Download className="h-6 w-6" />
-                Download PDF
+                Baixar PDF
               </a>
             </Button>
           )}
@@ -240,10 +240,10 @@ export function FinalizePage() {
               <div className="flex-shrink-0 w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
                 <AlertTriangle className="w-6 h-6 text-yellow-600" />
               </div>
-              <DialogTitle className="text-xl">Confirm Finalization</DialogTitle>
+              <DialogTitle className="text-xl">Confirmar Finalização</DialogTitle>
             </div>
             <DialogDescription className="text-base">
-              Are you sure you want to finalize this order? This action cannot be undone.
+              Tem certeza que deseja finalizar este pedido? Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-3 sm:gap-2">
@@ -252,13 +252,13 @@ export function FinalizePage() {
               onClick={() => setShowConfirmDialog(false)}
               className="flex-1"
             >
-              Cancel
+              Cancelar
             </Button>
             <Button
               onClick={handleFinalize}
               className="flex-1"
             >
-              Confirm
+              Confirmar
             </Button>
           </DialogFooter>
         </DialogContent>

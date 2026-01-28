@@ -40,7 +40,7 @@ export function LoginPage() {
         <div>
           <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-900">FreshFlow</h2>
           <p className="mt-3 text-center text-base md:text-sm text-gray-600">
-            B2B Fresh Produce Ordering
+            Pedidos B2B de Hortifruti
           </p>
         </div>
 
@@ -54,7 +54,7 @@ export function LoginPage() {
           <div className="space-y-5">
             <div>
               <label htmlFor="email" className="block text-base font-medium text-gray-700 mb-2">
-                Email
+                E-mail
               </label>
               <input
                 id="email"
@@ -69,7 +69,7 @@ export function LoginPage() {
 
             <div>
               <label htmlFor="password" className="block text-base font-medium text-gray-700 mb-2">
-                Password
+                Senha
               </label>
               <input
                 id="password"
@@ -87,45 +87,45 @@ export function LoginPage() {
             disabled={loading}
             className="w-full flex justify-center py-4 px-6 border border-transparent rounded-lg shadow-sm text-base font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 transition-colors"
           >
-            {loading ? "Signing in..." : "Sign in"}
+            {loading ? "Entrando..." : "Entrar"}
           </button>
 
           {import.meta.env.PROD && (
             <div className="text-sm text-center text-gray-600 pt-2">
-              <p className="font-medium">Test credentials:</p>
+              <p className="font-medium">Credenciais de teste:</p>
               <p className="font-mono text-xs mt-1">chef@chefstable.com</p>
             </div>
           )}
         </form>
 
-        {/* Development mode quick login */}
+        {/* Login rápido modo desenvolvimento */}
         {import.meta.env.DEV && (
           <div className="border-t border-gray-200 pt-6">
             <p className="text-sm font-medium text-gray-700 mb-3 text-center">
-              🔧 Development Mode - Quick Login
+              🔧 Modo Desenvolvimento - Login Rápido
             </p>
             <div className="space-y-2">
               <button
                 onClick={() => handleDevLogin("chef")}
                 className="w-full py-3 px-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 hover:bg-blue-100 transition-colors text-sm font-medium"
               >
-                Login as Chef (ACCOUNT_OWNER)
+                Entrar como Chef (ACCOUNT_OWNER)
               </button>
               <button
                 onClick={() => handleDevLogin("owner")}
                 className="w-full py-3 px-4 bg-purple-50 border border-purple-200 rounded-lg text-purple-700 hover:bg-purple-100 transition-colors text-sm font-medium"
               >
-                Login as Tenant Owner (TENANT_OWNER)
+                Entrar como Dono do Tenant (TENANT_OWNER)
               </button>
               <button
                 onClick={() => handleDevLogin("admin")}
                 className="w-full py-3 px-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors text-sm font-medium"
               >
-                Login as Platform Admin
+                Entrar como Admin da Plataforma
               </button>
             </div>
             <p className="text-xs text-gray-500 mt-3 text-center">
-              No password required in development mode
+              Senha não necessária no modo desenvolvimento
             </p>
           </div>
         )}
