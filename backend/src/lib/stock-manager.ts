@@ -1,5 +1,5 @@
 import { PrismaClient, StockMovementType, UnitType } from "@prisma/client";
-import { TRPCError } from "@trpc/server";
+import { Errors } from "./errors.js";
 
 /**
  * Check if sufficient stock is available for all items in an order
@@ -20,10 +20,7 @@ export async function validateStockAvailability(
   });
 
   if (!order) {
-    throw new TRPCError({
-      code: "NOT_FOUND",
-      message: "Order not found",
-    });
+    throw Errors.notFound("Order", orderId);
   }
 
   const insufficientStock: Array<{
@@ -55,10 +52,7 @@ export async function validateStockAvailability(
       )
       .join("; ");
 
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: `Insufficient stock for order finalization: ${details}`,
-    });
+    throw Errors.badRequest(`Insufficient stock: ${details}`);
   }
 }
 
@@ -82,10 +76,7 @@ export async function deductStockForOrder(
   });
 
   if (!order) {
-    throw new TRPCError({
-      code: "NOT_FOUND",
-      message: "Order not found",
-    });
+    throw Errors.notFound("Order", orderId);
   }
 
   // Use a transaction to ensure atomic stock deduction

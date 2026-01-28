@@ -109,6 +109,7 @@ model Product {
 
   @@index([tenantId])
   @@index([category])
+  @@index([tenantId, category]) // Composite index for filtered queries
 }
 
 // ProductOption - SKU with unit type and base price
@@ -179,6 +180,8 @@ model Order {
   @@index([createdBy])
   @@index([status])
   @@index([orderNumber])
+  @@index([accountId, status]) // Composite for filtered order lists
+  @@index([status, createdAt]) // Composite for status-filtered sorted lists
 }
 
 enum OrderStatus {

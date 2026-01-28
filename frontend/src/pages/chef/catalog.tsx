@@ -355,6 +355,8 @@ export function CatalogPage() {
                     src={product.imageUrl}
                     alt={product.name}
                     className="w-full h-48 object-cover"
+                    loading="lazy"
+                    decoding="async"
                   />
                 ) : (
                   <div className="w-full h-48 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">

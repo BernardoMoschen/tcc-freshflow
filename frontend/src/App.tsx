@@ -20,8 +20,16 @@ function App() {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 1000 * 60 * 5, // 5 minutes
-            retry: 1,
+            staleTime: 1000 * 60 * 5, // 5 minutes - data stays fresh for 5 min
+            cacheTime: 1000 * 60 * 30, // 30 minutes - cache persists even if unused
+            retry: 1, // Retry failed queries once
+            refetchOnWindowFocus: true, // Refetch when user returns to tab
+            refetchOnReconnect: true, // Refetch when internet reconnects
+            refetchOnMount: false, // Don't refetch if data is still fresh
+          },
+          mutations: {
+            retry: 0, // Don't retry mutations by default
+            // Global error handler for mutations can be added here
           },
         },
       })
