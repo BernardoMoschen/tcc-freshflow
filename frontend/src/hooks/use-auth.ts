@@ -119,10 +119,15 @@ export function useAuth() {
     }
   };
 
+  // Only show loading on initial load, not on session query refetches
+  // This prevents the page from blinking when session query retries
+  const isInitialLoading = loading || (!!user && !sessionQuery.data && sessionQuery.isLoading && !sessionQuery.isError);
+
   return {
     user,
     session: sessionQuery.data,
-    loading: loading || sessionQuery.isLoading,
+    loading: isInitialLoading,
+    error: sessionQuery.error,
     signIn,
     signOut,
     setContext,

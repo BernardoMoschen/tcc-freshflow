@@ -26,22 +26,43 @@ import { StockManagementPage } from "./pages/admin/stock-management";
 import { ProductsManagementPage } from "./pages/admin/products";
 import { CustomersManagementPage } from "./pages/admin/customers";
 
+// Helper to check if error is retryable (only server/network errors)
+function shouldRetry(failureCount: number, error: unknown): boolean {
+  // Max 2 retries
+  if (failureCount >= 2) return false;
+
+  // Check for tRPC error with HTTP status
+  if (error && typeof error === "object") {
+    const err = error as { data?: { httpStatus?: number }; message?: string };
+    const status = err.data?.httpStatus;
+
+    // Don't retry client errors (4xx) - they won't succeed
+    if (status && status >= 400 && status < 500) return false;
+
+    // Don't retry auth errors
+    if (err.message?.includes("UNAUTHORIZED")) return false;
+  }
+
+  // Retry server errors (5xx) and network errors
+  return true;
+}
+
 function App() {
   const [queryClient] = useState(
     () =>
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 1000 * 60 * 5, // 5 minutes - data stays fresh for 5 min
-            gcTime: 1000 * 60 * 30, // 30 minutes - cache persists even if unused
-            retry: 1, // Retry failed queries once
-            refetchOnWindowFocus: true, // Refetch when user returns to tab
-            refetchOnReconnect: true, // Refetch when internet reconnects
-            refetchOnMount: false, // Don't refetch if data is still fresh
+            staleTime: 1000 * 60 * 5, // 5 minutes
+            gcTime: 1000 * 60 * 30, // 30 minutes
+            retry: shouldRetry, // Smart retry: only server/network errors
+            retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000), // 1s, 2s, 4s... max 10s
+            refetchOnWindowFocus: false, // Prevent refetch loops
+            refetchOnReconnect: true,
+            refetchOnMount: false,
           },
           mutations: {
-            retry: 0, // Don't retry mutations by default
-            // Global error handler for mutations can be added here
+            retry: 0,
           },
         },
       })

@@ -13,6 +13,7 @@ import {
 import { Link } from "react-router-dom";
 
 export function DashboardPage() {
+  // Use global smart retry config (retries server errors, not client errors)
   const ordersQuery = trpc.orders.list.useQuery({
     take: 100,
   });
@@ -68,8 +69,31 @@ export function DashboardPage() {
 
   const recentOrders = ordersQuery.data?.items.slice(0, 5) || [];
 
+  // Show error state if both queries failed
+  const hasError = ordersQuery.isError || stockQuery.isError;
+
   return (
     <PageLayout title="Dashboard">
+      {hasError && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center gap-2 text-red-800">
+            <AlertTriangle className="h-5 w-5" />
+            <span className="font-medium">Failed to load dashboard data</span>
+          </div>
+          <p className="text-sm text-red-600 mt-1">
+            {ordersQuery.error?.message || stockQuery.error?.message || "An error occurred"}
+          </p>
+          <button
+            onClick={() => {
+              ordersQuery.refetch();
+              stockQuery.refetch();
+            }}
+            className="mt-2 text-sm text-red-700 hover:text-red-900 underline"
+          >
+            Try again
+          </button>
+        </div>
+      )}
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card>
