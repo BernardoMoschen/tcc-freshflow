@@ -128,26 +128,28 @@ export function OrdersPage() {
   };
 
   const handleExportCSV = async () => {
-    const result = await exportQuery.refetch();
-    if (result.data) {
-      // Convert to CSV string
-      const headers = Object.keys(result.data[0] || {});
-      const csvContent = [
-        headers.join(","),
-        ...result.data.map((row: any) =>
-          headers.map((h) => JSON.stringify(row[h] || "")).join(",")
-        ),
-      ].join("\n");
+    try {
+      const result = await exportQuery.refetch();
+      if (result.data && result.data.csv) {
+        // Add BOM for Excel UTF-8 compatibility
+        const BOM = "\uFEFF";
+        const csvContent = BOM + result.data.csv;
 
-      // Download CSV
-      const blob = new Blob([csvContent], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `orders-export-${new Date().toISOString()}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success("CSV exportado com sucesso");
+        // Download CSV
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = result.data.filename;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success(`${result.data.count} pedido(s) exportado(s) com sucesso`);
+      } else {
+        toast.error("Nenhum pedido para exportar");
+      }
+    } catch (error) {
+      toast.error("Falha ao exportar CSV");
+      console.error("Export error:", error);
     }
   };
 

@@ -29,6 +29,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useOrderEvents, OrderEvent, OrderEventType } from "@/hooks/use-order-events";
 
 // Auto-refresh interval in milliseconds (15 seconds for admin - more frequent)
 const AUTO_REFRESH_INTERVAL = 15 * 1000;
@@ -76,6 +77,25 @@ export function AdminOrdersPage() {
     ordersQuery.refetch();
     toast.success("Pedidos atualizados");
   }, [ordersQuery]);
+
+  // Real-time order updates via SSE
+  const handleOrderEvent = useCallback((event: OrderEvent) => {
+    // Show toast notification for important events
+    if (event.type === OrderEventType.CREATED) {
+      toast.info("Novo pedido recebido", {
+        description: `Pedido criado`,
+      });
+    } else if (event.type === OrderEventType.FINALIZED) {
+      toast.success("Pedido finalizado", {
+        description: `Pedido finalizado com sucesso`,
+      });
+    }
+
+    // Invalidate queries to refetch data
+    utils.orders.adminList.invalidate();
+  }, [utils]);
+
+  const { isConnected } = useOrderEvents(handleOrderEvent, hasTenantContext);
 
   // Format relative time
   const getRelativeTime = (date: Date) => {
@@ -141,31 +161,27 @@ export function AdminOrdersPage() {
   };
 
   const handleExportCSV = async () => {
-    const { data: rows } = await exportQuery.refetch();
-    if (rows && rows.length > 0) {
-      // Convert array of objects to CSV string
-      const headers = Object.keys(rows[0]);
-      const csvRows = [
-        headers.join(","),
-        ...rows.map((row) =>
-          headers.map((h) => {
-            const val = row[h as keyof typeof row];
-            // Escape quotes and wrap in quotes if contains comma
-            const strVal = String(val ?? "");
-            return strVal.includes(",") ? `"${strVal.replace(/"/g, '""')}"` : strVal;
-          }).join(",")
-        ),
-      ];
-      const csvContent = csvRows.join("\n");
+    try {
+      const { data } = await exportQuery.refetch();
+      if (data && data.csv) {
+        // Add BOM for Excel UTF-8 compatibility
+        const BOM = "\uFEFF";
+        const csvContent = BOM + data.csv;
 
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `pedidos-export-${new Date().toISOString()}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success("CSV exportado com sucesso");
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = data.filename;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success(`${data.count} pedido(s) exportado(s) com sucesso`);
+      } else {
+        toast.error("Nenhum pedido para exportar");
+      }
+    } catch (error) {
+      toast.error("Falha ao exportar CSV");
+      console.error("Export error:", error);
     }
   };
 
@@ -260,6 +276,17 @@ export function AdminOrdersPage() {
               )}
               <span className="hidden sm:inline">Auto</span>
             </button>
+
+            {/* Real-time connection indicator */}
+            {isConnected && (
+              <div
+                className="flex items-center gap-1.5 px-2 py-1 rounded text-xs bg-blue-100 text-blue-700"
+                title="Conectado - Atualizações em tempo real ativas"
+              >
+                <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                <span className="hidden sm:inline">Tempo real</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

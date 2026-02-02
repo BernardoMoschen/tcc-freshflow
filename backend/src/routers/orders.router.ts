@@ -22,6 +22,8 @@ import {
   deductStockForOrder,
 } from "../lib/stock-manager.js";
 import { checkRateLimit, procedureRateLimits } from "../middleware/rate-limit.js";
+import { orderEvents, OrderEventType } from "../lib/event-emitter.js";
+import { generateOrdersCsv, generateCsvFilename } from "../lib/csv-export.js";
 
 export const ordersRouter = router({
   /**
@@ -148,6 +150,23 @@ export const ordersRouter = router({
           logger.error("Failed to send WhatsApp notification:", error);
           // Don't fail the order creation if notification fails
         }
+      }
+
+      // Emit real-time event
+      const account = await ctx.prisma.account.findUnique({
+        where: { id: ctx.accountId },
+        select: { tenantId: true },
+      });
+
+      if (account) {
+        orderEvents.emitOrderEvent({
+          type: OrderEventType.CREATED,
+          orderId: order.id,
+          accountId: ctx.accountId,
+          tenantId: account.tenantId,
+          status: order.status,
+          timestamp: new Date().toISOString(),
+        });
       }
 
       return order;
@@ -1076,6 +1095,17 @@ export const ordersRouter = router({
         }
       }
 
+      // Emit real-time event
+      orderEvents.emitOrderEvent({
+        type: OrderEventType.FINALIZED,
+        orderId: finalizedOrder.id,
+        accountId: finalizedOrder.accountId,
+        tenantId: finalizedOrder.customer.account.tenantId,
+        status: finalizedOrder.status,
+        data: { totalAmount },
+        timestamp: new Date().toISOString(),
+      });
+
       return finalizedOrder;
     }),
 
@@ -1388,14 +1418,21 @@ export const ordersRouter = router({
       z.object({
         orderIds: z.array(z.string().uuid()).optional(),
         status: z.nativeEnum(OrderStatus).optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
+      // Rate limit export operations
+      checkRateLimit(`export:csv:${ctx.userId}`, procedureRateLimits.export);
+
       // Security: Always filter by tenant to prevent cross-tenant data exposure
       const where: Prisma.OrderWhereInput = {
         account: {
           tenantId: ctx.tenantId,
         },
+        // Don't export draft orders by default
+        status: { not: OrderStatus.DRAFT },
       };
 
       if (input.orderIds && input.orderIds.length > 0) {
@@ -1404,6 +1441,17 @@ export const ordersRouter = router({
 
       if (input.status) {
         where.status = input.status;
+      }
+
+      // Date range filter
+      if (input.startDate || input.endDate) {
+        where.createdAt = {};
+        if (input.startDate) {
+          where.createdAt.gte = new Date(input.startDate);
+        }
+        if (input.endDate) {
+          where.createdAt.lte = new Date(input.endDate);
+        }
       }
 
       const orders = await ctx.prisma.order.findMany({
@@ -1430,26 +1478,14 @@ export const ordersRouter = router({
         },
       });
 
-      // Convert to CSV rows
-      const rows = orders.flatMap((order) =>
-        order.items.map((item) => ({
-          orderNumber: order.orderNumber,
-          orderStatus: order.status,
-          customerName: order.customer.account.name,
-          createdBy: order.createdByUser?.name || order.createdByUser?.email || "Unknown",
-          createdAt: order.createdAt.toISOString(),
-          productName: item.productOption.product.name,
-          productOption: item.productOption.name,
-          sku: item.productOption.sku,
-          unitType: item.productOption.unitType,
-          requestedQty: item.requestedQty,
-          actualWeight: item.actualWeight || "",
-          finalPrice: item.finalPrice || "",
-          isExtra: item.isExtra,
-          notes: item.notes || "",
-        }))
-      );
+      // Generate CSV content
+      const csvContent = generateOrdersCsv(orders);
+      const filename = generateCsvFilename("pedidos");
 
-      return rows;
+      return {
+        csv: csvContent,
+        filename,
+        count: orders.length,
+      };
     }),
 });

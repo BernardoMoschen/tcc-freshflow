@@ -11,6 +11,7 @@ import { cache } from "./lib/cache.js";
 import { auditLogger, AuditEventType, AuditSeverity } from "./lib/audit-logger.js";
 import { validateEnv } from "./lib/env.js";
 import { logger } from "./lib/logger.js";
+import { orderEvents, OrderEvent } from "./lib/event-emitter.js";
 
 // Import middleware
 import { rateLimiters, adaptiveRateLimit } from "./middleware/rate-limit.js";
@@ -210,6 +211,82 @@ apiV1.post("/whatsapp/webhook", rateLimiters.webhook, async (req, res) => {
     return res.status(500).json({
       error: "Webhook processing failed",
       message: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});
+
+// ========== Server-Sent Events for Real-Time Order Updates ==========
+apiV1.get("/orders/events", rateLimiters.standard, async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization as string | undefined;
+
+    // Authenticate request
+    let userId: string;
+    try {
+      userId = await authenticateRequest(authHeader);
+    } catch (error) {
+      return res.status(401).json({
+        error: "Authentication required",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+
+    // Get user's memberships to determine what events they can see
+    const memberships = await prisma.membership.findMany({
+      where: { userId },
+      include: {
+        account: true,
+        tenant: true,
+      },
+    });
+
+    // Setup SSE
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no"); // Disable nginx buffering
+
+    // Send initial connection message
+    res.write(`data: ${JSON.stringify({ type: "connected", timestamp: new Date().toISOString() })}\n\n`);
+
+    // Create event listeners for each membership
+    const unsubscribers: (() => void)[] = [];
+
+    for (const membership of memberships) {
+      if (membership.accountId) {
+        // Subscribe to account events
+        const unsubscribe = orderEvents.onAccountEvents(membership.accountId, (event: OrderEvent) => {
+          res.write(`data: ${JSON.stringify(event)}\n\n`);
+        });
+        unsubscribers.push(unsubscribe);
+      }
+
+      if (membership.tenantId) {
+        // Subscribe to tenant events (admins see all orders in tenant)
+        const unsubscribe = orderEvents.onTenantEvents(membership.tenantId, (event: OrderEvent) => {
+          res.write(`data: ${JSON.stringify(event)}\n\n`);
+        });
+        unsubscribers.push(unsubscribe);
+      }
+    }
+
+    // Send heartbeat every 30 seconds to keep connection alive
+    const heartbeat = setInterval(() => {
+      res.write(`:heartbeat ${Date.now()}\n\n`);
+    }, 30000);
+
+    // Cleanup on disconnect
+    req.on("close", () => {
+      clearInterval(heartbeat);
+      unsubscribers.forEach((unsubscribe) => unsubscribe());
+      logger.debug(`SSE connection closed for user ${userId}`);
+    });
+
+    logger.debug(`SSE connection established for user ${userId}`);
+  } catch (error) {
+    logger.error("SSE endpoint error:", error);
+    res.status(500).json({
+      error: "Failed to establish SSE connection",
     });
   }
 });
