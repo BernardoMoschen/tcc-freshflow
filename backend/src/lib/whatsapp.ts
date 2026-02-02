@@ -86,28 +86,53 @@ export async function sendOrderCreatedNotification(
   customerName: string
 ): Promise<void> {
   const itemCount = order.items.length;
+
+  // Calculate estimated total for FIXED items
+  let estimatedTotal = 0;
   const itemsText = order.items
-    .slice(0, 5)
-    .map(
-      (item) =>
-        `• ${item.productOption.product.name} - ${item.productOption.name} (${item.requestedQty} ${item.productOption.unitType === "FIXED" ? "un" : "kg"})`
-    )
-    .join("\n");
+    .slice(0, 8) // Show more items
+    .map((item) => {
+      const qty = item.requestedQty;
+      const unit = item.productOption.unitType === "FIXED" ? "un" : "kg";
+      let priceInfo = "";
 
-  const moreText = itemCount > 5 ? `\n... e mais ${itemCount - 5} itens` : "";
+      if (item.finalPrice) {
+        estimatedTotal += item.finalPrice;
+        priceInfo = ` - ${formatPrice(item.finalPrice)}`;
+      }
 
-  const message = `🛒 *Novo Pedido Recebido*
+      return `  ${item.productOption.product.name}\n  ${item.productOption.name} - ${qty} ${unit}${priceInfo}`;
+    })
+    .join("\n\n");
 
-Olá! Recebemos seu pedido #${order.orderNumber}
+  const moreText = itemCount > 8 ? `\n\n  ... e mais ${itemCount - 8} itens` : "";
 
-*Cliente:* ${customerName}
-*Itens:* ${itemCount}
+  const totalText = estimatedTotal > 0
+    ? `\n\n💰 *Total Estimado:* ${formatPrice(estimatedTotal)}\n(Produtos pesados podem ter pequenas variações)`
+    : "";
 
-${itemsText}${moreText}
+  const orderUrl = process.env.APP_BASE_URL
+    ? `\n\n📱 Ver pedido: ${process.env.APP_BASE_URL}/chef/orders`
+    : "";
 
-Estamos processando seu pedido. Você receberá uma notificação quando estiver pronto para entrega.
+  const message = `✅ *Pedido Confirmado!*
 
-Obrigado por escolher a FreshFlow! 🌱`;
+Olá *${customerName}*! 👋
+
+Recebemos seu pedido *#${order.orderNumber}* com sucesso!
+
+📦 *PRODUTOS:*
+
+${itemsText}${moreText}${totalText}
+
+⏰ *Próximos passos:*
+→ Separação dos produtos
+→ Pesagem e conferência
+→ Notificação quando pronto${orderUrl}
+
+Qualquer dúvida, estamos à disposição! 💚
+
+_FreshFlow - Hortifrúti Fresco Sempre_ 🥬🍅`;
 
   await sendWhatsAppMessage(phoneNumber, message);
 }
@@ -137,23 +162,46 @@ export async function sendOrderFinalizedNotification(
   totalAmount: number,
   pdfUrl?: string
 ): Promise<void> {
+  // Show item breakdown
+  const itemsText = order.items
+    .slice(0, 10)
+    .map((item) => {
+      const qty = item.actualWeight || item.requestedQty;
+      const unit = item.productOption.unitType === "FIXED" ? "un" : "kg";
+      const price = item.finalPrice ? formatPrice(item.finalPrice) : "—";
+      return `  • ${item.productOption.product.name} (${qty} ${unit}) - ${price}`;
+    })
+    .join("\n");
+
+  const moreText = order.items.length > 10 ? `\n  ... e mais ${order.items.length - 10} itens` : "";
+
   const pdfText = pdfUrl
-    ? `\n\nBaixe seu extrato de conferência:\n${pdfUrl}`
-    : "\n\nSeu extrato de conferência estará disponível em breve.";
+    ? `\n\n📄 *Extrato de Conferência:*\n${pdfUrl}`
+    : "";
 
-  const message = `✅ *Pedido Finalizado*
+  const orderUrl = process.env.APP_BASE_URL
+    ? `\n\n📱 Ver detalhes: ${process.env.APP_BASE_URL}/chef/orders`
+    : "";
 
-Olá ${customerName}!
+  const message = `🎉 *Pedido Pronto para Entrega!*
 
-Seu pedido #${order.orderNumber} foi finalizado e está pronto para entrega! 🎉
+Olá *${customerName}*!
 
-*Valor Total:* ${formatPrice(totalAmount)}
+Seu pedido *#${order.orderNumber}* foi finalizado! ✅
 
-Todos os itens foram pesados e conferidos. ${pdfText}
+📦 *RESUMO:*
 
-Qualquer dúvida, estamos à disposição!
+${itemsText}${moreText}
 
-Equipe FreshFlow 🌱`;
+━━━━━━━━━━━━━━━━
+💰 *TOTAL: ${formatPrice(totalAmount)}*
+━━━━━━━━━━━━━━━━
+
+✅ Todos os produtos foram pesados e conferidos${pdfText}${orderUrl}
+
+📞 Dúvidas? Estamos à disposição!
+
+_FreshFlow - Qualidade Garantida_ 💚`;
 
   await sendWhatsAppMessage(phoneNumber, message);
 }
@@ -174,6 +222,60 @@ Pedido #${orderNumber}
 *Valor:* ${formatPrice(finalPrice)}
 
 Pesagem registrada com sucesso!`;
+
+  await sendWhatsAppMessage(phoneNumber, message);
+}
+
+export async function sendPaymentReminderNotification(
+  phoneNumber: string,
+  orderNumber: string,
+  totalAmount: number,
+  dueDate: Date,
+  pixKey?: string
+): Promise<void> {
+  const dueDateStr = dueDate.toLocaleDateString("pt-BR");
+  const pixText = pixKey
+    ? `\n\n💳 *Pix Copia e Cola:*\n\`${pixKey}\`\n\n_(Toque para copiar)_`
+    : "";
+
+  const message = `💰 *Lembrete de Pagamento*
+
+Pedido *#${orderNumber}*
+
+*Valor:* ${formatPrice(totalAmount)}
+*Vencimento:* ${dueDateStr}${pixText}
+
+Para pagamentos via Pix, use a chave acima ou acesse nosso sistema para gerar o QR Code.
+
+_FreshFlow - Obrigado!_ 💚`;
+
+  await sendWhatsAppMessage(phoneNumber, message);
+}
+
+export async function sendPromotionNotification(
+  phoneNumber: string,
+  customerName: string,
+  promotionTitle: string,
+  promotionDescription: string,
+  catalogUrl?: string
+): Promise<void> {
+  const catalogText = catalogUrl
+    ? `\n\n🛒 Ver produtos: ${catalogUrl}`
+    : "";
+
+  const message = `🎊 *Promoção Especial!*
+
+Olá *${customerName}*!
+
+*${promotionTitle}*
+
+${promotionDescription}${catalogText}
+
+⏰ Promoção por tempo limitado!
+
+Faça seu pedido agora! 💚
+
+_FreshFlow - Sempre com as melhores ofertas_ 🥬🍅`;
 
   await sendWhatsAppMessage(phoneNumber, message);
 }

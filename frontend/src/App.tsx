@@ -29,6 +29,7 @@ import { StockManagementPage } from "./pages/admin/stock-management";
 import { ProductsManagementPage } from "./pages/admin/products";
 import { CustomersManagementPage } from "./pages/admin/customers";
 import { AdminOrdersPage } from "./pages/admin/orders";
+import { PublicCatalogPage } from "./pages/public/catalog";
 
 // Helper to check if error is retryable (only server/network errors)
 function shouldRetry(failureCount: number, error: unknown): boolean {
@@ -106,6 +107,7 @@ function App() {
               <Routes>
             {/* Public routes */}
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/catalog/:tenantSlug" element={<PublicCatalogPage />} />
 
             {/* Dashboard (protected, all roles) */}
             <Route

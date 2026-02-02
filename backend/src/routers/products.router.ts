@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Prisma, PrismaClient } from "@prisma/client";
-import { router, tenantProcedure, tenantAdminProcedure } from "../trpc.js";
+import { router, tenantProcedure, tenantAdminProcedure, publicProcedure } from "../trpc.js";
 import { resolvePricesBatch } from "../lib/price-engine.js";
 import { Errors } from "../lib/errors.js";
 
@@ -405,5 +405,74 @@ export const productsRouter = router({
       });
 
       return { success: true };
+    }),
+
+  /**
+   * Public catalog - Get products by tenant slug (no auth required)
+   * Perfect for sharing via WhatsApp
+   */
+  publicCatalog: publicProcedure
+    .input(
+      z.object({
+        tenantSlug: z.string(),
+        category: z.string().optional(),
+        search: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      // Find tenant by slug
+      const tenant = await ctx.prisma.tenant.findUnique({
+        where: { slug: input.tenantSlug },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+      });
+
+      if (!tenant) {
+        throw Errors.notFound("Tenant", input.tenantSlug);
+      }
+
+      // Build where clause
+      const where: Prisma.ProductWhereInput = {
+        tenantId: tenant.id,
+        ...(input.search && {
+          OR: [
+            { name: { contains: input.search, mode: "insensitive" as const } },
+            { description: { contains: input.search, mode: "insensitive" as const } },
+          ],
+        }),
+        ...(input.category && { category: input.category }),
+      };
+
+      // Get products with available options only
+      const products = await ctx.prisma.product.findMany({
+        where,
+        include: {
+          options: {
+            where: {
+              isAvailable: true,
+              stockQuantity: { gt: 0 }, // Only show in-stock items
+            },
+            orderBy: { basePrice: "asc" },
+          },
+        },
+        orderBy: [{ category: "asc" }, { name: "asc" }],
+      });
+
+      // Filter out products with no available options
+      const availableProducts = products.filter((p) => p.options.length > 0);
+
+      // Get unique categories
+      const categories = [
+        ...new Set(availableProducts.map((p) => p.category).filter((c): c is string => !!c)),
+      ];
+
+      return {
+        tenant,
+        products: availableProducts,
+        categories,
+      };
     }),
 });
