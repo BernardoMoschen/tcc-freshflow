@@ -35,11 +35,11 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="max-w-md w-full space-y-6 md:space-y-8 p-6 md:p-8 bg-white rounded-lg shadow-md">
+    <div className="min-h-screen flex items-center justify-center bg-muted p-4">
+      <div className="max-w-md w-full space-y-6 md:space-y-8 p-6 md:p-8 bg-card rounded-lg shadow-md">
         <div>
-          <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-900">FreshFlow</h2>
-          <p className="mt-3 text-center text-base md:text-sm text-gray-600">
+          <h2 className="text-3xl md:text-4xl font-bold text-center text-foreground">FreshFlow</h2>
+          <p className="mt-3 text-center text-base md:text-sm text-muted-foreground">
             Pedidos B2B de Hortifruti
           </p>
         </div>
@@ -53,7 +53,7 @@ export function LoginPage() {
 
           <div className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-base font-medium text-gray-700 mb-2">
+              <label htmlFor="email" className="block text-base font-medium text-card-foreground mb-2">
                 E-mail
               </label>
               <input
@@ -62,13 +62,13 @@ export function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base"
+                className="block w-full px-4 py-3 border border-input rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent text-base"
                 placeholder="chef@chefstable.com"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-base font-medium text-gray-700 mb-2">
+              <label htmlFor="password" className="block text-base font-medium text-card-foreground mb-2">
                 Senha
               </label>
               <input
@@ -77,7 +77,7 @@ export function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base"
+                className="block w-full px-4 py-3 border border-input rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent text-base"
               />
             </div>
           </div>
@@ -91,7 +91,7 @@ export function LoginPage() {
           </button>
 
           {import.meta.env.PROD && (
-            <div className="text-sm text-center text-gray-600 pt-2">
+            <div className="text-sm text-center text-muted-foreground pt-2">
               <p className="font-medium">Credenciais de teste:</p>
               <p className="font-mono text-xs mt-1">chef@chefstable.com</p>
             </div>
@@ -100,31 +100,31 @@ export function LoginPage() {
 
         {/* Login rápido modo desenvolvimento */}
         {import.meta.env.DEV && (
-          <div className="border-t border-gray-200 pt-6">
-            <p className="text-sm font-medium text-gray-700 mb-3 text-center">
+          <div className="border-t border-border pt-6">
+            <p className="text-sm font-medium text-card-foreground mb-3 text-center">
               🔧 Modo Desenvolvimento - Login Rápido
             </p>
             <div className="space-y-2">
               <button
                 onClick={() => handleDevLogin("chef")}
-                className="w-full py-3 px-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 hover:bg-blue-100 transition-colors text-sm font-medium"
+                className="w-full py-3 px-4 bg-accent/10 border border-accent rounded-lg text-accent-foreground hover:bg-accent/20 transition-colors text-sm font-medium"
               >
                 Entrar como Chef (ACCOUNT_OWNER)
               </button>
               <button
                 onClick={() => handleDevLogin("owner")}
-                className="w-full py-3 px-4 bg-purple-50 border border-purple-200 rounded-lg text-purple-700 hover:bg-purple-100 transition-colors text-sm font-medium"
+                className="w-full py-3 px-4 bg-secondary border border-border rounded-lg text-secondary-foreground hover:bg-secondary/80 transition-colors text-sm font-medium"
               >
                 Entrar como Dono do Tenant (TENANT_OWNER)
               </button>
               <button
                 onClick={() => handleDevLogin("admin")}
-                className="w-full py-3 px-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors text-sm font-medium"
+                className="w-full py-3 px-4 bg-muted border border-border rounded-lg text-muted-foreground hover:bg-muted/80 transition-colors text-sm font-medium"
               >
                 Entrar como Admin da Plataforma
               </button>
             </div>
-            <p className="text-xs text-gray-500 mt-3 text-center">
+            <p className="text-xs text-muted-foreground mt-3 text-center">
               Senha não necessária no modo desenvolvimento
             </p>
           </div>

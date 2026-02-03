@@ -86,12 +86,12 @@ export function PublicCatalogPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b sticky top-0 z-10">
+      <div className="bg-card shadow-sm border-b border-border sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{tenant.name}</h1>
-              <p className="text-sm text-gray-600 mt-1">Produtos Frescos 🥬🍅</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">{tenant.name}</h1>
+              <p className="text-sm text-muted-foreground mt-1">Produtos Frescos 🥬🍅</p>
             </div>
             <Button
               onClick={shareCatalog}
@@ -137,17 +137,17 @@ export function PublicCatalogPage() {
         {products.length === 0 ? (
           <div className="text-center py-16">
             <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            <h3 className="text-xl font-semibold text-foreground mb-2">
               Nenhum produto encontrado
             </h3>
-            <p className="text-gray-600">Tente ajustar os filtros de busca.</p>
+            <p className="text-muted-foreground">Tente ajustar os filtros de busca.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {products.map((product) => (
               <div
                 key={product.id}
-                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                className="bg-card rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
               >
                 {/* Product Image */}
                 {product.imageUrl ? (
@@ -171,13 +171,13 @@ export function PublicCatalogPage() {
                   )}
 
                   {/* Product Name */}
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  <h3 className="text-lg font-semibold text-card-foreground mb-2">
                     {product.name}
                   </h3>
 
                   {/* Description */}
                   {product.description && (
-                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
                       {product.description}
                     </p>
                   )}
@@ -187,17 +187,17 @@ export function PublicCatalogPage() {
                     {product.options.map((option) => (
                       <div
                         key={option.id}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                        className="flex items-center justify-between p-3 bg-muted rounded-lg"
                       >
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">{option.name}</p>
-                          <p className="text-xs text-gray-500">SKU: {option.sku}</p>
+                          <p className="text-sm font-medium text-foreground">{option.name}</p>
+                          <p className="text-xs text-muted-foreground">SKU: {option.sku}</p>
                         </div>
                         <div className="text-right">
                           <p className="text-lg font-bold text-green-600">
                             {formatPrice(option.basePrice)}
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted-foreground">
                             {option.stockQuantity} disponível
                           </p>
                         </div>
@@ -235,9 +235,9 @@ export function PublicCatalogPage() {
       </div>
 
       {/* Footer */}
-      <div className="bg-white border-t mt-12">
+      <div className="bg-card border-t border-border mt-12">
         <div className="max-w-6xl mx-auto px-4 py-8 text-center">
-          <p className="text-gray-600 mb-4">
+          <p className="text-muted-foreground mb-4">
             Faça seu pedido pelo WhatsApp ou acesse nosso sistema
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -258,7 +258,7 @@ export function PublicCatalogPage() {
               <Link to="/login">Acessar Sistema</Link>
             </Button>
           </div>
-          <p className="text-sm text-gray-500 mt-6">
+          <p className="text-sm text-muted-foreground mt-6">
             Powered by <span className="font-semibold">FreshFlow</span>
           </p>
         </div>

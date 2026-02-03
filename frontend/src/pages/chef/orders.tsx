@@ -14,8 +14,9 @@ import {
 } from "@/components/ui/select";
 import { OrderDetailsDialog } from "@/components/order-details-dialog";
 import { OrderStatusTimeline } from "@/components/order-status-timeline";
-import { Search, ChevronLeft, ChevronRight, Eye, Download, FileDown, RefreshCw, Wifi, WifiOff } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Eye, Download, FileDown, RefreshCw, Wifi, WifiOff, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 // Auto-refresh interval in milliseconds (30 seconds)
 const AUTO_REFRESH_INTERVAL = 30 * 1000;
@@ -34,6 +35,7 @@ export function OrdersPage() {
   const hasAccountContext = !!localStorage.getItem("freshflow:accountId");
 
   const utils = trpc.useUtils();
+  const navigate = useNavigate();
 
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isAutoRefreshEnabled, setIsAutoRefreshEnabled] = useState(true);
@@ -82,6 +84,18 @@ export function OrdersPage() {
     },
     onError: (error) => {
       toast.error("Falha ao atualizar pedidos", { description: error.message });
+    },
+  });
+
+  const reorderMutation = trpc.orders.reorder.useMutation({
+    onSuccess: (data) => {
+      toast.success("Pedido adicionado ao carrinho!", {
+        description: "Revise e confirme os itens antes de enviar",
+      });
+      navigate("/chef/cart");
+    },
+    onError: (error) => {
+      toast.error("Falha ao repetir pedido", { description: error.message });
     },
   });
 
@@ -194,7 +208,7 @@ export function OrdersPage() {
         {/* Results count and auto-refresh indicator */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           {ordersQuery.data && (
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               Mostrando {filteredOrders.length} de {ordersQuery.data.total} pedido
               {ordersQuery.data.total !== 1 ? "s" : ""}
               {selectedOrders.size > 0 && ` • ${selectedOrders.size} selecionado(s)`}
@@ -204,7 +218,7 @@ export function OrdersPage() {
           {/* Auto-refresh controls */}
           <div className="flex items-center gap-3">
             {lastUpdated && (
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted-foreground">
                 Atualizado {getRelativeTime(lastUpdated)}
               </span>
             )}
@@ -224,8 +238,8 @@ export function OrdersPage() {
               onClick={() => setIsAutoRefreshEnabled(!isAutoRefreshEnabled)}
               className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors ${
                 isAutoRefreshEnabled
-                  ? "bg-green-100 text-green-700 hover:bg-green-200"
-                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  ? "bg-success/10 text-success hover:bg-success/20"
+                  : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
               }`}
               aria-label={isAutoRefreshEnabled ? "Desativar atualização automática" : "Ativar atualização automática"}
             >
@@ -242,14 +256,14 @@ export function OrdersPage() {
 
       {/* Batch Actions */}
       {selectedOrders.size > 0 && (
-        <div className="mb-4 p-4 bg-blue-50 rounded-lg flex flex-col sm:flex-row items-center gap-3">
-          <span className="text-sm font-medium text-blue-900">
+        <div className="mb-4 p-4 bg-accent/10 rounded-lg flex flex-col sm:flex-row items-center gap-3">
+          <span className="text-sm font-medium text-foreground">
             {selectedOrders.size} pedido{selectedOrders.size > 1 ? "s" : ""} selecionado{selectedOrders.size > 1 ? "s" : ""}
           </span>
 
           <div className="flex-1 flex items-center gap-2">
             <Select value={bulkStatus} onValueChange={setBulkStatus}>
-              <SelectTrigger className="w-[180px] bg-white">
+              <SelectTrigger className="w-[180px] bg-card">
                 <SelectValue placeholder="Atualizar status..." />
               </SelectTrigger>
               <SelectContent>
@@ -324,7 +338,7 @@ export function OrdersPage() {
       )}
 
       {ordersQuery.data && filteredOrders.length === 0 && (
-        <div className="text-center py-16 bg-gray-50 rounded-lg">
+        <div className="text-center py-16 bg-muted rounded-lg">
           <svg
             className="mx-auto h-16 w-16 text-gray-400"
             fill="none"
@@ -338,10 +352,10 @@ export function OrdersPage() {
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <p className="mt-4 text-lg text-gray-600">
+          <p className="mt-4 text-lg text-foreground">
             {searchQuery || statusFilter !== "all" ? "Nenhum pedido encontrado" : "Nenhum pedido ainda"}
           </p>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             {searchQuery || statusFilter !== "all"
               ? "Tente ajustar seus filtros"
               : "Comece a comprar para criar seu primeiro pedido"}
@@ -357,7 +371,7 @@ export function OrdersPage() {
             checked={selectedOrders.size === filteredOrders.length}
             onCheckedChange={toggleSelectAll}
           />
-          <label htmlFor="select-all" className="text-sm text-gray-600 cursor-pointer">
+          <label htmlFor="select-all" className="text-sm text-muted-foreground cursor-pointer">
             Selecionar todos ({filteredOrders.length})
           </label>
         </div>
@@ -367,7 +381,7 @@ export function OrdersPage() {
         {filteredOrders.map((order) => (
           <div
             key={order.id}
-            className={`bg-white rounded-lg shadow-sm p-4 md:p-6 hover:shadow-md transition-shadow ${
+            className={`bg-card rounded-lg shadow-sm p-4 md:p-6 hover:shadow-md transition-shadow ${
               selectedOrders.has(order.id) ? "ring-2 ring-blue-500" : ""
             }`}
           >
@@ -382,7 +396,7 @@ export function OrdersPage() {
                   />
                   <div className="flex-1">
                   <h3 className="font-semibold text-lg mb-2">{order.orderNumber}</h3>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-gray-600 mb-3">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-muted-foreground mb-3">
                     <div>
                       <span className="font-medium">Itens:</span> {order.items.length}
                     </div>
@@ -429,6 +443,19 @@ export function OrdersPage() {
                   Ver Detalhes
                 </Button>
 
+                {(order.status === "FINALIZED" || order.status === "SENT" || order.status === "IN_SEPARATION") && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => reorderMutation.mutate({ orderId: order.id })}
+                    disabled={reorderMutation.isLoading}
+                    className="flex-1"
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Fazer Novamente
+                  </Button>
+                )}
+
                 {order.status === "FINALIZED" && (
                   <a
                     href={`http://localhost:3001/api/delivery-note/${order.id}.pdf`}
@@ -451,7 +478,7 @@ export function OrdersPage() {
       {/* Pagination */}
       {ordersQuery.data && totalPages > 1 && (
         <div className="flex items-center justify-between mt-6 pt-6 border-t">
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-muted-foreground">
             Página {currentPage + 1} de {totalPages}
           </div>
           <div className="flex gap-2">

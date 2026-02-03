@@ -17,8 +17,8 @@ export function OrderStatusTimeline({ status, compact = false }: OrderStatusTime
   // If DRAFT, show special message
   if (status === "DRAFT") {
     return (
-      <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-        <p className="text-sm text-gray-600 text-center">Rascunho - Ainda não enviado</p>
+      <div className="bg-muted rounded-lg p-3 border border-border">
+        <p className="text-sm text-muted-foreground text-center">Rascunho - Ainda não enviado</p>
       </div>
     );
   }
@@ -28,9 +28,9 @@ export function OrderStatusTimeline({ status, compact = false }: OrderStatusTime
       {/* Timeline */}
       <div className="relative">
         {/* Progress Line */}
-        <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200 -z-0" />
+        <div className="absolute top-5 left-0 right-0 h-0.5 bg-border -z-0" />
         <div
-          className="absolute top-5 left-0 h-0.5 bg-green-500 transition-all duration-500 -z-0"
+          className="absolute top-5 left-0 h-0.5 bg-success transition-all duration-500 -z-0"
           style={{
             width:
               currentStepIndex === -1
@@ -58,10 +58,10 @@ export function OrderStatusTimeline({ status, compact = false }: OrderStatusTime
                     w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 z-10 border-2
                     ${
                       isCompleted
-                        ? "bg-green-500 border-green-500 text-white"
+                        ? "bg-success border-success text-primary-foreground"
                         : isCurrent
-                        ? "bg-blue-500 border-blue-500 text-white animate-pulse"
-                        : "bg-white border-gray-300 text-gray-400"
+                        ? "bg-primary border-primary text-primary-foreground animate-pulse"
+                        : "bg-card border-border text-muted-foreground"
                     }
                   `}
                 >
@@ -78,14 +78,14 @@ export function OrderStatusTimeline({ status, compact = false }: OrderStatusTime
                     <p
                       className={`text-xs font-medium ${
                         isCompleted || isCurrent
-                          ? "text-gray-900"
-                          : "text-gray-400"
+                          ? "text-foreground"
+                          : "text-muted-foreground"
                       }`}
                     >
                       {step.label}
                     </p>
                     {isCurrent && (
-                      <p className="text-xs text-blue-600 mt-1 font-semibold">
+                      <p className="text-xs text-primary mt-1 font-semibold">
                         Atual
                       </p>
                     )}
@@ -106,7 +106,7 @@ export function OrderStatusTimeline({ status, compact = false }: OrderStatusTime
               <p
                 key={step.key}
                 className={`text-xs text-center flex-1 ${
-                  isCurrent ? "font-semibold text-blue-600" : "text-gray-500"
+                  isCurrent ? "font-semibold text-primary" : "text-muted-foreground"
                 }`}
               >
                 {step.label}

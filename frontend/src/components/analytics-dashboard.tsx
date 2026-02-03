@@ -21,11 +21,11 @@ export function AnalyticsDashboard() {
           {[1, 2, 3].map((i) => (
             <Card key={i}>
               <CardHeader className="pb-2">
-                <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-24 bg-muted rounded animate-pulse"></div>
               </CardHeader>
               <CardContent>
-                <div className="h-8 w-32 bg-gray-200 rounded animate-pulse mb-2"></div>
-                <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-8 w-32 bg-muted rounded animate-pulse mb-2"></div>
+                <div className="h-4 w-20 bg-muted rounded animate-pulse"></div>
               </CardContent>
             </Card>
           ))}
@@ -36,9 +36,9 @@ export function AnalyticsDashboard() {
 
   if (analyticsQuery.isError) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-        <p className="text-red-800">Falha ao carregar analytics</p>
-        <p className="text-sm text-red-600 mt-1">{analyticsQuery.error.message}</p>
+      <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+        <p className="text-destructive">Falha ao carregar analytics</p>
+        <p className="text-sm text-destructive mt-1">{analyticsQuery.error.message}</p>
       </div>
     );
   }
@@ -60,21 +60,21 @@ export function AnalyticsDashboard() {
   const ChangeIndicator = ({ value }: { value: number }) => {
     if (value > 0) {
       return (
-        <div className="flex items-center gap-1 text-green-600">
+        <div className="flex items-center gap-1 text-success">
           <TrendingUp className="h-4 w-4" />
           <span className="text-xs font-medium">+{formatPercent(value)}</span>
         </div>
       );
     } else if (value < 0) {
       return (
-        <div className="flex items-center gap-1 text-red-600">
+        <div className="flex items-center gap-1 text-destructive">
           <TrendingDown className="h-4 w-4" />
           <span className="text-xs font-medium">{formatPercent(value)}</span>
         </div>
       );
     }
     return (
-      <div className="flex items-center gap-1 text-gray-500">
+      <div className="flex items-center gap-1 text-muted-foreground">
         <Minus className="h-4 w-4" />
         <span className="text-xs font-medium">0%</span>
       </div>
@@ -155,7 +155,7 @@ export function AnalyticsDashboard() {
           </CardHeader>
           <CardContent>
             {data.topProducts.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">Nenhum produto vendido ainda</p>
+              <p className="text-center text-muted-foreground py-8">Nenhum produto vendido ainda</p>
             ) : (
               <div className="space-y-3">
                 {data.topProducts.slice(0, 5).map((product, index) => (
@@ -165,11 +165,11 @@ export function AnalyticsDashboard() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{product.productName}</p>
-                      <p className="text-xs text-gray-500 truncate">{product.optionName}</p>
+                      <p className="text-xs text-muted-foreground truncate">{product.optionName}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold">{formatPrice(product.revenue)}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         {product.revenuePercentage.toFixed(1)}%
                       </p>
                     </div>
@@ -190,23 +190,23 @@ export function AnalyticsDashboard() {
           </CardHeader>
           <CardContent>
             {data.topCustomers.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">Nenhum cliente ainda</p>
+              <p className="text-center text-muted-foreground py-8">Nenhum cliente ainda</p>
             ) : (
               <div className="space-y-3">
                 {data.topCustomers.slice(0, 5).map((customer, index) => (
                   <div key={customer.customerId} className="flex items-center gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                      <span className="text-xs font-medium text-blue-600">{index + 1}</span>
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-xs font-medium text-primary">{index + 1}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{customer.accountName}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         {customer.orderCount} pedidos • Média {formatPrice(customer.avgOrderValue)}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold">{formatPrice(customer.revenue)}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         {customer.revenuePercentage.toFixed(1)}%
                       </p>
                     </div>
@@ -248,7 +248,7 @@ export function AnalyticsDashboard() {
 function SimpleLineChart({ data }: { data: Array<{ date: string; revenue: number; orders: number }> }) {
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-gray-500">
+      <div className="flex items-center justify-center h-full text-muted-foreground">
         Nenhum dado disponível
       </div>
     );
@@ -290,14 +290,14 @@ function SimpleLineChart({ data }: { data: Array<{ date: string; revenue: number
               y1={y}
               x2={width - padding}
               y2={y}
-              stroke="#e5e7eb"
+              stroke="hsl(var(--border))"
               strokeWidth="1"
             />
             <text
               x={padding - 10}
               y={y + 4}
               textAnchor="end"
-              className="text-xs fill-gray-500"
+              className="text-xs fill-muted-foreground"
             >
               {formatPrice(value)}
             </text>
@@ -309,7 +309,7 @@ function SimpleLineChart({ data }: { data: Array<{ date: string; revenue: number
       <polyline
         points={points}
         fill="none"
-        stroke="#16a34a"
+        stroke="hsl(var(--primary))"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -318,7 +318,7 @@ function SimpleLineChart({ data }: { data: Array<{ date: string; revenue: number
       {/* Area fill */}
       <polygon
         points={`${padding},${padding + chartHeight} ${points} ${width - padding},${padding + chartHeight}`}
-        fill="#16a34a"
+        fill="hsl(var(--primary))"
         fillOpacity="0.1"
       />
 
@@ -332,7 +332,7 @@ function SimpleLineChart({ data }: { data: Array<{ date: string; revenue: number
             cx={x}
             cy={y}
             r="3"
-            fill="#16a34a"
+            fill="hsl(var(--primary))"
             className="hover:r-5 transition-all cursor-pointer"
           >
             <title>

@@ -144,8 +144,9 @@ export function DropdownMenuContent({
     <div
       ref={contentRef}
       className={cn(
-        "absolute z-50 mt-2 min-w-[8rem] overflow-hidden rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-lg",
+        "absolute z-50 mt-2 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-lg",
         "animate-in fade-in-0 zoom-in-95",
+        "border-border",
         alignmentClasses[align],
         className
       )}
@@ -161,10 +162,13 @@ export function DropdownMenuItem({
   className,
   children,
 }: DropdownMenuItemProps) {
+  const { setOpen } = React.useContext(DropdownMenuContext);
+
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     onClick?.();
+    setOpen(false);
   };
 
   return (
@@ -176,13 +180,16 @@ export function DropdownMenuItem({
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           onClick?.();
+          setOpen(false);
         }
       }}
       className={cn(
-        "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-2 text-sm outline-none transition-colors",
-        "hover:bg-accent hover:text-accent-foreground",
-        "focus:bg-accent focus:text-accent-foreground",
-        "active:bg-accent/80",
+        "relative flex cursor-pointer select-none items-center rounded-sm px-3 py-2 text-sm outline-none transition-colors",
+        "text-popover-foreground",
+        "hover:bg-accent/80 hover:text-accent-foreground",
+        "focus:bg-accent/80 focus:text-accent-foreground",
+        "active:bg-accent",
+        "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className
       )}
     >
@@ -196,7 +203,7 @@ export function DropdownMenuLabel({
   children,
 }: DropdownMenuLabelProps) {
   return (
-    <div className={cn("px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider", className)}>
+    <div className={cn("px-3 py-2 text-sm font-semibold text-popover-foreground", className)}>
       {children}
     </div>
   );

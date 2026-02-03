@@ -72,7 +72,7 @@ export function ImageUpload({ value, onChange, onClear }: ImageUploadProps) {
     <div className="space-y-4">
       {/* URL Input as fallback */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-foreground mb-2">
           Image URL
         </label>
         <div className="flex gap-2">
@@ -84,7 +84,7 @@ export function ImageUpload({ value, onChange, onClear }: ImageUploadProps) {
               onChange(e.target.value);
               setPreview(e.target.value);
             }}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="flex-1 px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
           />
           {value && (
             <Button
@@ -97,7 +97,7 @@ export function ImageUpload({ value, onChange, onClear }: ImageUploadProps) {
             </Button>
           )}
         </div>
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           Enter an image URL or upload a file below
         </p>
       </div>
@@ -121,14 +121,14 @@ export function ImageUpload({ value, onChange, onClear }: ImageUploadProps) {
           <Upload className="h-4 w-4 mr-2" />
           {uploading ? "Processing..." : "Upload Image"}
         </Button>
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           Max file size: 5MB. Supported: JPG, PNG, GIF, WebP
         </p>
       </div>
 
       {/* Preview */}
       {preview && (
-        <div className="relative border-2 border-gray-200 rounded-lg overflow-hidden">
+        <div className="relative border-2 border-border rounded-lg overflow-hidden">
           <img
             src={preview}
             alt="Preview"
@@ -151,9 +151,9 @@ export function ImageUpload({ value, onChange, onClear }: ImageUploadProps) {
       )}
 
       {!preview && (
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-          <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-          <p className="text-sm text-gray-500">No image selected</p>
+        <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
+          <ImageIcon className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">No image selected</p>
         </div>
       )}
     </div>

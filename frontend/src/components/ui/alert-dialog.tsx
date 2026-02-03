@@ -106,24 +106,24 @@ export function AlertDialog({
         aria-modal="true"
         aria-labelledby="alert-dialog-title"
         aria-describedby={description ? "alert-dialog-description" : undefined}
-        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md bg-white rounded-lg shadow-xl p-6 animate-in fade-in zoom-in-95 duration-200"
+        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md bg-card rounded-lg shadow-xl p-6 animate-in fade-in zoom-in-95 duration-200"
       >
         {/* Close button */}
         <button
           onClick={() => !isLoading && onOpenChange(false)}
           disabled={isLoading}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 disabled:opacity-50"
+          className="absolute top-4 right-4 text-muted-foreground hover:text-foreground disabled:opacity-50"
           aria-label="Fechar"
         >
           <X className="h-5 w-5" />
         </button>
 
         {/* Content */}
-        <h2 id="alert-dialog-title" className="text-lg font-semibold text-gray-900 pr-8">
+        <h2 id="alert-dialog-title" className="text-lg font-semibold text-card-foreground pr-8">
           {title}
         </h2>
         {description && (
-          <p id="alert-dialog-description" className="mt-2 text-sm text-gray-600">
+          <p id="alert-dialog-description" className="mt-2 text-sm text-muted-foreground">
             {description}
           </p>
         )}

@@ -6,6 +6,8 @@ import { stockRouter } from "./routers/stock.router.js";
 import { customersRouter } from "./routers/customers.router.js";
 import { tenantsRouter } from "./routers/tenants.router.js";
 import { analyticsRouter } from "./routers/analytics.router.js";
+import { tenantSettingsRouter } from "./routers/tenant-settings.router.js";
+import { userProfileRouter } from "./routers/user-profile.router.js";
 
 /**
  * Root tRPC router
@@ -19,6 +21,8 @@ export const appRouter = router({
   customers: customersRouter,
   tenants: tenantsRouter,
   analytics: analyticsRouter,
+  tenantSettings: tenantSettingsRouter,
+  userProfile: userProfileRouter,
 });
 
 export type AppRouter = typeof appRouter;

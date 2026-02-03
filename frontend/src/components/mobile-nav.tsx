@@ -65,7 +65,7 @@ export function MobileNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden z-50 safe-area-inset-bottom"
+      className="fixed bottom-0 left-0 right-0 bg-card border-t border-border md:hidden z-50 safe-area-inset-bottom"
       aria-label="Navegação principal mobile"
       role="navigation"
     >
@@ -83,7 +83,7 @@ export function MobileNav() {
               aria-selected={active}
               onKeyDown={(e) => handleKeyDown(e, index)}
               className={`flex flex-col items-center justify-center space-y-1 relative transition-colors min-h-[64px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset ${
-                active ? "text-primary bg-primary/5" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                active ? "text-primary bg-primary/5" : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
               aria-current={active ? "page" : undefined}
               aria-label={
@@ -94,7 +94,7 @@ export function MobileNav() {
             >
               {item.badge !== undefined && (
                 <span
-                  className="absolute top-2 right-1/4 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium animate-in zoom-in duration-200"
+                  className="absolute top-2 right-1/4 bg-destructive text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium animate-in zoom-in duration-200"
                   aria-hidden="true"
                 >
                   {item.badge > 99 ? "99+" : item.badge}

@@ -17,10 +17,12 @@ export function useAuth() {
     enabled: !!user && !isRateLimited,
     retry: false,
     // Prevent rapid re-fetching
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: Infinity, // Never consider data stale - manual refetch only
     gcTime: 1000 * 60 * 30, // 30 minutes
     refetchOnMount: false,
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchInterval: false, // Disable polling
   });
 
   // Handle rate limit errors

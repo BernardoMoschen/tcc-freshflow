@@ -124,7 +124,7 @@ export function CustomersManagementPage() {
       {/* Header */}
       <div className="mb-6 flex flex-col sm:flex-row gap-3 justify-between">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar clientes..."
             value={search}
@@ -148,9 +148,9 @@ export function CustomersManagementPage() {
       )}
 
       {customersQuery.data && customersQuery.data.items.length === 0 && (
-        <div className="text-center py-16 bg-gray-50 rounded-lg">
-          <Users className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-          <p className="text-lg text-gray-600">Nenhum cliente encontrado</p>
+        <div className="text-center py-16 bg-muted rounded-lg">
+          <Users className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+          <p className="text-lg text-muted-foreground">Nenhum cliente encontrado</p>
         </div>
       )}
 
@@ -159,22 +159,22 @@ export function CustomersManagementPage() {
           {customersQuery.data.items.map((customer) => (
             <div
               key={customer.id}
-              className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden cursor-pointer"
+              className="bg-card rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden cursor-pointer"
               onClick={() => openCustomerDetails(customer)}
             >
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">{customer.account.name}</h3>
+                  <h3 className="text-lg font-semibold text-foreground">{customer.account.name}</h3>
                   <Badge variant="secondary">{customer.orders.length} pedidos</Badge>
                 </div>
 
                 <div className="space-y-2 text-sm">
-                  <div className="flex items-center text-gray-600">
+                  <div className="flex items-center text-muted-foreground">
                     <DollarSign className="h-4 w-4 mr-2" />
                     <span>{customer.customerPrices.length} preços personalizados</span>
                   </div>
                   {customer.orders.length > 0 && (
-                    <div className="text-gray-600">
+                    <div className="text-muted-foreground">
                       Último pedido:{" "}
                       {new Date(customer.orders[0].createdAt).toLocaleDateString("pt-BR")}
                     </div>
@@ -202,30 +202,30 @@ export function CustomersManagementPage() {
             <div className="space-y-6">
               {/* Stats Cards */}
               <div className="grid grid-cols-3 gap-4">
-                <div className="bg-blue-50 rounded-lg p-4">
+                <div className="bg-primary/10 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Package className="h-5 w-5 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-900">Total de Pedidos</span>
+                    <Package className="h-5 w-5 text-primary" />
+                    <span className="text-sm font-medium text-primary">Total de Pedidos</span>
                   </div>
-                  <p className="text-2xl font-bold text-blue-900">{statsQuery.data.totalOrders}</p>
+                  <p className="text-2xl font-bold text-primary">{statsQuery.data.totalOrders}</p>
                 </div>
 
-                <div className="bg-green-50 rounded-lg p-4">
+                <div className="bg-success/10 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <DollarSign className="h-5 w-5 text-green-600" />
-                    <span className="text-sm font-medium text-green-900">Receita Total</span>
+                    <DollarSign className="h-5 w-5 text-success" />
+                    <span className="text-sm font-medium text-success">Receita Total</span>
                   </div>
-                  <p className="text-2xl font-bold text-green-900">
+                  <p className="text-2xl font-bold text-success">
                     {formatPrice(statsQuery.data.totalRevenue)}
                   </p>
                 </div>
 
-                <div className="bg-purple-50 rounded-lg p-4">
+                <div className="bg-secondary/10 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="h-5 w-5 text-purple-600" />
-                    <span className="text-sm font-medium text-purple-900">Pedido Médio</span>
+                    <TrendingUp className="h-5 w-5 text-secondary-foreground" />
+                    <span className="text-sm font-medium text-secondary-foreground">Pedido Médio</span>
                   </div>
-                  <p className="text-2xl font-bold text-purple-900">
+                  <p className="text-2xl font-bold text-secondary-foreground">
                     {formatPrice(statsQuery.data.averageOrderValue)}
                   </p>
                 </div>
@@ -242,7 +242,7 @@ export function CustomersManagementPage() {
                 </div>
 
                 {customerDetailsQuery.data.customerPrices.length === 0 && (
-                  <p className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
+                  <p className="text-center py-8 text-muted-foreground bg-muted rounded-lg">
                     Nenhum preço personalizado definido. Usando preços base para todos os produtos.
                   </p>
                 )}
@@ -252,18 +252,18 @@ export function CustomersManagementPage() {
                     {customerDetailsQuery.data.customerPrices.map((cp) => (
                       <div
                         key={cp.id}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                        className="flex items-center justify-between p-3 bg-muted rounded-lg"
                       >
                         <div>
                           <p className="font-medium text-sm">
                             {cp.productOption.product.name} - {cp.productOption.name}
                           </p>
-                          <p className="text-xs text-gray-500">SKU: {cp.productOption.sku}</p>
+                          <p className="text-xs text-muted-foreground">SKU: {cp.productOption.sku}</p>
                         </div>
                         <div className="flex items-center gap-3">
                           <div className="text-right">
-                            <p className="font-semibold text-green-700">{formatPrice(cp.price)}</p>
-                            <p className="text-xs text-gray-500">
+                            <p className="font-semibold text-success">{formatPrice(cp.price)}</p>
+                            <p className="text-xs text-muted-foreground">
                               Base: {formatPrice(cp.productOption.basePrice)}
                             </p>
                           </div>
@@ -276,7 +276,7 @@ export function CustomersManagementPage() {
                                 cp.productOptionId
                               )
                             }
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -292,7 +292,7 @@ export function CustomersManagementPage() {
                 <h3 className="text-lg font-semibold mb-4">Pedidos Recentes</h3>
 
                 {customerDetailsQuery.data.orders.length === 0 && (
-                  <p className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
+                  <p className="text-center py-8 text-muted-foreground bg-muted rounded-lg">
                     Nenhum pedido ainda
                   </p>
                 )}
@@ -302,11 +302,11 @@ export function CustomersManagementPage() {
                     {customerDetailsQuery.data.orders.slice(0, 10).map((order) => (
                       <div
                         key={order.id}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                        className="flex items-center justify-between p-3 bg-muted rounded-lg"
                       >
                         <div>
                           <p className="font-medium text-sm">{order.orderNumber}</p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted-foreground">
                             {new Date(order.createdAt).toLocaleDateString("pt-BR")} •{" "}
                             {order.items.length} itens
                           </p>

@@ -1,12 +1,12 @@
 export function Skeleton({ className = "" }: { className?: string }) {
   return (
-    <div className={`animate-pulse bg-gray-200 rounded ${className}`} />
+    <div className={`animate-pulse bg-muted rounded ${className}`} />
   );
 }
 
 export function CardSkeleton() {
   return (
-    <div className="bg-white rounded-xl shadow-sm p-5 md:p-6">
+    <div className="bg-card rounded-xl shadow-sm p-5 md:p-6">
       <div className="animate-pulse">
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
@@ -26,7 +26,7 @@ export function CardSkeleton() {
 
 export function ProductCardSkeleton() {
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div className="bg-card rounded-xl shadow-sm overflow-hidden">
       <Skeleton className="h-48 w-full rounded-none" />
       <div className="p-4">
         <Skeleton className="h-6 w-3/4 mb-2" />
@@ -39,7 +39,7 @@ export function ProductCardSkeleton() {
 
 export function OrderItemSkeleton() {
   return (
-    <div className="bg-white rounded-xl shadow-sm p-5 md:p-6">
+    <div className="bg-card rounded-xl shadow-sm p-5 md:p-6">
       <div className="animate-pulse">
         <Skeleton className="h-6 w-2/3 mb-3" />
         <Skeleton className="h-4 w-1/3 mb-2" />
@@ -58,7 +58,7 @@ export function OrderDetailsSkeleton() {
   return (
     <div className="space-y-6 animate-pulse">
       {/* Status Timeline */}
-      <div className="bg-gray-100 rounded-lg p-4">
+      <div className="bg-muted rounded-lg p-4">
         <div className="flex justify-between">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="flex flex-col items-center gap-2">
@@ -97,7 +97,7 @@ export function OrderDetailsSkeleton() {
       {/* Items */}
       <div className="space-y-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="border rounded-lg p-4 bg-gray-50">
+          <div key={i} className="border rounded-lg p-4 bg-muted">
             <div className="flex justify-between mb-3">
               <div className="flex-1">
                 <Skeleton className="h-4 w-2/3 mb-2" />
@@ -148,7 +148,7 @@ export function ListSkeleton({ items = 5 }: { items?: number }) {
   return (
     <div className="space-y-3">
       {Array.from({ length: items }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4 p-4 bg-white rounded-lg">
+        <div key={i} className="flex items-center gap-4 p-4 bg-card rounded-lg">
           <Skeleton className="h-12 w-12 rounded-full flex-shrink-0" />
           <div className="flex-1 space-y-2">
             <Skeleton className="h-4 w-3/4" />

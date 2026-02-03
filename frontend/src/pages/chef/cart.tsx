@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { trpc } from "@/lib/trpc";
 import { useCart } from "@/hooks/use-cart";
@@ -32,12 +32,26 @@ export function CartPage() {
 
   const submitDraftMutation = trpc.orders.submitDraft.useMutation();
 
-  // Set default delivery date to tomorrow
+  // Fetch delivery settings from tenant
+  const deliverySettingsQuery = trpc.tenantSettings.getAvailableDeliveryDates.useQuery();
+
+  // Set default delivery date based on tenant settings
   useState(() => {
+    // Will be updated when deliverySettingsQuery loads
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     setDeliveryDate(tomorrow.toISOString().split("T")[0]);
   });
+
+  // Update default date when settings load
+  useEffect(() => {
+    if (deliverySettingsQuery.data) {
+      const minDays = deliverySettingsQuery.data.minDaysAhead;
+      const defaultDate = new Date();
+      defaultDate.setDate(defaultDate.getDate() + minDays);
+      setDeliveryDate(defaultDate.toISOString().split("T")[0]);
+    }
+  }, [deliverySettingsQuery.data]);
 
   const handleSubmit = useCallback(async () => {
     // Prevent duplicate submissions
@@ -74,6 +88,35 @@ export function CartPage() {
         description: "A data de entrega não pode ser no passado.",
       });
       return;
+    }
+
+    // Validate against tenant settings
+    if (deliverySettingsQuery.data) {
+      const weekday = selectedDate.getDay();
+      if (!deliverySettingsQuery.data.allowedWeekdays.includes(weekday)) {
+        const weekdayNames = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+        toast.error("Data inválida", {
+          description: `Entregas não são permitidas às ${weekdayNames[weekday]}s.`,
+        });
+        return;
+      }
+
+      const daysFromNow = Math.floor((selectedDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      const minDays = deliverySettingsQuery.data.allowSameDay ? 0 : deliverySettingsQuery.data.minDaysAhead;
+
+      if (daysFromNow < minDays) {
+        toast.error("Data inválida", {
+          description: `A entrega deve ser agendada com pelo menos ${minDays} dia(s) de antecedência.`,
+        });
+        return;
+      }
+
+      if (daysFromNow > deliverySettingsQuery.data.maxDaysAhead) {
+        toast.error("Data inválida", {
+          description: `A entrega não pode ser agendada com mais de ${deliverySettingsQuery.data.maxDaysAhead} dias de antecedência.`,
+        });
+        return;
+      }
     }
 
     isSubmittingRef.current = true;
@@ -125,43 +168,89 @@ export function CartPage() {
   }, [updateQuantity]);
 
   const handleNotesChange = useCallback((productOptionId: string, value: string) => {
-    // Sanitize input to prevent XSS
+    // Allow unrestricted input while typing, only limit length
+    if (value.length <= MAX_ITEM_NOTES_LENGTH) {
+      updateNotes(productOptionId, value);
+    }
+  }, [updateNotes]);
+
+  const handleNotesBlur = useCallback((productOptionId: string, value: string) => {
+    // Sanitize only on blur to prevent XSS while allowing natural typing
     const sanitized = sanitizeNotes(value);
-    if (sanitized.length <= MAX_ITEM_NOTES_LENGTH) {
+    if (sanitized !== value) {
       updateNotes(productOptionId, sanitized);
     }
   }, [updateNotes]);
 
   const handleOrderNotesChange = useCallback((value: string) => {
-    // Sanitize input to prevent XSS
+    // Allow unrestricted input while typing, only limit length
+    if (value.length <= MAX_ORDER_NOTES_LENGTH) {
+      setOrderNotes(value);
+    }
+  }, []);
+
+  const handleOrderNotesBlur = useCallback((value: string) => {
+    // Sanitize only on blur to prevent XSS while allowing natural typing
     const sanitized = sanitizeNotes(value);
-    if (sanitized.length <= MAX_ORDER_NOTES_LENGTH) {
+    if (sanitized !== value) {
       setOrderNotes(sanitized);
     }
   }, []);
 
-  // Quick date buttons
-  const getQuickDate = (daysFromNow: number) => {
-    const date = new Date();
-    date.setDate(date.getDate() + daysFromNow);
-    return date.toISOString().split("T")[0];
+  // Generate quick date options based on tenant settings
+  const getAvailableQuickDates = () => {
+    if (!deliverySettingsQuery.data) return [];
+
+    const { minDaysAhead, maxDaysAhead, allowedWeekdays, allowSameDay } = deliverySettingsQuery.data;
+    const quickDates: { date: string; label: string; daysAhead: number }[] = [];
+    const today = new Date();
+    const startDays = allowSameDay ? 0 : minDaysAhead;
+
+    let daysChecked = 0;
+    let daysAhead = startDays;
+
+    // Generate up to 4 quick date options
+    while (quickDates.length < 4 && daysAhead <= maxDaysAhead && daysChecked < 30) {
+      const date = new Date(today);
+      date.setDate(date.getDate() + daysAhead);
+      const weekday = date.getDay();
+
+      // Check if this weekday is allowed
+      if (allowedWeekdays.includes(weekday)) {
+        const dateStr = date.toISOString().split("T")[0];
+        let label: string;
+
+        if (daysAhead === 0) {
+          label = "Hoje";
+        } else if (daysAhead === 1) {
+          label = "Amanhã";
+        } else {
+          label = date.toLocaleDateString("pt-BR", {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+          });
+        }
+
+        quickDates.push({ date: dateStr, label, daysAhead });
+      }
+
+      daysAhead++;
+      daysChecked++;
+    }
+
+    return quickDates;
   };
 
-  const formatDateLabel = (daysFromNow: number) => {
-    if (daysFromNow === 0) return "Hoje";
-    if (daysFromNow === 1) return "Amanhã";
-    const date = new Date();
-    date.setDate(date.getDate() + daysFromNow);
-    return date.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" });
-  };
+  const quickDates = getAvailableQuickDates();
 
   return (
     <PageLayout title="Carrinho">
       {items.length === 0 ? (
         <div className="text-center py-16">
           <ShoppingBag className="mx-auto h-16 w-16 text-gray-400" aria-hidden="true" />
-          <p className="mt-4 text-lg font-medium text-gray-700">Seu carrinho está vazio</p>
-          <p className="mt-1 text-sm text-gray-500">Adicione produtos do catálogo para começar</p>
+          <p className="mt-4 text-lg font-medium text-foreground">Seu carrinho está vazio</p>
+          <p className="mt-1 text-sm text-muted-foreground">Adicione produtos do catálogo para começar</p>
           <Button onClick={() => navigate("/chef/catalog")} className="mt-6" size="lg">
             Ver Catálogo
           </Button>
@@ -170,7 +259,7 @@ export function CartPage() {
         <>
           {/* Header with clear button */}
           <div className="flex justify-between items-center mb-4">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               {items.length} {items.length === 1 ? "item" : "itens"} no carrinho
             </p>
             <Button
@@ -188,13 +277,13 @@ export function CartPage() {
           {/* Cart items */}
           <div className="space-y-4 mb-6">
             {items.map((item) => (
-              <div key={item.productOptionId} className="bg-white rounded-lg shadow-sm p-4 md:p-6">
+              <div key={item.productOptionId} className="bg-card rounded-lg shadow-sm p-4 md:p-6">
                 <div className="flex flex-col gap-4">
                   {/* Item header */}
                   <div className="flex justify-between items-start gap-4">
                     <div className="flex-1">
                       <h3 className="font-semibold text-base md:text-lg">{item.productName}</h3>
-                      <p className="text-sm text-gray-600">{item.optionName}</p>
+                      <p className="text-sm text-muted-foreground">{item.optionName}</p>
                       <p className="text-sm font-medium text-primary mt-1">
                         R$ {(item.price / 100).toFixed(2)}
                         {item.unitType === "WEIGHT" && " /kg"}
@@ -229,11 +318,11 @@ export function CartPage() {
                       disabled={isSyncing}
                       aria-describedby={`unit-${item.productOptionId}`}
                     />
-                    <span id={`unit-${item.productOptionId}`} className="text-sm text-gray-600">
+                    <span id={`unit-${item.productOptionId}`} className="text-sm text-muted-foreground">
                       {item.unitType === "WEIGHT" ? "kg" : "unidades"}
                     </span>
                     <div className="ml-auto text-right">
-                      <span className="text-sm text-gray-500">Subtotal: </span>
+                      <span className="text-sm text-muted-foreground">Subtotal: </span>
                       <span className="font-semibold text-primary">
                         R$ {((item.price * item.requestedQty) / 100).toFixed(2)}
                       </span>
@@ -245,12 +334,12 @@ export function CartPage() {
                     <div className="flex items-center justify-between">
                       <Label
                         htmlFor={`notes-${item.productOptionId}`}
-                        className="text-xs text-gray-600 flex items-center gap-1"
+                        className="text-xs text-muted-foreground flex items-center gap-1"
                       >
                         <MessageSquare className="h-3 w-3" aria-hidden="true" />
                         Instruções especiais (opcional)
                       </Label>
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-muted-foreground">
                         {(item.notes?.length || 0)}/{MAX_ITEM_NOTES_LENGTH}
                       </span>
                     </div>
@@ -259,6 +348,7 @@ export function CartPage() {
                       placeholder={`Ex: "Cortar ao meio", "Bem fresco", "Sem substituições"...`}
                       value={item.notes || ""}
                       onChange={(e) => handleNotesChange(item.productOptionId, e.target.value)}
+                      onBlur={(e) => handleNotesBlur(item.productOptionId, e.target.value)}
                       className="text-sm resize-none"
                       rows={2}
                       maxLength={MAX_ITEM_NOTES_LENGTH}
@@ -271,7 +361,7 @@ export function CartPage() {
           </div>
 
           {/* Order details section */}
-          <div className="bg-white rounded-lg shadow-sm p-6 space-y-6 mb-6">
+          <div className="bg-card rounded-lg shadow-sm p-6 space-y-6 mb-6">
             <h3 className="font-semibold text-lg">Detalhes do Pedido</h3>
 
             {/* Delivery Date */}
@@ -283,17 +373,23 @@ export function CartPage() {
 
               {/* Quick date buttons */}
               <div className="flex flex-wrap gap-2" role="group" aria-label="Atalhos de data">
-                {[0, 1, 2, 3].map((days) => (
+                {quickDates.map((option) => (
                   <Button
-                    key={days}
+                    key={option.date}
                     type="button"
-                    variant={deliveryDate === getQuickDate(days) ? "default" : "outline"}
+                    variant={deliveryDate === option.date ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setDeliveryDate(getQuickDate(days))}
+                    onClick={() => setDeliveryDate(option.date)}
                   >
-                    {formatDateLabel(days)}
+                    {option.label}
                   </Button>
                 ))}
+                {quickDates.length === 0 && deliverySettingsQuery.isLoading && (
+                  <p className="text-sm text-muted-foreground">Carregando datas disponíveis...</p>
+                )}
+                {quickDates.length === 0 && !deliverySettingsQuery.isLoading && (
+                  <p className="text-sm text-warning">Nenhuma data de entrega disponível no momento</p>
+                )}
               </div>
 
               {/* Date picker */}
@@ -302,7 +398,21 @@ export function CartPage() {
                 type="date"
                 value={deliveryDate}
                 onChange={(e) => setDeliveryDate(e.target.value)}
-                min={new Date().toISOString().split("T")[0]}
+                min={(() => {
+                  if (!deliverySettingsQuery.data) return new Date().toISOString().split("T")[0];
+                  const minDate = new Date();
+                  const minDays = deliverySettingsQuery.data.allowSameDay
+                    ? 0
+                    : deliverySettingsQuery.data.minDaysAhead;
+                  minDate.setDate(minDate.getDate() + minDays);
+                  return minDate.toISOString().split("T")[0];
+                })()}
+                max={(() => {
+                  if (!deliverySettingsQuery.data) return undefined;
+                  const maxDate = new Date();
+                  maxDate.setDate(maxDate.getDate() + deliverySettingsQuery.data.maxDaysAhead);
+                  return maxDate.toISOString().split("T")[0];
+                })()}
                 className="w-full"
                 required
                 aria-required="true"
@@ -320,11 +430,32 @@ export function CartPage() {
                   <SelectValue placeholder="Selecione um horário" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="06:00-09:00">Manhã Cedo (06:00 - 09:00)</SelectItem>
-                  <SelectItem value="09:00-12:00">Manhã (09:00 - 12:00)</SelectItem>
-                  <SelectItem value="12:00-15:00">Tarde (12:00 - 15:00)</SelectItem>
-                  <SelectItem value="15:00-18:00">Tarde Final (15:00 - 18:00)</SelectItem>
-                  <SelectItem value="18:00-21:00">Noite (18:00 - 21:00)</SelectItem>
+                  {(() => {
+                    // Use tenant-configured time slots if available for the selected day
+                    if (deliverySettingsQuery.data?.timeSlots && deliveryDate) {
+                      const selectedWeekday = new Date(deliveryDate).getDay();
+                      const slotsForDay = deliverySettingsQuery.data.timeSlots[selectedWeekday.toString()];
+
+                      if (slotsForDay && slotsForDay.length > 0) {
+                        return slotsForDay.map((slot: string) => (
+                          <SelectItem key={slot} value={slot}>
+                            {slot}
+                          </SelectItem>
+                        ));
+                      }
+                    }
+
+                    // Fallback to default time slots
+                    return (
+                      <>
+                        <SelectItem value="06:00-09:00">Manhã Cedo (06:00 - 09:00)</SelectItem>
+                        <SelectItem value="09:00-12:00">Manhã (09:00 - 12:00)</SelectItem>
+                        <SelectItem value="12:00-15:00">Tarde (12:00 - 15:00)</SelectItem>
+                        <SelectItem value="15:00-18:00">Tarde Final (15:00 - 18:00)</SelectItem>
+                        <SelectItem value="18:00-21:00">Noite (18:00 - 21:00)</SelectItem>
+                      </>
+                    );
+                  })()}
                 </SelectContent>
               </Select>
             </div>
@@ -344,7 +475,7 @@ export function CartPage() {
                 rows={2}
                 maxLength={500}
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 Informações específicas para o entregador sobre localização e acesso
               </p>
             </div>
@@ -356,7 +487,7 @@ export function CartPage() {
                   <MessageSquare className="h-4 w-4" aria-hidden="true" />
                   Observações do Pedido (opcional)
                 </Label>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-muted-foreground">
                   {orderNotes.length}/{MAX_ORDER_NOTES_LENGTH}
                 </span>
               </div>
@@ -365,6 +496,7 @@ export function CartPage() {
                 placeholder='Ex: "Entregar nos fundos", "Ligar antes da entrega", "Pedido urgente"...'
                 value={orderNotes}
                 onChange={(e) => handleOrderNotesChange(e.target.value)}
+                onBlur={(e) => handleOrderNotesBlur(e.target.value)}
                 className="resize-none"
                 rows={3}
                 maxLength={MAX_ORDER_NOTES_LENGTH}
@@ -373,7 +505,7 @@ export function CartPage() {
           </div>
 
           {/* Order summary - sticky on mobile */}
-          <div className="bg-white rounded-lg shadow-sm p-6 sticky bottom-20 md:bottom-4">
+          <div className="bg-card rounded-lg shadow-sm p-6 sticky bottom-20 md:bottom-4">
             {isSyncing && (
               <div className="flex items-center gap-2 text-sm text-amber-600 mb-4">
                 <AlertTriangle className="h-4 w-4" aria-hidden="true" />
@@ -397,7 +529,7 @@ export function CartPage() {
               {submitting ? "Enviando..." : "Enviar Pedido"}
             </Button>
 
-            <p className="mt-3 text-xs text-center text-gray-600">
+            <p className="mt-3 text-xs text-center text-muted-foreground">
               Itens por peso serão precificados após pesagem
             </p>
           </div>

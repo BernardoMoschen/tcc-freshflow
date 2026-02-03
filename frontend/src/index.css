@@ -4,51 +4,98 @@
 
 @layer base {
   :root {
-    /* Fresh Produce Theme - Vibrant greens and oranges */
+    /* Fresh Produce Theme - Light Mode */
     --background: 0 0% 100%;
-    --foreground: 142 30% 15%; /* Dark green-tinted text */
+    --foreground: 142 30% 15%;
     --card: 0 0% 100%;
     --card-foreground: 142 30% 15%;
 
-    /* Primary: Fresh green (like lettuce/vegetables) */
-    --primary: 142 71% 45%; /* Brighter, more vibrant green */
+    /* Primary: Fresh green */
+    --primary: 142 71% 45%;
     --primary-foreground: 0 0% 100%;
+    --primary-hover: 142 71% 38%;
 
-    /* Secondary: Soft green tint */
+    /* Secondary */
     --secondary: 142 35% 96%;
     --secondary-foreground: 142 71% 25%;
 
-    /* Muted: Very light green tint for backgrounds */
+    /* Muted */
     --muted: 142 20% 97%;
     --muted-foreground: 142 16% 45%;
 
-    /* Accent: Fresh orange (like carrots/citrus) for vibrancy */
-    --accent: 24 94% 50%; /* Vibrant orange */
+    /* Accent */
+    --accent: 24 94% 50%;
     --accent-foreground: 0 0% 100%;
+    --accent-hover: 24 94% 42%;
 
-    /* Destructive: Red for errors/delete */
+    /* Destructive */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
+    --destructive-hover: 0 84% 52%;
 
-    /* Borders: Light green tint */
+    /* UI Elements */
     --border: 142 25% 88%;
     --input: 142 25% 90%;
     --ring: 142 71% 45%;
 
-    /* Radius: Slightly more rounded for friendly feel */
-    --radius: 0.75rem;
-  }
+    /* Popover & Dropdown */
+    --popover: 0 0% 100%;
+    --popover-foreground: 142 30% 15%;
 
-  /* Success state (green) */
-  .success {
+    /* Radius */
+    --radius: 0.75rem;
+
+    /* Success & Warning */
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
-  }
-
-  /* Warning state (yellow/orange) */
-  .warning {
     --warning: 45 93% 47%;
     --warning-foreground: 45 30% 15%;
+  }
+
+  .dark {
+    /* Fresh Produce Theme - Dark Mode */
+    --background: 142 30% 8%;
+    --foreground: 142 20% 95%;
+    --card: 142 25% 12%;
+    --card-foreground: 142 20% 95%;
+
+    /* Primary: Brighter green for dark bg */
+    --primary: 142 65% 55%;
+    --primary-foreground: 142 30% 10%;
+    --primary-hover: 142 65% 62%;
+
+    /* Secondary */
+    --secondary: 142 30% 18%;
+    --secondary-foreground: 142 20% 90%;
+
+    /* Muted */
+    --muted: 142 25% 15%;
+    --muted-foreground: 142 15% 65%;
+
+    /* Accent: Adjusted orange for dark */
+    --accent: 24 90% 60%;
+    --accent-foreground: 142 30% 10%;
+    --accent-hover: 24 90% 68%;
+
+    /* Destructive */
+    --destructive: 0 84% 65%;
+    --destructive-foreground: 0 0% 100%;
+    --destructive-hover: 0 84% 72%;
+
+    /* UI Elements */
+    --border: 142 25% 22%;
+    --input: 142 25% 20%;
+    --ring: 142 65% 55%;
+
+    /* Popover & Dropdown */
+    --popover: 142 25% 14%;
+    --popover-foreground: 142 20% 95%;
+
+    /* Success & Warning */
+    --success: 142 65% 55%;
+    --success-foreground: 142 30% 10%;
+    --warning: 45 90% 60%;
+    --warning-foreground: 45 30% 10%;
   }
 }
 

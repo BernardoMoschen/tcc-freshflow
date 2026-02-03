@@ -166,14 +166,14 @@ export function StockManagementPage() {
     }
     if (item.isLowStock) {
       return (
-        <Badge variant="secondary" className="flex items-center gap-1 bg-yellow-100 text-yellow-800">
+        <Badge variant="secondary" className="flex items-center gap-1 bg-warning/10 text-warning">
           <AlertTriangle className="h-3 w-3" />
           Estoque Baixo
         </Badge>
       );
     }
     return (
-      <Badge variant="secondary" className="flex items-center gap-1 bg-green-100 text-green-800">
+      <Badge variant="secondary" className="flex items-center gap-1 bg-success/10 text-success">
         <CheckCircle className="h-3 w-3" />
         Em Estoque
       </Badge>
@@ -195,7 +195,7 @@ export function StockManagementPage() {
           </Button>
         </div>
 
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-muted-foreground">
           {stockQuery.data?.total} produtos
         </div>
       </div>
@@ -214,49 +214,49 @@ export function StockManagementPage() {
       )}
 
       {stockQuery.data && stockQuery.data.items.length === 0 && (
-        <div className="text-center py-16 bg-gray-50 rounded-lg">
-          <Package className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-          <p className="text-lg text-gray-600">
+        <div className="text-center py-16 bg-muted rounded-lg">
+          <Package className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+          <p className="text-lg text-muted-foreground">
             {lowStockOnly ? "Nenhum item com estoque baixo" : "Nenhum produto encontrado"}
           </p>
         </div>
       )}
 
       {stockQuery.data && stockQuery.data.items.length > 0 && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-card rounded-lg shadow overflow-hidden">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Produto
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   SKU
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Estoque
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Ações
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-border">
               {stockQuery.data.items.map((item) => (
-                <tr key={item.optionId} className="hover:bg-gray-50">
+                <tr key={item.optionId} className="hover:bg-accent/5">
                   <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-gray-900">{item.productName}</div>
-                    <div className="text-sm text-gray-500">{item.optionName}</div>
+                    <div className="text-sm font-medium text-card-foreground">{item.productName}</div>
+                    <div className="text-sm text-muted-foreground">{item.optionName}</div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{item.sku}</td>
+                  <td className="px-6 py-4 text-sm text-muted-foreground">{item.sku}</td>
                   <td className="px-6 py-4 text-center">
-                    <div className="text-sm font-semibold text-gray-900">
+                    <div className="text-sm font-semibold text-card-foreground">
                       {item.stockQuantity} {item.unitType === "WEIGHT" ? "kg" : "unidades"}
                     </div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-muted-foreground">
                       Limite: {item.lowStockThreshold}
                     </div>
                   </td>
@@ -337,11 +337,11 @@ export function StockManagementPage() {
           {selectedOption && (
             <div className="space-y-4">
               <div>
-                <p className="text-sm font-medium text-gray-700">Produto</p>
-                <p className="text-sm text-gray-900">
+                <p className="text-sm font-medium text-card-foreground">Produto</p>
+                <p className="text-sm text-card-foreground">
                   {selectedOption.productName} - {selectedOption.name}
                 </p>
-                <p className="text-sm text-gray-500">Atual: {selectedOption.currentStock}</p>
+                <p className="text-sm text-muted-foreground">Atual: {selectedOption.currentStock}</p>
               </div>
 
               <div>

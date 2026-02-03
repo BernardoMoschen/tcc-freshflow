@@ -16,15 +16,15 @@ function PageErrorFallback({ pageName }: PageErrorFallbackProps) {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
-      <div className="flex items-center justify-center w-12 h-12 bg-amber-100 rounded-full mb-4">
-        <AlertTriangle className="w-6 h-6 text-amber-600" aria-hidden="true" />
+      <div className="flex items-center justify-center w-12 h-12 bg-warning/10 rounded-full mb-4">
+        <AlertTriangle className="w-6 h-6 text-warning" aria-hidden="true" />
       </div>
 
-      <h2 className="text-lg font-semibold text-gray-900 mb-2">
+      <h2 className="text-lg font-semibold text-card-foreground mb-2">
         Erro ao carregar {pageName || "página"}
       </h2>
 
-      <p className="text-sm text-gray-600 text-center max-w-md mb-6">
+      <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
         Ocorreu um problema ao carregar esta seção. Tente novamente ou volte para a página anterior.
       </p>
 

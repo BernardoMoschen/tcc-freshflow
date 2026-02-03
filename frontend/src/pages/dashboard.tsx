@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
+import { useEffect } from "react";
+import { toast } from "sonner";
 
 export function DashboardPage() {
   const { isPlatformAdmin, isTenantAdmin, isAccountUser, session } = useAuth();
@@ -47,6 +49,18 @@ export function DashboardPage() {
   );
 
   const lowStockItems = stockQuery.data?.items.filter((item) => item.isLowStock || item.isOutOfStock) || [];
+  const outOfStockItems = lowStockItems.filter((item) => item.isOutOfStock);
+
+  // Show toast notification for out of stock items (only once per session)
+  useEffect(() => {
+    if (isTenantAdmin && outOfStockItems.length > 0 && !sessionStorage.getItem("freshflow:low-stock-alert-shown")) {
+      toast.warning(`${outOfStockItems.length} produto${outOfStockItems.length > 1 ? "s" : ""} esgotado${outOfStockItems.length > 1 ? "s" : ""}`, {
+        description: "Verifique o estoque para evitar pedidos não atendidos",
+        duration: 5000,
+      });
+      sessionStorage.setItem("freshflow:low-stock-alert-shown", "true");
+    }
+  }, [isTenantAdmin, outOfStockItems.length]);
 
   // Calculate metrics
   const totalOrders = ordersQuery.data?.total || 0;
@@ -115,15 +129,15 @@ export function DashboardPage() {
       <PageLayout title="Painel">
         <div className="flex flex-col items-center justify-center py-12">
           <Building2 className="h-16 w-16 text-gray-400 mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+          <h2 className="text-xl font-semibold text-foreground mb-2">
             Selecione um Tenant
           </h2>
-          <p className="text-gray-600 text-center max-w-md mb-6">
+          <p className="text-muted-foreground text-center max-w-md mb-6">
             Como administrador da plataforma, você precisa selecionar um tenant
             para visualizar os dados do painel. Use o seletor no menu de navegação.
           </p>
           {session?.memberships && session.memberships.length > 0 && (
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-muted-foreground">
               Você tem acesso a {session.memberships.length} membership(s).
               Use o Context Switcher na barra de navegação.
             </div>
@@ -139,10 +153,10 @@ export function DashboardPage() {
       <PageLayout title="Meu Painel">
         <div className="flex flex-col items-center justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+          <h2 className="text-xl font-semibold text-foreground mb-2">
             Configurando sua conta...
           </h2>
-          <p className="text-gray-600 text-center max-w-md">
+          <p className="text-muted-foreground text-center max-w-md">
             Aguarde enquanto configuramos seu acesso.
           </p>
         </div>
@@ -172,6 +186,34 @@ export function DashboardPage() {
           </div>
         )}
 
+        {/* Low Stock Alert Banner */}
+        {!stockQuery.isLoading && lowStockItems.length > 0 && (
+          <div className="mb-6 p-4 bg-warning/10 border-l-4 border-warning rounded-lg animate-fade-in">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-warning mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-warning mb-1">
+                  Alerta de Estoque Baixo
+                </h3>
+                <p className="text-sm text-warning mb-3">
+                  {lowStockItems.length} {lowStockItems.length === 1 ? "produto está" : "produtos estão"} com estoque baixo ou esgotado.
+                  {lowStockItems.filter(item => item.isOutOfStock).length > 0 && (
+                    <span className="font-medium">
+                      {" "}({lowStockItems.filter(item => item.isOutOfStock).length} esgotado{lowStockItems.filter(item => item.isOutOfStock).length > 1 ? "s" : ""})
+                    </span>
+                  )}
+                </p>
+                <Link to="/admin/stock">
+                  <Button variant="outline" size="sm" className="bg-card hover:bg-warning/20 border-warning">
+                    <Package className="h-4 w-4 mr-2" />
+                    Gerenciar Estoque
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Admin Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <Card>
@@ -181,7 +223,7 @@ export function DashboardPage() {
             </CardHeader>
             <CardContent>
               {ordersQuery.isLoading ? (
-                <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-8 bg-muted rounded animate-pulse"></div>
               ) : (
                 <>
                   <div className="text-2xl font-bold">{totalOrders}</div>
@@ -198,7 +240,7 @@ export function DashboardPage() {
             </CardHeader>
             <CardContent>
               {ordersQuery.isLoading ? (
-                <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-8 bg-muted rounded animate-pulse"></div>
               ) : (
                 <>
                   <div className="text-2xl font-bold">{formatPrice(totalRevenue)}</div>
@@ -217,7 +259,7 @@ export function DashboardPage() {
             </CardHeader>
             <CardContent>
               {ordersQuery.isLoading ? (
-                <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-8 bg-muted rounded animate-pulse"></div>
               ) : (
                 <>
                   <div className="text-2xl font-bold">{pendingOrders}</div>
@@ -268,14 +310,14 @@ export function DashboardPage() {
                   <CardSkeleton />
                 </div>
               ) : recentOrders.length === 0 ? (
-                <p className="text-center text-gray-500 py-8">Nenhum pedido ainda</p>
+                <p className="text-center text-muted-foreground py-8">Nenhum pedido ainda</p>
               ) : (
                 <div className="space-y-3">
                   {recentOrders.map((order) => (
                     <Link
                       key={order.id}
                       to={`/admin/weighing/${order.id}`}
-                      className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                      className="block p-3 bg-muted rounded-lg hover:bg-accent/10 transition"
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-medium text-sm">{order.orderNumber}</span>
@@ -292,7 +334,7 @@ export function DashboardPage() {
                           {translateStatus(order.status)}
                         </Badge>
                       </div>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         {order.customer?.account?.name || "Cliente"} • {order.items.length} itens •{" "}
                         {new Date(order.createdAt).toLocaleDateString("pt-BR")}
                       </p>
@@ -324,17 +366,17 @@ export function DashboardPage() {
                 </div>
               ) : lowStockItems.length === 0 ? (
                 <div className="text-center py-8">
-                  <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
-                  <p className="text-gray-500">Estoque em dia!</p>
+                  <CheckCircle className="h-12 w-12 text-success mx-auto mb-2" />
+                  <p className="text-muted-foreground">Estoque em dia!</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {lowStockItems.slice(0, 5).map((item) => (
-                    <div key={item.optionId} className="p-3 bg-gray-50 rounded-lg">
+                    <div key={item.optionId} className="p-3 bg-muted rounded-lg">
                       <div className="flex items-start justify-between mb-1">
                         <div className="flex-1">
                           <p className="font-medium text-sm">{item.productName}</p>
-                          <p className="text-xs text-gray-500">{item.optionName}</p>
+                          <p className="text-xs text-muted-foreground">{item.optionName}</p>
                         </div>
                         <Badge
                           variant={item.isOutOfStock ? "destructive" : "secondary"}
@@ -344,7 +386,7 @@ export function DashboardPage() {
                         </Badge>
                       </div>
                       {!item.isOutOfStock && (
-                        <p className="text-xs text-yellow-600">
+                        <p className="text-xs text-warning">
                           Abaixo do mínimo ({item.lowStockThreshold})
                         </p>
                       )}
@@ -368,12 +410,12 @@ export function DashboardPage() {
             <AlertTriangle className="h-5 w-5" />
             <span className="font-medium">Falha ao carregar dados</span>
           </div>
-          <p className="text-sm text-red-600 mt-1">
+          <p className="text-sm text-destructive mt-1">
             {ordersQuery.error?.message || "Ocorreu um erro"}
           </p>
           <button
             onClick={() => ordersQuery.refetch()}
-            className="mt-2 text-sm text-red-700 hover:text-red-900 underline"
+            className="mt-2 text-sm text-destructive hover:text-destructive/80 underline"
           >
             Tentar novamente
           </button>
@@ -490,8 +532,8 @@ export function DashboardPage() {
             </div>
           ) : recentOrders.length === 0 ? (
             <div className="text-center py-8">
-              <Package className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-              <p className="text-gray-500 mb-4">Você ainda não fez nenhum pedido</p>
+              <Package className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+              <p className="text-muted-foreground mb-4">Você ainda não fez nenhum pedido</p>
               <Link to="/chef/catalog">
                 <Button>Fazer Primeiro Pedido</Button>
               </Link>
@@ -502,7 +544,7 @@ export function DashboardPage() {
                 <Link
                   key={order.id}
                   to="/chef/orders"
-                  className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                  className="block p-3 bg-muted rounded-lg hover:bg-accent/10 transition"
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-medium text-sm">{order.orderNumber}</span>
@@ -519,7 +561,7 @@ export function DashboardPage() {
                       {translateStatus(order.status)}
                     </Badge>
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     {order.items.length} itens •{" "}
                     {new Date(order.createdAt).toLocaleDateString("pt-BR")}
                   </p>

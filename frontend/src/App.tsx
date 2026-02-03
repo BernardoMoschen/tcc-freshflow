@@ -8,6 +8,7 @@ import { Toaster } from "./components/ui/sonner";
 import { ErrorBoundary } from "./components/error-boundary";
 import { PageErrorBoundary } from "./components/page-error-boundary";
 import { NavigationProgress } from "./components/navigation-progress";
+import { ThemeProvider } from "./components/theme-provider";
 
 // Smart redirect: goes to dashboard if logged in, login if not
 function RootRedirect() {
@@ -30,7 +31,9 @@ import { ProductsManagementPage } from "./pages/admin/products";
 import { CustomersManagementPage } from "./pages/admin/customers";
 import { AdminOrdersPage } from "./pages/admin/orders";
 import { AnalyticsPage } from "./pages/admin/analytics";
+import { TenantSettingsPage } from "./pages/admin/settings";
 import { PublicCatalogPage } from "./pages/public/catalog";
+import { ProfilePage } from "./pages/profile";
 
 // Helper to check if error is retryable (only server/network errors)
 function shouldRetry(failureCount: number, error: unknown): boolean {
@@ -98,14 +101,15 @@ function App() {
   );
 
   return (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>
-        <ToastProvider>
-          <Toaster />
-          <ErrorBoundary>
-            <BrowserRouter>
-              <NavigationProgress />
-              <Routes>
+    <ThemeProvider defaultTheme="system">
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          <ToastProvider>
+            <Toaster />
+            <ErrorBoundary>
+              <BrowserRouter>
+                <NavigationProgress />
+                <Routes>
             {/* Public routes */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/catalog/:tenantSlug" element={<PublicCatalogPage />} />
@@ -116,6 +120,18 @@ function App() {
               element={
                 <ProtectedRoute>
                   <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Profile (protected, all roles) */}
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <PageErrorBoundary pageName="Perfil">
+                    <ProfilePage />
+                  </PageErrorBoundary>
                 </ProtectedRoute>
               }
             />
@@ -239,6 +255,16 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/admin/settings"
+              element={
+                <ProtectedRoute requireTenantAdmin>
+                  <PageErrorBoundary pageName="Configurações">
+                    <TenantSettingsPage />
+                  </PageErrorBoundary>
+                </ProtectedRoute>
+              }
+            />
 
               {/* Default redirect - dashboard if logged in, login if not */}
               <Route path="/" element={<RootRedirect />} />
@@ -249,6 +275,7 @@ function App() {
         </ToastProvider>
       </QueryClientProvider>
     </trpc.Provider>
+    </ThemeProvider>
   );
 }
 

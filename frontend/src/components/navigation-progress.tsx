@@ -62,7 +62,7 @@ export function NavigationProgress() {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-gray-200/50">
+    <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-border/50">
       <div
         className={cn(
           "h-full bg-primary transition-all duration-200 ease-out",
@@ -88,7 +88,7 @@ export function GlobalLoadingIndicator({ isLoading }: { isLoading: boolean }) {
 
   return (
     <div
-      className="fixed bottom-4 right-4 z-50 bg-white rounded-full p-2 shadow-lg"
+      className="fixed bottom-4 right-4 z-50 bg-card rounded-full p-2 shadow-lg"
       role="status"
       aria-label="Loading"
     >

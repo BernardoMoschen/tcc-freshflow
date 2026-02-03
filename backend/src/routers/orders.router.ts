@@ -24,6 +24,7 @@ import {
 import { checkRateLimit, procedureRateLimits } from "../middleware/rate-limit.js";
 import { orderEvents, OrderEventType } from "../lib/event-emitter.js";
 import { generateOrdersCsv, generateCsvFilename } from "../lib/csv-export.js";
+import { ActivityService } from "../services/activity.service.js";
 
 export const ordersRouter = router({
   /**
@@ -505,6 +506,23 @@ export const ordersRouter = router({
         },
       });
 
+      // Log activity
+      const activityService = new ActivityService(ctx.prisma);
+      await activityService.logOrderSubmitted(input.orderId, ctx.userId, orderNumber);
+
+      if (input.requestedDeliveryDate) {
+        await activityService.logDeliveryScheduled(
+          input.orderId,
+          ctx.userId,
+          new Date(input.requestedDeliveryDate),
+          input.deliveryTimeSlot
+        );
+      }
+
+      if (input.notes) {
+        await activityService.logNoteAdded(input.orderId, ctx.userId, input.notes);
+      }
+
       // Send WhatsApp notification
       try {
         const phoneNumber = process.env.WHATSAPP_DEFAULT_PHONE;
@@ -513,6 +531,13 @@ export const ordersRouter = router({
             phoneNumber,
             submittedOrder,
             submittedOrder.customer.account.name
+          );
+
+          // Log notification
+          await activityService.logNotificationSent(
+            input.orderId,
+            "Pedido Criado",
+            phoneNumber
           );
         }
       } catch (error) {
@@ -1513,5 +1538,181 @@ export const ordersRouter = router({
         filename,
         count: orders.length,
       };
+    }),
+
+  /**
+   * Create a draft order from an existing order (reorder functionality)
+   */
+  reorder: accountProcedure
+    .input(z.object({ orderId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      // Get the original order with items
+      const originalOrder = await ctx.prisma.order.findUnique({
+        where: { id: input.orderId },
+        include: {
+          items: {
+            include: {
+              productOption: true,
+            },
+          },
+        },
+      });
+
+      if (!originalOrder) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Order not found",
+        });
+      }
+
+      // Verify user has access to this order's account
+      if (originalOrder.accountId !== ctx.accountId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Not authorized to reorder this order",
+        });
+      }
+
+      // Check if user already has a draft order
+      const existingDraft = await ctx.prisma.order.findFirst({
+        where: {
+          accountId: ctx.accountId,
+          createdBy: ctx.userId,
+          status: OrderStatus.DRAFT,
+        },
+      });
+
+      // If existing draft exists, delete it and create new one
+      if (existingDraft) {
+        await ctx.prisma.order.delete({
+          where: { id: existingDraft.id },
+        });
+      }
+
+      // Create new draft order with items from original order
+      const draftOrder = await ctx.prisma.order.create({
+        data: {
+          customerId: originalOrder.customerId,
+          accountId: originalOrder.accountId,
+          createdBy: ctx.userId,
+          status: OrderStatus.DRAFT,
+          orderNumber: "DRAFT",
+          items: {
+            create: originalOrder.items.map((item) => ({
+              productOptionId: item.productOptionId,
+              requestedQty: item.requestedQty,
+              notes: item.notes,
+              // For FIXED items, set finalPrice using current prices
+              finalPrice: item.productOption.unitType === "FIXED" ? null : null,
+              isExtra: false,
+            })),
+          },
+        },
+        include: {
+          items: {
+            include: {
+              productOption: {
+                include: {
+                  product: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // Resolve prices for FIXED items using current pricing
+      for (const item of draftOrder.items) {
+        if (item.productOption.unitType === "FIXED") {
+          const finalPrice = await calculateFixedItemPrice(
+            item.productOptionId,
+            item.requestedQty,
+            originalOrder.customerId
+          );
+          await ctx.prisma.orderItem.update({
+            where: { id: item.id },
+            data: { finalPrice },
+          });
+        }
+      }
+
+      return draftOrder;
+    }),
+
+  /**
+   * Get activity log for an order
+   */
+  getActivities: protectedProcedure
+    .input(z.object({ orderId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const activityService = new ActivityService(ctx.prisma);
+
+      // Verify user has access to this order
+      const order = await ctx.prisma.order.findUnique({
+        where: { id: input.orderId },
+        select: {
+          id: true,
+          accountId: true,
+          customer: {
+            select: {
+              account: {
+                select: {
+                  tenantId: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!order) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Order not found",
+        });
+      }
+
+      // Check if user has access (either through tenant or account)
+      const userMemberships = await ctx.prisma.membership.findMany({
+        where: { userId: ctx.userId },
+        include: {
+          role: true,
+          tenant: true,
+          account: true,
+        },
+      });
+
+      const hasAccess = userMemberships.some((membership) => {
+        // Platform admin has access to everything
+        if (membership.role.name === "PLATFORM_ADMIN") return true;
+
+        // Tenant admin has access to all orders in their tenant
+        if (
+          membership.tenantId === order.customer.account.tenantId &&
+          ["TENANT_OWNER", "TENANT_ADMIN"].includes(membership.role.name)
+        ) {
+          return true;
+        }
+
+        // Account users have access to their account's orders
+        if (
+          membership.accountId === order.accountId &&
+          ["ACCOUNT_OWNER", "ACCOUNT_BUYER"].includes(membership.role.name)
+        ) {
+          return true;
+        }
+
+        return false;
+      });
+
+      if (!hasAccess) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Not authorized to view this order's activities",
+        });
+      }
+
+      // Fetch and return activities
+      return activityService.getOrderActivities(input.orderId);
     }),
 });

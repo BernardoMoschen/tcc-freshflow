@@ -245,7 +245,7 @@ export function ProductsManagementPage() {
       <div className="mb-6 flex flex-col sm:flex-row gap-3 justify-between">
         <div className="flex gap-3 flex-1">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar produtos..."
               value={search}
@@ -280,10 +280,10 @@ export function ProductsManagementPage() {
       )}
 
       {productsQuery.data && productsQuery.data.items.length === 0 && (
-        <div className="text-center py-16 bg-gray-50 rounded-lg">
-          <Package className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-          <p className="text-lg text-gray-600">Nenhum produto encontrado</p>
-          <p className="text-sm text-gray-500 mt-1">Crie seu primeiro produto para começar</p>
+        <div className="text-center py-16 bg-muted rounded-lg">
+          <Package className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+          <p className="text-lg text-muted-foreground">Nenhum produto encontrado</p>
+          <p className="text-sm text-muted-foreground mt-1">Crie seu primeiro produto para começar</p>
         </div>
       )}
 
@@ -292,7 +292,7 @@ export function ProductsManagementPage() {
           {productsQuery.data.items.map((product) => (
             <div
               key={product.id}
-              className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden"
+              className="bg-card rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden"
             >
               {product.imageUrl && (
                 <img
@@ -302,27 +302,27 @@ export function ProductsManagementPage() {
                 />
               )}
               <div className="p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">{product.name}</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-1">{product.name}</h3>
                 {product.category && (
                   <Badge variant="secondary" className="text-xs mb-2">
                     {product.category}
                   </Badge>
                 )}
-                <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                   {product.description || "Sem descrição"}
                 </p>
 
                 <div className="border-t pt-3 mb-3">
-                  <p className="text-xs font-medium text-gray-500 mb-2">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">
                     {product.options.length} opç{product.options.length !== 1 ? "ões" : "ão"}
                   </p>
                   {product.options.slice(0, 2).map((option: any) => (
-                    <div key={option.id} className="text-xs text-gray-600 mb-1">
+                    <div key={option.id} className="text-xs text-muted-foreground mb-1">
                       • {option.name} - R$ {(option.basePrice / 100).toFixed(2)}
                     </div>
                   ))}
                   {product.options.length > 2 && (
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       +{product.options.length - 2} mais
                     </p>
                   )}
@@ -416,7 +416,7 @@ export function ProductsManagementPage() {
 
               <div className="space-y-4">
                 {formData.options.map((option, index) => (
-                  <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                  <div key={index} className="border rounded-lg p-4 bg-muted">
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-sm font-medium">Opção {index + 1}</span>
                       {formData.options.length > 1 && (

@@ -87,7 +87,7 @@ export function CartPreview() {
         <Button
           variant="outline"
           size="icon"
-          className="fixed bottom-20 right-4 md:bottom-6 md:right-6 h-14 w-14 rounded-full shadow-lg bg-white hover:bg-gray-50 z-40"
+          className="fixed bottom-20 right-4 md:bottom-6 md:right-6 h-14 w-14 rounded-full shadow-lg bg-card hover:bg-muted z-40"
           aria-label="Abrir carrinho"
         >
           <ShoppingCart className="h-6 w-6" aria-hidden="true" />
@@ -112,7 +112,7 @@ export function CartPreview() {
           <ShoppingCart className="h-6 w-6" aria-hidden="true" />
         )}
         <Badge
-          className="absolute -top-1 -right-1 h-6 w-6 flex items-center justify-center rounded-full bg-red-500 text-white text-xs border-2 border-white"
+          className="absolute -top-1 -right-1 h-6 w-6 flex items-center justify-center rounded-full bg-destructive text-primary-foreground text-xs border-2 border-card"
           aria-hidden="true"
         >
           {count}
@@ -136,16 +136,16 @@ export function CartPreview() {
             aria-modal="true"
             aria-labelledby="cart-drawer-title"
             aria-busy={isSyncing}
-            className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white z-50 shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col"
+            className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-card z-50 shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col"
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b bg-gray-50">
+            <div className="flex items-center justify-between p-4 border-b bg-muted">
               <div className="flex items-center gap-3">
                 <ShoppingCart className="h-5 w-5" aria-hidden="true" />
                 <h2 id="cart-drawer-title" className="font-semibold text-lg">Seu Carrinho</h2>
                 <Badge variant="secondary">{count} {count === 1 ? "item" : "itens"}</Badge>
                 {isSyncing && (
-                  <Loader2 className="h-4 w-4 animate-spin text-gray-500" aria-label="Sincronizando..." />
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Sincronizando..." />
                 )}
               </div>
               <Button
@@ -165,17 +165,17 @@ export function CartPreview() {
               {items.map((item, index) => (
                 <div
                   key={item.productOptionId}
-                  className="bg-gray-50 rounded-lg p-3 space-y-2"
+                  className="bg-muted rounded-lg p-3 space-y-2"
                 >
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium text-sm truncate">{item.productName}</h3>
-                      <p className="text-xs text-gray-600 truncate">{item.optionName}</p>
+                      <p className="text-xs text-muted-foreground truncate">{item.optionName}</p>
                     </div>
                     <button
                       onClick={() => handleRemove(item.productOptionId)}
                       disabled={isSyncing}
-                      className="text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                      className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
                       aria-label={`Remover ${item.productName} do carrinho`}
                     >
                       <X className="h-4 w-4" aria-hidden="true" />
@@ -190,7 +190,7 @@ export function CartPreview() {
                           handleQuantityChange(item.productOptionId, Math.max(0.1, item.requestedQty - 1))
                         }
                         disabled={isSyncing}
-                        className="h-11 w-11 rounded border border-gray-300 hover:bg-gray-200 flex items-center justify-center transition-colors disabled:opacity-50"
+                        className="h-11 w-11 rounded border border-border hover:bg-muted flex items-center justify-center transition-colors disabled:opacity-50"
                         aria-label={`Diminuir quantidade de ${item.productName}`}
                       >
                         <span aria-hidden="true">-</span>
@@ -203,7 +203,7 @@ export function CartPreview() {
                           handleQuantityChange(item.productOptionId, item.requestedQty + 1)
                         }
                         disabled={isSyncing}
-                        className="h-11 w-11 rounded border border-gray-300 hover:bg-gray-200 flex items-center justify-center transition-colors disabled:opacity-50"
+                        className="h-11 w-11 rounded border border-border hover:bg-muted flex items-center justify-center transition-colors disabled:opacity-50"
                         aria-label={`Aumentar quantidade de ${item.productName}`}
                       >
                         <span aria-hidden="true">+</span>
@@ -211,7 +211,7 @@ export function CartPreview() {
                     </div>
 
                     <div className="text-right">
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         R$ {(item.price / 100).toFixed(2)}
                         {item.unitType === "WEIGHT" ? "/kg" : ""}
                       </p>
@@ -222,7 +222,7 @@ export function CartPreview() {
                   </div>
 
                   {item.notes && (
-                    <p className="text-xs text-gray-600 italic bg-white p-2 rounded">
+                    <p className="text-xs text-muted-foreground italic bg-card p-2 rounded">
                       Obs: {item.notes}
                     </p>
                   )}
@@ -231,9 +231,9 @@ export function CartPreview() {
             </div>
 
             {/* Footer with Subtotal and Checkout */}
-            <div className="border-t p-4 space-y-3 bg-gray-50">
+            <div className="border-t p-4 space-y-3 bg-muted">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Subtotal:</span>
+                <span className="text-sm text-muted-foreground">Subtotal:</span>
                 <span className="text-xl font-bold text-primary">
                   R$ {(subtotal / 100).toFixed(2)}
                 </span>
@@ -255,7 +255,7 @@ export function CartPreview() {
                 </Button>
               </Link>
 
-              <p className="text-xs text-center text-gray-500">
+              <p className="text-xs text-center text-muted-foreground">
                 Itens por peso são precificados após pesagem
               </p>
             </div>

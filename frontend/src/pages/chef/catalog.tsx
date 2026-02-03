@@ -194,12 +194,12 @@ export function CatalogPage() {
           value={search}
           onChange={(e) => handleSearchChange(e.target.value)}
           onFocus={() => setShowRecentSearches(true)}
-          className="w-full px-4 py-3 pr-10 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+          className="w-full px-4 py-3 pr-10 text-base border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
         />
         {search && (
           <button
             onClick={clearSearch}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Clear search"
           >
             <X className="h-5 w-5" />
@@ -210,13 +210,13 @@ export function CatalogPage() {
         {showRecentSearches && !search && recentSearches.length > 0 && (
           <div
             ref={searchDropdownRef}
-            className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden"
+            className="absolute z-10 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg overflow-hidden"
           >
-            <div className="p-2 border-b border-gray-100 flex items-center justify-between">
-              <span className="text-xs font-medium text-gray-500 uppercase">Buscas Recentes</span>
+            <div className="p-2 border-b border-border flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground uppercase">Buscas Recentes</span>
               <button
                 onClick={clearRecentSearches}
-                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                className="text-xs text-primary hover:text-primary/80 font-medium"
               >
                 Limpar
               </button>
@@ -226,10 +226,10 @@ export function CatalogPage() {
                 <button
                   key={index}
                   onClick={() => selectRecentSearch(query)}
-                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                  className="w-full px-4 py-2 text-left hover:bg-accent/10 flex items-center gap-3 transition-colors"
                 >
-                  <Clock className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm text-gray-700">{query}</span>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-popover-foreground">{query}</span>
                 </button>
               ))}
             </div>
@@ -253,9 +253,9 @@ export function CatalogPage() {
       {/* Botão de filtros - apenas mobile */}
       <button
         onClick={() => setShowFilters(!showFilters)}
-        className="md:hidden w-full mb-4 px-4 py-3 bg-white border border-gray-300 rounded-lg text-left flex justify-between items-center"
+        className="md:hidden w-full mb-4 px-4 py-3 bg-card border border-border rounded-lg text-left flex justify-between items-center"
       >
-        <span className="font-medium text-gray-700">Mais Filtros</span>
+        <span className="font-medium text-card-foreground">Mais Filtros</span>
         <svg
           className={`w-5 h-5 transition-transform ${showFilters ? "rotate-180" : ""}`}
           fill="none"
@@ -268,15 +268,15 @@ export function CatalogPage() {
 
       {/* Filters - collapsible on mobile, always visible on desktop */}
       <div className={`${showFilters ? "block" : "hidden"} md:block mb-6`}>
-        <div className="bg-white p-4 rounded-lg shadow-sm space-y-4 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-5 md:gap-4">
+        <div className="bg-card p-4 rounded-lg shadow-sm space-y-4 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-5 md:gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-card-foreground mb-2">
               Categoria
             </label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
             >
               <option value="">Todas</option>
               {categoriesQuery.data?.map((cat) => (
@@ -288,13 +288,13 @@ export function CatalogPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-card-foreground mb-2">
               Disponibilidade
             </label>
             <select
               value={availability}
               onChange={(e) => setAvailability(e.target.value as typeof availability)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
             >
               <option value="all">Todos</option>
               <option value="in_stock">Em Estoque</option>
@@ -304,7 +304,7 @@ export function CatalogPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-card-foreground mb-2">
               Preço Mín. (R$)
             </label>
             <input
@@ -312,12 +312,12 @@ export function CatalogPage() {
               placeholder="0,00"
               value={minPrice}
               onChange={(e) => setMinPrice(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-card-foreground mb-2">
               Preço Máx. (R$)
             </label>
             <input
@@ -325,18 +325,18 @@ export function CatalogPage() {
               placeholder="999,99"
               value={maxPrice}
               onChange={(e) => setMaxPrice(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-card-foreground mb-2">
               Tipo de Unidade
             </label>
             <select
               value={unitType}
               onChange={(e) => setUnitType(e.target.value as "FIXED" | "WEIGHT" | "")}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
             >
               <option value="">Todos</option>
               <option value="FIXED">Unidade Fixa</option>
@@ -345,13 +345,13 @@ export function CatalogPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-card-foreground mb-2">
               Ordenar Por
             </label>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as "name" | "price")}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
             >
               <option value="name">Nome</option>
               <option value="price">Preço</option>
@@ -359,13 +359,13 @@ export function CatalogPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-card-foreground mb-2">
               Ordem
             </label>
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
             >
               <option value="asc">Crescente</option>
               <option value="desc">Decrescente</option>
@@ -376,7 +376,7 @@ export function CatalogPage() {
 
       {/* Pull-to-refresh hint on mobile */}
       {isMobile && !productsQuery.isLoading && (
-        <p className="text-center text-xs text-gray-400 mb-2 md:hidden">
+        <p className="text-center text-xs text-muted-foreground mb-2 md:hidden">
           Puxe para atualizar
         </p>
       )}
@@ -466,7 +466,7 @@ export function CatalogPage() {
             };
 
             return (
-              <div key={option.id} className={`bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all relative ${isOutOfStock ? 'opacity-75' : ''}`}>
+              <div key={option.id} className={`bg-card rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all relative ${isOutOfStock ? 'opacity-75' : ''}`}>
                 {/* Favorite Star */}
                 <button
                   onClick={(e) => {
@@ -521,10 +521,10 @@ export function CatalogPage() {
                   </div>
                 )}
                 <div className="p-4 md:p-6">
-                  <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
-                  <p className="text-sm text-gray-600 mt-1">{option.name}</p>
+                  <h3 className="text-lg font-semibold text-card-foreground">{product.name}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">{option.name}</p>
                   <div className="flex items-center justify-between mt-3">
-                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-700">
+                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-secondary text-secondary-foreground">
                       {option.unitType === "FIXED" ? "Unidade fixa" : "Por peso"}
                     </span>
                     <div className="text-right">
@@ -545,7 +545,10 @@ export function CatalogPage() {
                     inCart ? (
                       <div className="mt-4 flex items-center gap-2" role="group" aria-label={`Quantidade de ${product.name}`}>
                         <button
-                          onClick={() => updateQuantity(option.id, Math.max(0.1, cartItem.requestedQty - 1))}
+                          onClick={() => {
+                            const stepSize = option.unitType === "WEIGHT" ? 0.5 : 1;
+                            updateQuantity(option.id, Math.max(0.1, cartItem.requestedQty - stepSize));
+                          }}
                           disabled={isOutOfStock || isSyncing}
                           className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary text-primary hover:bg-primary hover:text-white transition-colors flex items-center justify-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                           aria-label={`Diminuir quantidade de ${product.name}`}
@@ -553,11 +556,36 @@ export function CatalogPage() {
                           <Minus className="h-4 w-4" aria-hidden="true" />
                         </button>
                         <div className="flex-1 text-center">
-                          <p className="text-lg font-bold text-primary" aria-live="polite">{cartItem.requestedQty}</p>
-                          <p className="text-xs text-gray-500">{isSyncing ? "sincronizando..." : "no carrinho"}</p>
+                          <input
+                            type="number"
+                            min="0.1"
+                            step={option.unitType === "WEIGHT" ? "0.1" : "1"}
+                            value={cartItem.requestedQty}
+                            onChange={(e) => {
+                              const qty = parseFloat(e.target.value);
+                              if (!isNaN(qty) && qty >= 0.1) {
+                                updateQuantity(option.id, qty);
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const qty = parseFloat(e.target.value);
+                              if (isNaN(qty) || qty < 0.1) {
+                                updateQuantity(option.id, 0.1);
+                              }
+                            }}
+                            disabled={isOutOfStock || isSyncing}
+                            className="w-full text-lg font-bold text-primary text-center border-0 focus:ring-2 focus:ring-primary rounded px-2 py-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                            aria-live="polite"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            {isSyncing ? "sincronizando..." : `${option.unitType === "WEIGHT" ? "kg" : "un."} no carrinho`}
+                          </p>
                         </div>
                         <button
-                          onClick={() => updateQuantity(option.id, cartItem.requestedQty + 1)}
+                          onClick={() => {
+                            const stepSize = option.unitType === "WEIGHT" ? 0.5 : 1;
+                            updateQuantity(option.id, cartItem.requestedQty + stepSize);
+                          }}
                           disabled={isOutOfStock || isSyncing}
                           className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary bg-primary text-white hover:bg-primary/90 transition-colors flex items-center justify-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                           aria-label={`Aumentar quantidade de ${product.name}`}
@@ -611,7 +639,7 @@ export function CatalogPage() {
 
         {/* Estado vazio */}
         {productsQuery.data?.items.length === 0 && (
-          <div className="text-center py-16 bg-gray-50 rounded-lg">
+          <div className="text-center py-16 bg-muted rounded-lg">
             <svg
               className="mx-auto h-16 w-16 text-gray-400"
               fill="none"
@@ -626,12 +654,12 @@ export function CatalogPage() {
                 d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
               />
             </svg>
-            <p className="mt-4 text-lg font-medium text-gray-700">
+            <p className="mt-4 text-lg font-medium text-foreground">
               {search || minPrice || maxPrice || category || availability !== "all" || unitType || showFavoritesOnly
                 ? "Nenhum produto corresponde aos filtros"
                 : "Nenhum produto disponível"}
             </p>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               {search || minPrice || maxPrice || category || availability !== "all" || unitType || showFavoritesOnly
                 ? "Tente ajustar seus filtros ou termos de busca"
                 : "Não há produtos cadastrados no momento"}

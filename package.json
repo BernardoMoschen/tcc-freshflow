@@ -4,17 +4,17 @@
   "private": true,
   "description": "B2B fresh produce ordering and warehouse management system",
   "scripts": {
-    "dev": "concurrently \"pnpm --filter backend dev\" \"pnpm --filter frontend dev\"",
-    "build": "pnpm --filter backend build && pnpm --filter frontend build",
-    "start": "pnpm --filter backend start",
-    "db:migrate": "pnpm --filter backend prisma:migrate",
-    "db:seed": "pnpm --filter backend prisma:seed",
-    "test:unit": "pnpm --filter backend test:unit",
-    "test:integration": "pnpm --filter backend test:integration",
+    "dev": "concurrently \"pnpm --filter freshflow-backend dev\" \"pnpm --filter freshflow-frontend dev\"",
+    "build": "pnpm --filter freshflow-backend build && pnpm --filter freshflow-frontend build",
+    "start": "pnpm --filter freshflow-backend start",
+    "db:migrate": "pnpm --filter freshflow-backend prisma:migrate",
+    "db:seed": "pnpm --filter freshflow-backend prisma:seed",
+    "test:unit": "pnpm --filter freshflow-backend test:unit",
+    "test:integration": "pnpm --filter freshflow-backend test:integration",
     "test:e2e": "pnpm --filter tests test:e2e",
     "test": "pnpm test:unit && pnpm test:integration && pnpm test:e2e",
-    "typecheck": "pnpm --filter backend typecheck && pnpm --filter frontend typecheck",
-    "lint": "pnpm --filter backend lint && pnpm --filter frontend lint"
+    "typecheck": "pnpm --filter freshflow-backend typecheck && pnpm --filter freshflow-frontend typecheck",
+    "lint": "pnpm --filter freshflow-backend lint && pnpm --filter freshflow-frontend lint"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

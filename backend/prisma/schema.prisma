@@ -12,14 +12,18 @@ datasource db {
 
 // User - system user with Supabase ID
 model User {
-  id          String       @id @default(uuid())
-  supabaseId  String       @unique
-  email       String       @unique
-  name        String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  memberships Membership[]
-  orders      Order[]
+  id              String          @id @default(uuid())
+  supabaseId      String          @unique
+  email           String          @unique
+  name            String?
+  phone           String? // Contact phone number
+  contactEmail    String? // Alternative contact email (different from login email)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  memberships     Membership[]
+  orders          Order[]
+  orderActivities OrderActivity[]
+  preferences     UserPreferences?
 }
 
 // Role - defines permission level
@@ -59,14 +63,22 @@ model Membership {
 
 // Tenant - distributor/supplier organization
 model Tenant {
-  id          String       @id @default(uuid())
-  name        String
-  slug        String       @unique
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  memberships Membership[]
-  accounts    Account[]
-  products    Product[]
+  id            String          @id @default(uuid())
+  name          String
+  slug          String          @unique
+  // Brazilian business data
+  cnpj          String?         @unique // Brazilian business tax ID
+  razaoSocial   String? // Legal company name
+  phone         String?
+  // Address stored as JSON: {street, number, complement, neighborhood, city, state, zipCode}
+  address       Json?
+  deliveryAddress Json? // Alternative delivery address if different from main
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  memberships   Membership[]
+  accounts      Account[]
+  products      Product[]
+  settings      TenantSettings?
 }
 
 // Account - customer organization (restaurant, etc.)
@@ -101,7 +113,7 @@ model Product {
   name        String
   description String?
   category    String?
-  imageUrl    String?         // Product image URL
+  imageUrl    String? // Product image URL
   tenantId    String
   tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt   DateTime        @default(now())
@@ -138,7 +150,7 @@ model ProductOption {
 }
 
 enum UnitType {
-  FIXED  // sold by unit/box (finalPrice set at order creation)
+  FIXED // sold by unit/box (finalPrice set at order creation)
   WEIGHT // sold by weight (finalPrice set after weighing)
 }
 
@@ -160,25 +172,26 @@ model CustomerPrice {
 
 // Order - customer order with lifecycle
 model Order {
-  id                    String         @id @default(uuid())
-  orderNumber           String         @unique
+  id                    String          @id @default(uuid())
+  orderNumber           String          @unique
   customerId            String
-  customer              Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer              Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
   accountId             String
-  account               Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account               Account         @relation(fields: [accountId], references: [id], onDelete: Cascade)
   createdBy             String
-  createdByUser         User           @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  status                OrderStatus    @default(DRAFT)
+  createdByUser         User            @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  status                OrderStatus     @default(DRAFT)
   notes                 String?
-  requestedDeliveryDate DateTime?      // Customer's requested delivery date
-  deliveryTimeSlot      String?        // e.g., "08:00-12:00", "12:00-18:00"
-  deliveryInstructions  String?        // Special delivery instructions
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
+  requestedDeliveryDate DateTime? // Customer's requested delivery date
+  deliveryTimeSlot      String? // e.g., "08:00-12:00", "12:00-18:00"
+  deliveryInstructions  String? // Special delivery instructions
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
   sentAt                DateTime?
   finalizedAt           DateTime?
   items                 OrderItem[]
   deliveryNotes         DeliveryNote[]
+  activities            OrderActivity[]
 
   @@index([customerId])
   @@index([accountId])
@@ -248,16 +261,16 @@ model DeliveryNote {
 
 // StockMovement - audit trail for all stock changes
 model StockMovement {
-  id              String             @id @default(uuid())
+  id              String            @id @default(uuid())
   productOptionId String
-  productOption   ProductOption      @relation(fields: [productOptionId], references: [id], onDelete: Cascade)
+  productOption   ProductOption     @relation(fields: [productOptionId], references: [id], onDelete: Cascade)
   type            StockMovementType
   quantity        Float // positive for additions, negative for deductions
   orderId         String? // if related to an order
   orderItemId     String? // specific order item for traceability
   notes           String?
   userId          String // who performed the action
-  createdAt       DateTime           @default(now())
+  createdAt       DateTime          @default(now())
 
   @@index([productOptionId])
   @@index([orderId])
@@ -356,4 +369,100 @@ enum AuditSeverity {
   WARNING
   ERROR
   CRITICAL
+}
+
+// OrderActivity - Activity log for order lifecycle tracking
+model OrderActivity {
+  id           String            @id @default(uuid())
+  orderId      String
+  order        Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  activityType OrderActivityType
+  userId       String? // User who performed the action (null for system actions)
+  user         User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  description  String // Human-readable description
+  metadata     Json? // Additional data (old/new values, etc.)
+  createdAt    DateTime          @default(now())
+
+  @@index([orderId, createdAt])
+  @@index([userId])
+}
+
+enum OrderActivityType {
+  // Order lifecycle
+  ORDER_CREATED
+  ORDER_SUBMITTED
+  ORDER_STATUS_CHANGED
+  ORDER_FINALIZED
+  ORDER_CANCELLED
+
+  // Items
+  ITEM_ADDED
+  ITEM_REMOVED
+  ITEM_QUANTITY_CHANGED
+  ITEM_WEIGHED
+  ITEM_PRICE_UPDATED
+
+  // Notes & Communication
+  NOTE_ADDED
+  NOTE_UPDATED
+  INTERNAL_NOTE_ADDED
+  DELIVERY_INSTRUCTIONS_UPDATED
+
+  // Delivery
+  DELIVERY_SCHEDULED
+  DELIVERY_RESCHEDULED
+  DELIVERY_COMPLETED
+
+  // Documents
+  PDF_GENERATED
+  INVOICE_GENERATED
+
+  // System
+  NOTIFICATION_SENT
+}
+
+// TenantSettings - Configurable business rules for tenants
+model TenantSettings {
+  id                     String   @id @default(uuid())
+  tenantId               String   @unique
+  tenant                 Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Delivery scheduling settings
+  minDeliveryDaysAhead   Int      @default(1) // Minimum days in advance (e.g., 1 = next day minimum)
+  maxDeliveryDaysAhead   Int      @default(30) // Maximum days in advance for scheduling
+  deliveryDaysAllowed    Json     @default("[1,2,3,4,5]") // Array of weekdays (0=Sunday, 1=Monday, ..., 6=Saturday)
+  deliveryTimeSlots      Json?    // JSON object: {"1": ["08:00-12:00", "14:00-18:00"], "2": [...]}
+
+  // Operating hours
+  operatingDays          Json     @default("[1,2,3,4,5]") // Days tenant accepts orders
+
+  // Order settings
+  allowSameDayOrders     Boolean  @default(false) // Allow orders for same-day delivery
+  autoConfirmOrders      Boolean  @default(false) // Auto-confirm orders without review
+
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+// UserPreferences - User interface and notification preferences
+model UserPreferences {
+  id                    String   @id @default(uuid())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Interface preferences
+  theme                 String   @default("light") // "light" | "dark" | "system"
+  density               String   @default("comfortable") // "comfortable" | "compact"
+
+  // In-app notification preferences
+  notifyOrderStatus     Boolean  @default(true)
+  notifyLowStock        Boolean  @default(true)
+  notifyNewOrders       Boolean  @default(true)
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([userId])
 }

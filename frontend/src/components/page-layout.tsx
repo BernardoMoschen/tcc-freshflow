@@ -10,13 +10,13 @@ interface PageLayoutProps {
 
 export function PageLayout({ children, title, showNav = true, action }: PageLayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted">
       {showNav && <Navbar />}
 
-      <div className="bg-white shadow-sm border-b border-gray-200">
+      <div className="bg-card shadow-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-4 py-4 md:py-6">
           <div className="flex justify-between items-center">
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900">{title}</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-card-foreground">{title}</h1>
             {action && <div>{action}</div>}
           </div>
         </div>

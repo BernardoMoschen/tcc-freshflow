@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Home,
@@ -11,15 +11,27 @@ import {
   ClipboardList,
   ShoppingCart,
   ShoppingBag,
+  User as UserIcon,
+  Settings,
+  ChevronDown,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useCart } from "@/hooks/use-cart";
 import { ContextSwitcher } from "./context-switcher";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function Navbar() {
   const location = useLocation();
-  const { signOut, isTenantAdmin, isAccountUser } = useAuth();
+  const navigate = useNavigate();
+  const { signOut, isTenantAdmin, isAccountUser, user } = useAuth();
   const { items } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -58,14 +70,14 @@ export function Navbar() {
   const links = isTenantAdmin ? tenantAdminLinks : accountUserLinks;
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+    <nav className="bg-card border-b border-border sticky top-0 z-50 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
             <Link to="/dashboard" className="flex items-center">
               <Package className="h-8 w-8 text-primary" />
-              <span className="ml-2 text-xl font-bold text-gray-900">FreshFlow</span>
+              <span className="ml-2 text-xl font-bold text-foreground">FreshFlow</span>
             </Link>
           </div>
 
@@ -80,8 +92,8 @@ export function Navbar() {
                   to={link.path}
                   className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors ${
                     active
-                      ? "bg-primary text-white"
-                      : "text-gray-700 hover:bg-gray-100"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-foreground hover:bg-accent/10"
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -96,8 +108,8 @@ export function Navbar() {
                 to="/chef/cart"
                 className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors relative ${
                   isActive("/chef/cart")
-                    ? "bg-primary text-white"
-                    : "text-gray-700 hover:bg-gray-100"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-foreground hover:bg-accent/10"
                 }`}
               >
                 <ShoppingCart className="h-4 w-4" />
@@ -114,15 +126,41 @@ export function Navbar() {
               <ContextSwitcher />
             </div>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              className="ml-2 text-gray-700 hover:text-red-600"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Sair
-            </Button>
+            {/* User Menu */}
+            <div className="ml-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <UserIcon className="h-4 w-4 text-primary" />
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate("/profile")}>
+                    <UserIcon className="h-4 w-4 mr-2" />
+                    Perfil
+                  </DropdownMenuItem>
+                  {isTenantAdmin && (
+                    <DropdownMenuItem onClick={() => navigate("/admin/settings")}>
+                      <Settings className="h-4 w-4 mr-2" />
+                      Configurações do Tenant
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           {/* Mobile menu button */}
@@ -144,7 +182,7 @@ export function Navbar() {
 
       {/* Mobile Navigation */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-gray-200 bg-white">
+        <div className="md:hidden border-t border-border bg-card">
           <div className="px-2 pt-2 pb-3 space-y-1">
             {links.map((link) => {
               const Icon = link.icon;
@@ -156,8 +194,8 @@ export function Navbar() {
                   onClick={() => setMobileMenuOpen(false)}
                   className={`block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2 ${
                     active
-                      ? "bg-primary text-white"
-                      : "text-gray-700 hover:bg-gray-100"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-foreground hover:bg-accent/10"
                   }`}
                 >
                   <Icon className="h-5 w-5" />
@@ -173,8 +211,8 @@ export function Navbar() {
                 onClick={() => setMobileMenuOpen(false)}
                 className={`block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2 ${
                   isActive("/chef/cart")
-                    ? "bg-primary text-white"
-                    : "text-gray-700 hover:bg-gray-100"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-foreground hover:bg-accent/10"
                 }`}
               >
                 <ShoppingCart className="h-5 w-5" />
@@ -191,15 +229,35 @@ export function Navbar() {
               <ContextSwitcher />
             </div>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              className="w-full justify-start text-gray-700 hover:text-red-600"
-            >
-              <LogOut className="h-5 w-5 mr-2" />
-              Sair
-            </Button>
+            <div className="border-t border-border mt-2 pt-2">
+              <Link
+                to="/profile"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-3 py-2 rounded-md text-base font-medium text-foreground hover:bg-accent/10 flex items-center gap-2"
+              >
+                <UserIcon className="h-5 w-5" />
+                Perfil
+              </Link>
+              {isTenantAdmin && (
+                <Link
+                  to="/admin/settings"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 rounded-md text-base font-medium text-foreground hover:bg-accent/10 flex items-center gap-2"
+                >
+                  <Settings className="h-5 w-5" />
+                  Configurações do Tenant
+                </Link>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 mt-1"
+              >
+                <LogOut className="h-5 w-5 mr-2" />
+                Sair
+              </Button>
+            </div>
           </div>
         </div>
       )}

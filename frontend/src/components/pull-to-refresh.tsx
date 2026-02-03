@@ -51,18 +51,18 @@ export function PullToRefresh({
       >
         <div
           className={cn(
-            "bg-white rounded-full shadow-md p-2 transition-colors",
-            isReadyToRefresh && !isRefreshing && "bg-green-50"
+            "bg-card rounded-full shadow-md p-2 transition-colors",
+            isReadyToRefresh && !isRefreshing && "bg-success/10"
           )}
           style={{ opacity: indicatorOpacity }}
         >
           {isRefreshing ? (
-            <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+            <Loader2 className="w-5 h-5 text-primary animate-spin" />
           ) : (
             <ArrowDown
               className={cn(
                 "w-5 h-5 transition-colors",
-                isReadyToRefresh ? "text-green-600" : "text-gray-600"
+                isReadyToRefresh ? "text-success" : "text-muted-foreground"
               )}
               style={{ transform: `rotate(${arrowRotation}deg)` }}
             />

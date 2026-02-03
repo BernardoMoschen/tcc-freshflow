@@ -148,39 +148,39 @@ export class ErrorBoundary extends Component<Props, State> {
       const isDev = import.meta.env.DEV;
 
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-          <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
-            <div className="flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mx-auto mb-4">
-              <AlertTriangle className="w-8 h-8 text-red-600" aria-hidden="true" />
+        <div className="min-h-screen flex items-center justify-center bg-muted px-4">
+          <div className="max-w-md w-full bg-card rounded-lg shadow-lg p-8">
+            <div className="flex items-center justify-center w-16 h-16 bg-destructive/10 rounded-full mx-auto mb-4">
+              <AlertTriangle className="w-8 h-8 text-destructive" aria-hidden="true" />
             </div>
 
-            <h1 className="text-2xl font-bold text-gray-900 text-center mb-2">
+            <h1 className="text-2xl font-bold text-card-foreground text-center mb-2">
               Ops! Algo deu errado
             </h1>
 
-            <p className="text-gray-600 text-center mb-4">
+            <p className="text-muted-foreground text-center mb-4">
               Encontramos um erro inesperado. Tente novamente ou entre em contato com o suporte.
             </p>
 
             {this.state.errorId && (
-              <p className="text-xs text-gray-400 text-center mb-6">
-                ID do erro: <code className="bg-gray-100 px-1 rounded">{this.state.errorId}</code>
+              <p className="text-xs text-muted-foreground text-center mb-6">
+                ID do erro: <code className="bg-muted px-1 rounded">{this.state.errorId}</code>
                 {this.state.reportSent && (
-                  <span className="ml-2 text-green-600">✓ Reportado</span>
+                  <span className="ml-2 text-success">✓ Reportado</span>
                 )}
                 {this.state.isReporting && (
-                  <span className="ml-2 text-blue-600">Reportando...</span>
+                  <span className="ml-2 text-primary">Reportando...</span>
                 )}
               </p>
             )}
 
             {isDev && this.state.error && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
+              <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md">
                 <div className="flex items-center gap-2 mb-2">
-                  <Bug className="w-4 h-4 text-red-600" aria-hidden="true" />
-                  <span className="text-sm font-medium text-red-800">Erro (Dev)</span>
+                  <Bug className="w-4 h-4 text-destructive" aria-hidden="true" />
+                  <span className="text-sm font-medium text-destructive">Erro (Dev)</span>
                 </div>
-                <p className="text-sm font-mono text-red-800 break-all">
+                <p className="text-sm font-mono text-destructive break-all">
                   {this.state.error.message}
                 </p>
               </div>
@@ -207,16 +207,16 @@ export class ErrorBoundary extends Component<Props, State> {
 
             {isDev && this.state.error?.stack && (
               <details className="mt-6">
-                <summary className="text-sm text-gray-600 cursor-pointer hover:text-gray-900">
+                <summary className="text-sm text-muted-foreground cursor-pointer hover:text-foreground">
                   Ver Stack Trace (Dev)
                 </summary>
-                <pre className="mt-2 p-4 bg-gray-100 border border-gray-200 rounded text-xs overflow-auto max-h-64">
+                <pre className="mt-2 p-4 bg-muted border border-border rounded text-xs overflow-auto max-h-64">
                   {this.state.error.stack}
                 </pre>
                 {this.state.errorInfo?.componentStack && (
                   <>
-                    <p className="mt-3 text-sm text-gray-600">Component Stack:</p>
-                    <pre className="mt-1 p-4 bg-gray-100 border border-gray-200 rounded text-xs overflow-auto max-h-64">
+                    <p className="mt-3 text-sm text-muted-foreground">Component Stack:</p>
+                    <pre className="mt-1 p-4 bg-muted border border-border rounded text-xs overflow-auto max-h-64">
                       {this.state.errorInfo.componentStack}
                     </pre>
                   </>

@@ -12,11 +12,11 @@ export function AnalyticsPage() {
     return (
       <PageLayout title="Analytics">
         <div className="flex flex-col items-center justify-center py-12">
-          <Building2 className="h-16 w-16 text-gray-400 mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+          <Building2 className="h-16 w-16 text-muted-foreground mb-4" />
+          <h2 className="text-xl font-semibold text-foreground mb-2">
             Selecione um Tenant
           </h2>
-          <p className="text-gray-600 text-center max-w-md">
+          <p className="text-muted-foreground text-center max-w-md">
             Selecione um tenant para visualizar as análises.
           </p>
         </div>
@@ -28,7 +28,7 @@ export function AnalyticsPage() {
     return (
       <PageLayout title="Analytics">
         <div className="flex flex-col items-center justify-center py-12">
-          <p className="text-gray-600">Acesso negado. Apenas administradores podem visualizar analytics.</p>
+          <p className="text-muted-foreground">Acesso negado. Apenas administradores podem visualizar analytics.</p>
         </div>
       </PageLayout>
     );

@@ -27,6 +27,13 @@ import {
   Wifi,
   WifiOff,
   AlertTriangle,
+  Package,
+  Clock,
+  TruckIcon,
+  ShoppingCart,
+  Calendar,
+  User,
+  BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useOrderEvents, OrderEvent, OrderEventType } from "@/hooks/use-order-events";
@@ -190,14 +197,31 @@ export function AdminOrdersPage() {
 
   const totalPages = ordersQuery.data ? Math.ceil(ordersQuery.data.total / PAGE_SIZE) : 0;
 
+  // Calculate statistics
+  const stats = {
+    total: ordersQuery.data?.total || 0,
+    sent: filteredOrders.filter((o) => o.status === "SENT").length,
+    inSeparation: filteredOrders.filter((o) => o.status === "IN_SEPARATION").length,
+    finalized: filteredOrders.filter((o) => o.status === "FINALIZED").length,
+    today: filteredOrders.filter((o) => {
+      const today = new Date();
+      const orderDate = new Date(o.createdAt);
+      return (
+        orderDate.getDate() === today.getDate() &&
+        orderDate.getMonth() === today.getMonth() &&
+        orderDate.getFullYear() === today.getFullYear()
+      );
+    }).length,
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "SENT":
-        return <Badge className="bg-blue-100 text-blue-800">Enviado</Badge>;
+        return <Badge className="bg-primary/10 text-primary">Enviado</Badge>;
       case "IN_SEPARATION":
-        return <Badge className="bg-yellow-100 text-yellow-800">Em Separação</Badge>;
+        return <Badge className="bg-warning/10 text-warning">Em Separação</Badge>;
       case "FINALIZED":
-        return <Badge className="bg-green-100 text-green-800">Finalizado</Badge>;
+        return <Badge className="bg-success/10 text-success">Finalizado</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -205,11 +229,84 @@ export function AdminOrdersPage() {
 
   return (
     <PageLayout title="Gestão de Pedidos">
+      {/* Statistics Dashboard */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        {/* Total Orders */}
+        <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-4 border border-primary/20 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-primary uppercase tracking-wide mb-1">Total</p>
+              <p className="text-2xl font-bold text-primary">{stats.total}</p>
+              <p className="text-xs text-primary mt-1">pedidos</p>
+            </div>
+            <div className="bg-primary/20 rounded-lg p-2">
+              <Package className="h-5 w-5 text-primary" />
+            </div>
+          </div>
+        </div>
+
+        {/* Sent */}
+        <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-4 border border-primary/20 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-primary uppercase tracking-wide mb-1">Enviados</p>
+              <p className="text-2xl font-bold text-primary">{stats.sent}</p>
+              <p className="text-xs text-primary mt-1">aguardando</p>
+            </div>
+            <div className="bg-primary/20 rounded-lg p-2">
+              <ShoppingCart className="h-5 w-5 text-primary" />
+            </div>
+          </div>
+        </div>
+
+        {/* In Separation */}
+        <div className="bg-gradient-to-br from-warning/5 to-warning/10 rounded-xl p-4 border border-warning/20 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-warning uppercase tracking-wide mb-1">Em Separação</p>
+              <p className="text-2xl font-bold text-warning">{stats.inSeparation}</p>
+              <p className="text-xs text-warning mt-1">em processo</p>
+            </div>
+            <div className="bg-warning/20 rounded-lg p-2">
+              <Clock className="h-5 w-5 text-warning" />
+            </div>
+          </div>
+        </div>
+
+        {/* Finalized */}
+        <div className="bg-gradient-to-br from-success/5 to-success/10 rounded-xl p-4 border border-success/20 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-success uppercase tracking-wide mb-1">Finalizados</p>
+              <p className="text-2xl font-bold text-success">{stats.finalized}</p>
+              <p className="text-xs text-success mt-1">concluídos</p>
+            </div>
+            <div className="bg-success/20 rounded-lg p-2">
+              <CheckCircle className="h-5 w-5 text-success" />
+            </div>
+          </div>
+        </div>
+
+        {/* Today's Orders */}
+        <div className="bg-gradient-to-br from-secondary/5 to-secondary/10 rounded-xl p-4 border border-secondary/20 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-secondary-foreground uppercase tracking-wide mb-1">Hoje</p>
+              <p className="text-2xl font-bold text-secondary-foreground">{stats.today}</p>
+              <p className="text-xs text-secondary-foreground mt-1">novos</p>
+            </div>
+            <div className="bg-secondary/20 rounded-lg p-2">
+              <Calendar className="h-5 w-5 text-secondary-foreground" />
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Filters */}
       <div className="mb-6 space-y-3">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar por número ou cliente..."
               value={searchQuery}
@@ -234,7 +331,7 @@ export function AdminOrdersPage() {
         {/* Results count and auto-refresh indicator */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           {ordersQuery.data && (
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               Mostrando {filteredOrders.length} de {ordersQuery.data.total} pedido
               {ordersQuery.data.total !== 1 ? "s" : ""}
               {selectedOrders.size > 0 && ` • ${selectedOrders.size} selecionado(s)`}
@@ -244,7 +341,7 @@ export function AdminOrdersPage() {
           {/* Auto-refresh controls */}
           <div className="flex items-center gap-3">
             {lastUpdated && (
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted-foreground">
                 Atualizado {getRelativeTime(lastUpdated)}
               </span>
             )}
@@ -265,7 +362,7 @@ export function AdminOrdersPage() {
               className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors ${
                 isAutoRefreshEnabled
                   ? "bg-green-100 text-green-700 hover:bg-green-200"
-                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  : "bg-accent/20 text-muted-foreground hover:bg-accent/30"
               }`}
               aria-label={isAutoRefreshEnabled ? "Desativar atualização automática" : "Ativar atualização automática"}
             >
@@ -301,7 +398,7 @@ export function AdminOrdersPage() {
 
           <div className="flex-1 flex items-center gap-2">
             <Select value={bulkStatus} onValueChange={setBulkStatus}>
-              <SelectTrigger className="w-[180px] bg-white">
+              <SelectTrigger className="w-[180px] bg-card">
                 <SelectValue placeholder="Atualizar status..." />
               </SelectTrigger>
               <SelectContent>
@@ -341,10 +438,10 @@ export function AdminOrdersPage() {
       )}
 
       {ordersQuery.error && (
-        <div className="text-center py-12 bg-red-50 rounded-lg">
+        <div className="text-center py-12 bg-destructive/10 rounded-lg">
           <AlertTriangle className="mx-auto h-12 w-12 text-red-400" aria-hidden="true" />
-          <p className="mt-3 text-lg font-medium text-red-800">Erro ao carregar pedidos</p>
-          <p className="mt-1 text-sm text-red-600">
+          <p className="mt-3 text-lg font-medium text-destructive">Erro ao carregar pedidos</p>
+          <p className="mt-1 text-sm text-destructive">
             {ordersQuery.error.message || "Não foi possível carregar os pedidos. Tente novamente."}
           </p>
           <Button
@@ -359,9 +456,9 @@ export function AdminOrdersPage() {
       )}
 
       {ordersQuery.data && filteredOrders.length === 0 && (
-        <div className="text-center py-16 bg-gray-50 rounded-lg">
+        <div className="text-center py-16 bg-muted rounded-lg">
           <svg
-            className="mx-auto h-16 w-16 text-gray-400"
+            className="mx-auto h-16 w-16 text-muted-foreground"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -373,7 +470,7 @@ export function AdminOrdersPage() {
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <p className="mt-4 text-lg text-gray-600">Nenhum pedido encontrado</p>
+          <p className="mt-4 text-lg text-muted-foreground">Nenhum pedido encontrado</p>
         </div>
       )}
 
@@ -385,135 +482,158 @@ export function AdminOrdersPage() {
             checked={selectedOrders.size === filteredOrders.length}
             onCheckedChange={toggleSelectAll}
           />
-          <label htmlFor="select-all" className="text-sm text-gray-600 cursor-pointer">
+          <label htmlFor="select-all" className="text-sm text-muted-foreground cursor-pointer">
             Selecionar todos ({filteredOrders.length})
           </label>
         </div>
       )}
 
-      {/* Orders Table */}
+      {/* Orders Grid */}
       {filteredOrders.length > 0 && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="w-12 px-4 py-3"></th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Pedido
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cliente
-                </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Itens
-                </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Criado
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ações
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredOrders.map((order) => {
-                const hasWeightItems = order.items.some(
-                  (item: any) => item.productOption?.unitType === "WEIGHT"
-                );
-                const allWeighed = order.items
-                  .filter((item: any) => item.productOption?.unitType === "WEIGHT")
-                  .every((item: any) => item.actualWeight !== null);
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {filteredOrders.map((order) => {
+            const hasWeightItems = order.items.some(
+              (item: any) => item.productOption?.unitType === "WEIGHT"
+            );
+            const allWeighed = order.items
+              .filter((item: any) => item.productOption?.unitType === "WEIGHT")
+              .every((item: any) => item.actualWeight !== null);
 
-                return (
-                  <tr key={order.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
+            return (
+              <div
+                key={order.id}
+                className="bg-card rounded-xl shadow-sm border border-border hover:shadow-lg hover:border-border transition-all duration-200"
+              >
+                {/* Card Header */}
+                <div className="p-4 border-b border-gray-100">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
                       <Checkbox
                         checked={selectedOrders.has(order.id)}
                         onCheckedChange={() => toggleOrderSelection(order.id)}
+                        className="mt-1"
                       />
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-gray-900">{order.orderNumber}</p>
-                      <p className="text-xs text-gray-500">
-                        {order.createdByUser?.name || order.createdByUser?.email || "—"}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm text-gray-900">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-foreground text-base">
+                            {order.orderNumber}
+                          </h3>
+                          {getStatusBadge(order.status)}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <User className="h-3 w-3" />
+                          <span className="truncate">
+                            {order.createdByUser?.name || order.createdByUser?.email || "—"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card Body */}
+                <div className="p-4 space-y-3">
+                  {/* Customer */}
+                  <div className="flex items-center gap-2">
+                    <div className="bg-blue-100 rounded-lg p-2">
+                      <ShoppingCart className="h-4 w-4 text-blue-700" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Cliente</p>
+                      <p className="text-sm font-medium text-foreground truncate">
                         {order.customer?.account?.name || "—"}
                       </p>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="text-sm font-medium">{order.items.length}</span>
-                    </td>
-                    <td className="px-4 py-3 text-center">{getStatusBadge(order.status)}</td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm text-gray-900">
+                    </div>
+                  </div>
+
+                  {/* Items Count */}
+                  <div className="flex items-center gap-2">
+                    <div className="bg-purple-100 rounded-lg p-2">
+                      <Package className="h-4 w-4 text-purple-700" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground">Itens</p>
+                      <p className="text-sm font-medium text-foreground">
+                        {order.items.length} produto{order.items.length !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Created Date */}
+                  <div className="flex items-center gap-2">
+                    <div className="bg-accent/20 rounded-lg p-2">
+                      <Clock className="h-4 w-4 text-card-foreground" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground">Criado em</p>
+                      <p className="text-sm font-medium text-foreground">
                         {new Date(order.createdAt).toLocaleDateString("pt-BR", {
                           day: "2-digit",
                           month: "short",
-                        })}
-                      </p>
-                      <p className="text-xs text-gray-500">
+                          year: "numeric",
+                        })}{" "}
+                        às{" "}
                         {new Date(order.createdAt).toLocaleTimeString("pt-BR", {
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
                       </p>
-                    </td>
-                    <td className="px-4 py-3 text-right space-x-1">
-                      {order.status !== "FINALIZED" && hasWeightItems && (
-                        <Button variant="outline" size="sm" asChild>
-                          <Link to={`/admin/weighing/${order.id}`}>
-                            <Scale className="h-4 w-4 mr-1" />
-                            Pesar
-                          </Link>
-                        </Button>
-                      )}
+                    </div>
+                  </div>
+                </div>
 
-                      {order.status !== "FINALIZED" && (!hasWeightItems || allWeighed) && (
-                        <Button variant="outline" size="sm" asChild>
-                          <Link to={`/admin/finalize/${order.id}`}>
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Finalizar
-                          </Link>
-                        </Button>
-                      )}
-
-                      {order.status === "FINALIZED" && (
-                        <Button variant="outline" size="sm" asChild>
-                          <a
-                            href={`http://localhost:3001/api/delivery-note/${order.id}.pdf`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <Download className="h-4 w-4 mr-1" />
-                            PDF
-                          </a>
-                        </Button>
-                      )}
-
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link to={`/admin/finalize/${order.id}`}>
-                          <Eye className="h-4 w-4" />
+                {/* Card Actions */}
+                <div className="p-4 bg-muted rounded-b-xl border-t border-gray-100">
+                  <div className="flex flex-wrap gap-2">
+                    {order.status === "IN_SEPARATION" && hasWeightItems && (
+                      <Button variant="outline" size="sm" className="flex-1" asChild>
+                        <Link to={`/admin/weighing/${order.id}`}>
+                          <Scale className="h-4 w-4 mr-1.5" />
+                          Pesar
                         </Link>
                       </Button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    )}
+
+                    {order.status !== "FINALIZED" && (!hasWeightItems || allWeighed) && (
+                      <Button variant="outline" size="sm" className="flex-1" asChild>
+                        <Link to={`/admin/finalize/${order.id}`}>
+                          <CheckCircle className="h-4 w-4 mr-1.5" />
+                          Finalizar
+                        </Link>
+                      </Button>
+                    )}
+
+                    {order.status === "FINALIZED" && (
+                      <Button variant="outline" size="sm" className="flex-1" asChild>
+                        <a
+                          href={`http://localhost:3001/api/delivery-note/${order.id}.pdf`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Download className="h-4 w-4 mr-1.5" />
+                          PDF
+                        </a>
+                      </Button>
+                    )}
+
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link to={`/admin/finalize/${order.id}`}>
+                        <Eye className="h-4 w-4 mr-1.5" />
+                        Ver
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
       {/* Pagination */}
       {ordersQuery.data && totalPages > 1 && (
         <div className="flex items-center justify-between mt-6 pt-6 border-t">
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-muted-foreground">
             Página {currentPage + 1} de {totalPages}
           </div>
           <div className="flex gap-2">

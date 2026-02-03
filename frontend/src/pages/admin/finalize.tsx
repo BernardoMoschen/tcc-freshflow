@@ -36,10 +36,10 @@ export function FinalizePage() {
 
   if (orderQuery.isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-muted">
         <nav className="bg-white shadow-sm sticky top-0 z-40">
           <div className="max-w-4xl mx-auto px-4 py-4">
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Finalizar Pedido</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-foreground">Finalizar Pedido</h1>
           </div>
         </nav>
         <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
@@ -52,7 +52,7 @@ export function FinalizePage() {
   }
 
   if (orderQuery.error) {
-    return <div className="p-8 text-center text-red-600">Erro ao carregar pedido</div>;
+    return <div className="p-8 text-center text-destructive">Erro ao carregar pedido</div>;
   }
 
   if (!orderQuery.data) {
@@ -74,7 +74,7 @@ export function FinalizePage() {
   const isFinalized = order.status === "FINALIZED";
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted">
       {/* Sticky header */}
       <nav className="bg-white shadow-sm sticky top-0 z-40">
         <div className="max-w-4xl mx-auto px-4 py-4">
@@ -86,7 +86,7 @@ export function FinalizePage() {
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Finalizar Pedido</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-foreground">Finalizar Pedido</h1>
           </div>
         </div>
       </nav>
@@ -97,11 +97,11 @@ export function FinalizePage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="font-semibold text-lg md:text-xl">Pedido: {order.orderNumber}</h2>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 Status:{" "}
                 <span
                   className={`font-medium ${
-                    isFinalized ? "text-green-600" : "text-blue-600"
+                    isFinalized ? "text-success" : "text-primary"
                   }`}
                 >
                   {order.status === "SENT" ? "Enviado" : order.status === "IN_SEPARATION" ? "Em Separação" : order.status === "FINALIZED" ? "Finalizado" : order.status}
@@ -109,20 +109,20 @@ export function FinalizePage() {
               </p>
             </div>
             {isFinalized && (
-              <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+              <Badge className="bg-success/10 text-success hover:bg-green-100">
                 Finalizado
               </Badge>
             )}
           </div>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             Cliente: <span className="font-medium">{order.customer.account.name}</span>
           </p>
         </div>
 
         {/* Warning for unweighed items */}
         {!allWeighed && !isFinalized && (
-          <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4 mb-6 flex items-start gap-3">
-            <svg className="w-6 h-6 text-yellow-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <div className="bg-warning/10 border-2 border-warning/20 rounded-xl p-4 mb-6 flex items-start gap-3">
+            <svg className="w-6 h-6 text-warning flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
               <path
                 fillRule="evenodd"
                 d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
@@ -130,10 +130,10 @@ export function FinalizePage() {
               />
             </svg>
             <div className="flex-1">
-              <p className="text-sm font-medium text-yellow-800">
+              <p className="text-sm font-medium text-warning">
                 Nem todos os itens por peso foram pesados
               </p>
-              <p className="text-xs text-yellow-700 mt-1">
+              <p className="text-xs text-warning mt-1">
                 Por favor, complete a pesagem antes de finalizar este pedido
               </p>
             </div>
@@ -166,7 +166,7 @@ export function FinalizePage() {
                     <p className="font-medium text-sm">
                       {item.productOption.product.name} - {item.productOption.name}
                     </p>
-                    <p className="text-xs text-gray-600 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {item.productOption.unitType === "FIXED"
                         ? `Qtd: ${item.requestedQty}`
                         : item.actualWeight
@@ -184,11 +184,11 @@ export function FinalizePage() {
 
           <div className="border-t-2 mt-6 pt-4 space-y-3">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Itens Fixos:</span>
+              <span className="text-muted-foreground">Itens Fixos:</span>
               <span className="font-medium">R$ {(fixedTotal / 100).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Itens por Peso:</span>
+              <span className="text-muted-foreground">Itens por Peso:</span>
               <span className="font-medium">R$ {(weightTotal / 100).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-xl md:text-2xl font-bold text-primary pt-2 border-t">
@@ -216,7 +216,7 @@ export function FinalizePage() {
           ) : (
             <Button
               asChild
-              className="w-full px-6 py-7 rounded-xl text-lg md:text-xl font-semibold shadow-lg bg-green-600 hover:bg-green-700"
+              className="w-full px-6 py-7 rounded-xl text-lg md:text-xl font-semibold shadow-lg bg-success hover:bg-success"
               size="lg"
             >
               <a
@@ -237,8 +237,8 @@ export function FinalizePage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader className="space-y-3">
             <div className="flex items-center gap-3">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-yellow-600" />
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-warning/10 flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-warning" />
               </div>
               <DialogTitle className="text-xl">Confirmar Finalização</DialogTitle>
             </div>

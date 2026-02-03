@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { OrderDetailsSkeleton } from "@/components/ui/skeleton";
 import { OrderStatusTimeline } from "@/components/order-status-timeline";
-import { ShoppingCart, Package, XCircle, Trash2 } from "lucide-react";
+import { OrderActivityTimeline } from "@/components/order-activity-timeline";
+import { ShoppingCart, Package, XCircle, Trash2, History } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useCart } from "@/hooks/use-cart";
 import { toast } from "sonner";
@@ -137,15 +138,15 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
   const getStatusColor = (status: string) => {
     switch (status) {
       case "DRAFT":
-        return "bg-gray-100 text-gray-800";
+        return "bg-secondary text-secondary-foreground";
       case "SENT":
-        return "bg-blue-100 text-blue-800";
+        return "bg-primary/10 text-primary";
       case "IN_SEPARATION":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-warning/10 text-warning";
       case "FINALIZED":
-        return "bg-green-100 text-green-800";
+        return "bg-success/10 text-success";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-secondary text-secondary-foreground";
     }
   };
 
@@ -168,18 +169,18 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
         ) : order ? (
           <div className="space-y-6">
             {/* Status Timeline */}
-            <div className="bg-gray-50 rounded-lg p-4">
+            <div className="bg-muted rounded-lg p-4">
               <OrderStatusTimeline status={order.status as any} />
             </div>
 
             {/* Order Info */}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-gray-500">Número do Pedido</p>
+                <p className="text-muted-foreground">Número do Pedido</p>
                 <p className="font-medium">{order.orderNumber}</p>
               </div>
               <div>
-                <p className="text-gray-500">Criado</p>
+                <p className="text-muted-foreground">Criado</p>
                 <p className="font-medium">
                   {new Date(order.createdAt).toLocaleDateString("pt-BR", {
                     day: "2-digit",
@@ -191,14 +192,14 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
                 </p>
               </div>
               <div className="col-span-2">
-                <p className="text-gray-500">Criado por</p>
+                <p className="text-muted-foreground">Criado por</p>
                 <p className="font-medium">
                   {order.createdByUser?.name || order.createdByUser?.email || "Desconhecido"}
                 </p>
               </div>
               {order.sentAt && (
                 <div>
-                  <p className="text-gray-500">Enviado</p>
+                  <p className="text-muted-foreground">Enviado</p>
                   <p className="font-medium">
                     {new Date(order.sentAt).toLocaleDateString("pt-BR", {
                       day: "2-digit",
@@ -211,7 +212,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
               )}
               {order.finalizedAt && (
                 <div>
-                  <p className="text-gray-500">Finalizado</p>
+                  <p className="text-muted-foreground">Finalizado</p>
                   <p className="font-medium">
                     {new Date(order.finalizedAt).toLocaleDateString("pt-BR", {
                       day: "2-digit",
@@ -226,8 +227,8 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
 
             {order.notes && (
               <div>
-                <p className="text-sm text-gray-500 mb-1">Observações</p>
-                <p className="text-sm bg-gray-50 p-3 rounded">{order.notes}</p>
+                <p className="text-sm text-muted-foreground mb-1">Observações</p>
+                <p className="text-sm bg-muted p-3 rounded">{order.notes}</p>
               </div>
             )}
 
@@ -236,7 +237,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
             {/* Order Items */}
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <Package className="h-5 w-5 text-gray-600" />
+                <Package className="h-5 w-5 text-muted-foreground" />
                 <h3 className="font-medium">Itens ({order.items.length})</h3>
               </div>
 
@@ -244,14 +245,14 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
                 {order.items.map((item) => (
                   <div
                     key={item.id}
-                    className="border rounded-lg p-4 bg-gray-50"
+                    className="border rounded-lg p-4 bg-muted"
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex-1">
                         <p className="font-medium text-sm">
                           {item.productOption.product.name}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-muted-foreground">
                           {item.productOption.name}
                         </p>
                       </div>
@@ -272,7 +273,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
                                 `${item.productOption.product.name} - ${item.productOption.name}`
                               )
                             }
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-6 w-6 p-0"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10 h-6 w-6 p-0"
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -282,7 +283,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
 
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
-                        <span className="text-gray-500">Solicitado:</span>
+                        <span className="text-muted-foreground">Solicitado:</span>
                         <span className="ml-1 font-medium">
                           {item.requestedQty}
                           {item.productOption.unitType === "WEIGHT" ? " kg" : " un"}
@@ -291,8 +292,8 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
 
                       {item.productOption.unitType === "WEIGHT" && item.actualWeight && (
                         <div>
-                          <span className="text-gray-500">Real:</span>
-                          <span className="ml-1 font-medium text-green-700">
+                          <span className="text-muted-foreground">Real:</span>
+                          <span className="ml-1 font-medium text-success">
                             {item.actualWeight} kg
                           </span>
                         </div>
@@ -301,7 +302,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
                       {item.finalPrice && (
                         <>
                           <div>
-                            <span className="text-gray-500">Preço:</span>
+                            <span className="text-muted-foreground">Preço:</span>
                             <span className="ml-1 font-medium">
                               {formatPrice(item.finalPrice)}
                               {item.productOption.unitType === "WEIGHT" ? "/kg" : ""}
@@ -309,8 +310,8 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
                           </div>
 
                           <div>
-                            <span className="text-gray-500">Total:</span>
-                            <span className="ml-1 font-medium text-blue-700">
+                            <span className="text-muted-foreground">Total:</span>
+                            <span className="ml-1 font-medium text-primary">
                               {item.productOption.unitType === "FIXED"
                                 ? formatPrice(item.finalPrice)
                                 : item.actualWeight
@@ -323,7 +324,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
                     </div>
 
                     {item.notes && (
-                      <p className="text-xs text-gray-600 mt-2 italic">{item.notes}</p>
+                      <p className="text-xs text-muted-foreground mt-2 italic">{item.notes}</p>
                     )}
 
                     {item.isExtra && (
@@ -341,7 +342,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
             {/* Total */}
             <div className="flex justify-between items-center text-lg font-semibold">
               <span>Total</span>
-              <span className="text-blue-700">{formatPrice(calculateTotal())}</span>
+              <span className="text-primary">{formatPrice(calculateTotal())}</span>
             </div>
 
             {/* Actions */}
@@ -400,9 +401,19 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
                 </Button>
               </a>
             )}
+
+            {/* Activity Timeline */}
+            <div className="mt-8">
+              <Separator className="mb-6" />
+              <div className="flex items-center gap-2 mb-6">
+                <History className="h-5 w-5 text-muted-foreground" />
+                <h3 className="text-lg font-semibold text-card-foreground">Histórico do Pedido</h3>
+              </div>
+              <OrderActivityTimeline orderId={order.id} />
+            </div>
           </div>
         ) : (
-          <div className="py-8 text-center text-gray-500">
+          <div className="py-8 text-center text-muted-foreground">
             Pedido não encontrado
           </div>
         )}
