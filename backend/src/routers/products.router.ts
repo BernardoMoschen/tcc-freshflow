@@ -44,6 +44,29 @@ async function verifyProductOptionTenantAccess(
 
 export const productsRouter = router({
   /**
+   * Get list of unique categories for a tenant
+   */
+  categories: tenantProcedure.query(async ({ ctx }) => {
+    const products = await ctx.prisma.product.findMany({
+      where: {
+        tenantId: ctx.tenantId,
+      },
+      select: {
+        category: true,
+      },
+      distinct: ["category"],
+    });
+
+    // Filter out null categories and return sorted list
+    const categories = products
+      .map((p) => p.category)
+      .filter((c): c is string => !!c)
+      .sort();
+
+    return categories;
+  }),
+
+  /**
    * List products with pagination, search, filters, and sorting
    */
   list: tenantProcedure

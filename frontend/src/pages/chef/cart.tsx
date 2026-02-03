@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { sanitizeNotes } from "@/lib/sanitize";
 import { toast } from "sonner";
-import { Calendar, MessageSquare, Trash2, AlertTriangle, ShoppingBag } from "lucide-react";
+import { Calendar, MessageSquare, Trash2, AlertTriangle, ShoppingBag, Clock, Truck } from "lucide-react";
 
 const MAX_ITEM_NOTES_LENGTH = 200;
 const MAX_ORDER_NOTES_LENGTH = 500;
@@ -20,6 +21,8 @@ export function CartPage() {
   const [submitting, setSubmitting] = useState(false);
   const [orderNotes, setOrderNotes] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
+  const [deliveryTimeSlot, setDeliveryTimeSlot] = useState("");
+  const [deliveryInstructions, setDeliveryInstructions] = useState("");
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [itemToRemove, setItemToRemove] = useState<{ id: string; name: string } | null>(null);
   const navigate = useNavigate();
@@ -79,10 +82,15 @@ export function CartPage() {
     try {
       const order = await submitDraftMutation.mutateAsync({
         orderId: draftOrderId,
+        requestedDeliveryDate: deliveryDate,
+        deliveryTimeSlot: deliveryTimeSlot || undefined,
+        deliveryInstructions: deliveryInstructions || undefined,
+        notes: orderNotes || undefined,
       });
 
+      const timeSlotText = deliveryTimeSlot ? ` (${deliveryTimeSlot})` : "";
       toast.success(`Pedido enviado: ${order.orderNumber}`, {
-        description: `Agendado para ${new Date(deliveryDate).toLocaleDateString("pt-BR")}`,
+        description: `Agendado para ${new Date(deliveryDate).toLocaleDateString("pt-BR")}${timeSlotText}`,
       });
       navigate("/chef/orders");
     } catch (error) {
@@ -299,6 +307,46 @@ export function CartPage() {
                 required
                 aria-required="true"
               />
+            </div>
+
+            {/* Delivery Time Slot */}
+            <div className="space-y-3">
+              <Label htmlFor="deliveryTimeSlot" className="flex items-center gap-2">
+                <Clock className="h-4 w-4" aria-hidden="true" />
+                Horário de Entrega (opcional)
+              </Label>
+              <Select value={deliveryTimeSlot} onValueChange={setDeliveryTimeSlot}>
+                <SelectTrigger id="deliveryTimeSlot" className="w-full">
+                  <SelectValue placeholder="Selecione um horário" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="06:00-09:00">Manhã Cedo (06:00 - 09:00)</SelectItem>
+                  <SelectItem value="09:00-12:00">Manhã (09:00 - 12:00)</SelectItem>
+                  <SelectItem value="12:00-15:00">Tarde (12:00 - 15:00)</SelectItem>
+                  <SelectItem value="15:00-18:00">Tarde Final (15:00 - 18:00)</SelectItem>
+                  <SelectItem value="18:00-21:00">Noite (18:00 - 21:00)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Delivery Instructions */}
+            <div className="space-y-2">
+              <Label htmlFor="deliveryInstructions" className="flex items-center gap-2">
+                <Truck className="h-4 w-4" aria-hidden="true" />
+                Instruções de Entrega (opcional)
+              </Label>
+              <Textarea
+                id="deliveryInstructions"
+                placeholder='Ex: "Entregar nos fundos", "Ligar antes de chegar", "Portão sempre fechado"...'
+                value={deliveryInstructions}
+                onChange={(e) => setDeliveryInstructions(e.target.value)}
+                className="resize-none"
+                rows={2}
+                maxLength={500}
+              />
+              <p className="text-xs text-gray-500">
+                Informações específicas para o entregador sobre localização e acesso
+              </p>
             </div>
 
             {/* Overall Order Notes */}

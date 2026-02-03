@@ -39,6 +39,8 @@ export function CatalogPage() {
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
+  const [category, setCategory] = useState("");
+  const [availability, setAvailability] = useState<"all" | "in_stock" | "low_stock" | "out_of_stock">("all");
   const [unitType, setUnitType] = useState<"FIXED" | "WEIGHT" | "">("");
   const [sortBy, setSortBy] = useState<"name" | "price">("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -127,11 +129,17 @@ export function CatalogPage() {
   // Ensure tenant context exists before querying products
   const hasTenantContext = !!localStorage.getItem("freshflow:tenantId");
 
+  // Fetch available categories
+  const categoriesQuery = trpc.products.categories.useQuery(undefined, {
+    enabled: hasTenantContext,
+  });
+
   const productsQuery = trpc.products.list.useQuery(
     {
       skip: 0,
       take: 20,
       search: debouncedSearch || undefined,
+      category: category || undefined,
       minPrice: minPrice ? parseFloat(minPrice) * 100 : undefined,
       maxPrice: maxPrice ? parseFloat(maxPrice) * 100 : undefined,
       unitType: unitType || undefined,
@@ -263,6 +271,40 @@ export function CatalogPage() {
         <div className="bg-white p-4 rounded-lg shadow-sm space-y-4 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-5 md:gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
+              Categoria
+            </label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            >
+              <option value="">Todas</option>
+              {categoriesQuery.data?.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Disponibilidade
+            </label>
+            <select
+              value={availability}
+              onChange={(e) => setAvailability(e.target.value as typeof availability)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            >
+              <option value="all">Todos</option>
+              <option value="in_stock">Em Estoque</option>
+              <option value="low_stock">Estoque Baixo</option>
+              <option value="out_of_stock">Esgotado</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Preço Mín. (R$)
             </label>
             <input
@@ -378,7 +420,25 @@ export function CatalogPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {productsQuery.data?.items.map((product) =>
             product.options
-              .filter((option: ProductOption) => !showFavoritesOnly || isFavorite(option.id))
+              .filter((option: ProductOption) => {
+                // Filter by favorites
+                if (showFavoritesOnly && !isFavorite(option.id)) return false;
+
+                // Filter by availability
+                if (availability !== "all") {
+                  const stockQty = option.stockQuantity ?? 0;
+                  const lowThreshold = option.lowStockThreshold ?? 10;
+                  const isOutOfStock = !option.isAvailable || stockQty === 0;
+                  const isLowStock = stockQty > 0 && stockQty <= lowThreshold;
+                  const isInStock = stockQty > lowThreshold;
+
+                  if (availability === "in_stock" && !isInStock) return false;
+                  if (availability === "low_stock" && !isLowStock) return false;
+                  if (availability === "out_of_stock" && !isOutOfStock) return false;
+                }
+
+                return true;
+              })
               .map((option: ProductOption) => {
             const cartItem = items.find((item) => item.productOptionId === option.id);
             const inCart = !!cartItem;
@@ -567,16 +627,16 @@ export function CatalogPage() {
               />
             </svg>
             <p className="mt-4 text-lg font-medium text-gray-700">
-              {search || minPrice || maxPrice || unitType || showFavoritesOnly
+              {search || minPrice || maxPrice || category || availability !== "all" || unitType || showFavoritesOnly
                 ? "Nenhum produto corresponde aos filtros"
                 : "Nenhum produto disponível"}
             </p>
             <p className="mt-1 text-sm text-gray-500">
-              {search || minPrice || maxPrice || unitType || showFavoritesOnly
+              {search || minPrice || maxPrice || category || availability !== "all" || unitType || showFavoritesOnly
                 ? "Tente ajustar seus filtros ou termos de busca"
                 : "Não há produtos cadastrados no momento"}
             </p>
-            {(search || minPrice || maxPrice || unitType || showFavoritesOnly) && (
+            {(search || minPrice || maxPrice || category || availability !== "all" || unitType || showFavoritesOnly) && (
               <Button
                 variant="outline"
                 className="mt-4"
@@ -584,6 +644,8 @@ export function CatalogPage() {
                   setSearch("");
                   setMinPrice("");
                   setMaxPrice("");
+                  setCategory("");
+                  setAvailability("all");
                   setUnitType("");
                   setShowFavoritesOnly(false);
                 }}

@@ -160,22 +160,25 @@ model CustomerPrice {
 
 // Order - customer order with lifecycle
 model Order {
-  id            String         @id @default(uuid())
-  orderNumber   String         @unique
-  customerId    String
-  customer      Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  accountId     String
-  account       Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  createdBy     String
-  createdByUser User           @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  status        OrderStatus    @default(DRAFT)
-  notes         String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  sentAt        DateTime?
-  finalizedAt   DateTime?
-  items         OrderItem[]
-  deliveryNotes DeliveryNote[]
+  id                    String         @id @default(uuid())
+  orderNumber           String         @unique
+  customerId            String
+  customer              Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  accountId             String
+  account               Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdBy             String
+  createdByUser         User           @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  status                OrderStatus    @default(DRAFT)
+  notes                 String?
+  requestedDeliveryDate DateTime?      // Customer's requested delivery date
+  deliveryTimeSlot      String?        // e.g., "08:00-12:00", "12:00-18:00"
+  deliveryInstructions  String?        // Special delivery instructions
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  sentAt                DateTime?
+  finalizedAt           DateTime?
+  items                 OrderItem[]
+  deliveryNotes         DeliveryNote[]
 
   @@index([customerId])
   @@index([accountId])
@@ -185,6 +188,7 @@ model Order {
   @@index([accountId, status]) // Composite for filtered order lists
   @@index([status, createdAt]) // Composite for status-filtered sorted lists
   @@index([customerId, status]) // Composite for customer order filtering
+  @@index([requestedDeliveryDate]) // For delivery scheduling
 }
 
 enum OrderStatus {

@@ -33,6 +33,9 @@ export const ordersRouter = router({
     .input(
       z.object({
         notes: z.string().optional(),
+        requestedDeliveryDate: z.string().optional(), // ISO date string
+        deliveryTimeSlot: z.string().optional(), // e.g., "08:00-12:00"
+        deliveryInstructions: z.string().optional(),
         items: z.array(
           z.object({
             productOptionId: z.string().uuid(),
@@ -114,6 +117,9 @@ export const ordersRouter = router({
           status: OrderStatus.SENT,
           sentAt: new Date(),
           notes: input.notes,
+          requestedDeliveryDate: input.requestedDeliveryDate ? new Date(input.requestedDeliveryDate) : undefined,
+          deliveryTimeSlot: input.deliveryTimeSlot,
+          deliveryInstructions: input.deliveryInstructions,
           items: {
             create: orderItems,
           },
@@ -286,6 +292,9 @@ export const ordersRouter = router({
           })
         ),
         notes: z.string().optional(),
+        requestedDeliveryDate: z.string().optional(),
+        deliveryTimeSlot: z.string().optional(),
+        deliveryInstructions: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -381,6 +390,9 @@ export const ordersRouter = router({
         where: { id: input.orderId },
         data: {
           notes: input.notes,
+          requestedDeliveryDate: input.requestedDeliveryDate ? new Date(input.requestedDeliveryDate) : undefined,
+          deliveryTimeSlot: input.deliveryTimeSlot,
+          deliveryInstructions: input.deliveryInstructions,
           items: {
             create: orderItems,
           },
@@ -410,7 +422,15 @@ export const ordersRouter = router({
    * Submit draft order (converts to SENT status)
    */
   submitDraft: accountProcedure
-    .input(z.object({ orderId: z.string().uuid() }))
+    .input(
+      z.object({
+        orderId: z.string().uuid(),
+        notes: z.string().optional(),
+        requestedDeliveryDate: z.string().optional(), // ISO date string
+        deliveryTimeSlot: z.string().optional(),
+        deliveryInstructions: z.string().optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       // Verify order is draft and belongs to user
       const order = await ctx.prisma.order.findUnique({
@@ -459,6 +479,12 @@ export const ordersRouter = router({
           status: OrderStatus.SENT,
           orderNumber,
           sentAt: new Date(),
+          notes: input.notes,
+          requestedDeliveryDate: input.requestedDeliveryDate
+            ? new Date(input.requestedDeliveryDate)
+            : undefined,
+          deliveryTimeSlot: input.deliveryTimeSlot,
+          deliveryInstructions: input.deliveryInstructions,
         },
         include: {
           items: {

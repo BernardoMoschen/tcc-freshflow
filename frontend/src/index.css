@@ -4,26 +4,51 @@
 
 @layer base {
   :root {
+    /* Fresh Produce Theme - Vibrant greens and oranges */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 142 30% 15%; /* Dark green-tinted text */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --primary: 142 76% 36%;
+    --card-foreground: 142 30% 15%;
+
+    /* Primary: Fresh green (like lettuce/vegetables) */
+    --primary: 142 71% 45%; /* Brighter, more vibrant green */
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    /* Improved contrast: changed from 46.9% to 40% lightness for WCAG AA compliance */
-    --muted-foreground: 215.4 16.3% 40%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    /* Improved contrast: darker border for better visibility */
-    --border: 214.3 31.8% 85%;
-    --input: 214.3 31.8% 85%;
-    --ring: 142 76% 36%;
-    --radius: 0.5rem;
+
+    /* Secondary: Soft green tint */
+    --secondary: 142 35% 96%;
+    --secondary-foreground: 142 71% 25%;
+
+    /* Muted: Very light green tint for backgrounds */
+    --muted: 142 20% 97%;
+    --muted-foreground: 142 16% 45%;
+
+    /* Accent: Fresh orange (like carrots/citrus) for vibrancy */
+    --accent: 24 94% 50%; /* Vibrant orange */
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive: Red for errors/delete */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders: Light green tint */
+    --border: 142 25% 88%;
+    --input: 142 25% 90%;
+    --ring: 142 71% 45%;
+
+    /* Radius: Slightly more rounded for friendly feel */
+    --radius: 0.75rem;
+  }
+
+  /* Success state (green) */
+  .success {
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+  }
+
+  /* Warning state (yellow/orange) */
+  .warning {
+    --warning: 45 93% 47%;
+    --warning-foreground: 45 30% 15%;
   }
 }
 
@@ -33,10 +58,26 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter var', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     font-size: 16px; /* Prevent iOS zoom on input focus */
+    line-height: 1.6; /* Better readability */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Headings with better hierarchy */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em; /* Tighter for headings */
+  }
+
+  h1 { font-size: 2.5rem; }
+  h2 { font-size: 2rem; }
+  h3 { font-size: 1.75rem; }
+  h4 { font-size: 1.5rem; }
+  h5 { font-size: 1.25rem; }
+  h6 { font-size: 1.125rem; }
 
   /* Mobile-first: Ensure minimum touch target size */
   button,
@@ -87,13 +128,14 @@
     top: 0;
   }
 
-  /* Ensure links have sufficient contrast */
+  /* Ensure links have sufficient contrast - Fresh green theme */
   a {
-    color: hsl(142 76% 32%);
+    color: hsl(142 71% 40%);
   }
 
   a:hover {
-    color: hsl(142 76% 25%);
+    color: hsl(142 71% 30%);
+    text-decoration: underline;
   }
 
   /* Toast animations */
@@ -129,5 +171,186 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
     }
+  }
+}
+
+/* Micro-interactions and animations */
+@layer components {
+  /* Smooth transitions for interactive elements */
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Button hover effect with lift */
+  button:not(:disabled):hover,
+  a:has(button):hover button {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  button:not(:disabled):active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Card hover effect */
+  .card-hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Pulse animation for badges/notifications */
+  @keyframes pulse-subtle {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.9;
+      transform: scale(1.05);
+    }
+  }
+
+  .pulse-subtle {
+    animation: pulse-subtle 2s ease-in-out infinite;
+  }
+
+  /* Fade in animation */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.4s ease-out;
+  }
+
+  /* Slide up animation */
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.5s ease-out;
+  }
+
+  /* Shimmer loading effect */
+  @keyframes shimmer {
+    0% {
+      background-position: -1000px 0;
+    }
+    100% {
+      background-position: 1000px 0;
+    }
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--muted-foreground) / 0.1) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite linear;
+  }
+
+  /* Success checkmark animation */
+  @keyframes check-scale {
+    0% {
+      transform: scale(0) rotate(0deg);
+    }
+    50% {
+      transform: scale(1.2) rotate(180deg);
+    }
+    100% {
+      transform: scale(1) rotate(360deg);
+    }
+  }
+
+  .animate-check {
+    animation: check-scale 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  }
+
+  /* Bounce animation for cart badge */
+  @keyframes bounce {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-4px);
+    }
+  }
+
+  .animate-bounce-subtle {
+    animation: bounce 0.4s ease-in-out;
+  }
+
+  /* Focus ring with green theme */
+  *:focus-visible {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Improved spacing utilities */
+  .section-padding {
+    @apply px-4 py-6 md:px-6 md:py-8 lg:px-8 lg:py-10;
+  }
+
+  .card-padding {
+    @apply p-4 md:p-6;
+  }
+
+  /* Typography utilities */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .heading-1 {
+    @apply text-4xl md:text-5xl font-bold tracking-tight text-balance;
+  }
+
+  .heading-2 {
+    @apply text-3xl md:text-4xl font-bold tracking-tight;
+  }
+
+  .heading-3 {
+    @apply text-2xl md:text-3xl font-semibold;
+  }
+
+  /* Product card specific styles */
+  .product-card {
+    @apply bg-card rounded-lg border border-border overflow-hidden;
+    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+  }
+
+  .product-card img {
+    @apply transition-transform duration-300;
+  }
+
+  .product-card:hover img {
+    @apply scale-105;
   }
 }

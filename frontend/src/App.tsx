@@ -29,6 +29,7 @@ import { StockManagementPage } from "./pages/admin/stock-management";
 import { ProductsManagementPage } from "./pages/admin/products";
 import { CustomersManagementPage } from "./pages/admin/customers";
 import { AdminOrdersPage } from "./pages/admin/orders";
+import { AnalyticsPage } from "./pages/admin/analytics";
 import { PublicCatalogPage } from "./pages/public/catalog";
 
 // Helper to check if error is retryable (only server/network errors)
@@ -224,6 +225,16 @@ function App() {
                 <ProtectedRoute requireTenantAdmin>
                   <PageErrorBoundary pageName="Finalização">
                     <FinalizePage />
+                  </PageErrorBoundary>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/analytics"
+              element={
+                <ProtectedRoute requireTenantAdmin>
+                  <PageErrorBoundary pageName="Analytics">
+                    <AnalyticsPage />
                   </PageErrorBoundary>
                 </ProtectedRoute>
               }
