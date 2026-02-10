@@ -1,27 +1,60 @@
 # FreshFlow
 
-B2B fresh produce ordering and warehouse management system with catch-weight support, per-customer pricing, multi-tenant RBAC, PDF delivery statements, and offline-capable admin UI.
+Sistema B2B de pedidos e gestao de estoque para distribuidoras de hortifruti.
 
-## Features
+![CI](https://github.com/USERNAME/freshflow/actions/workflows/ci.yml/badge.svg)
 
-- **Multi-tenant Architecture**: Platform supports multiple distributors (tenants) and their restaurant customers (accounts)
-- **Catch-Weight Support**: Handle both fixed-unit and weight-based products
-- **Per-Customer Pricing**: Custom price lists with overrides
-- **Role-Based Access Control**: 5-level hierarchy (Platform Admin, Tenant Owner, Tenant Admin, Account Owner, Account Buyer)
-- **PDF Delivery Statements**: "Extrato de Conferência" format with subtotals
-- **Offline-Capable Weighing**: Queue operations when offline, auto-sync when online (last-write-wins)
-- **Order Lifecycle**: DRAFT → SENT → IN_SEPARATION → FINALIZED
+## Sobre o Projeto
 
-## Architecture
+O FreshFlow e uma plataforma web completa para distribuidoras de hortifruti gerenciarem pedidos B2B com restaurantes, mercados e outros estabelecimentos. O sistema cobre todo o ciclo operacional: desde o catalogo de produtos e criacao de pedidos, passando pela separacao e pesagem (catch-weight), ate a finalizacao com geracao de romaneio em PDF.
 
-### Development Environment
+**Principais funcionalidades:**
+
+- **Pedidos B2B** — Clientes fazem pedidos online; operadores acompanham, separam e finalizam
+- **Pesagem catch-weight** — Produtos vendidos por peso sao pesados na separacao, ajustando valores automaticamente
+- **Gestao de estoque** — Movimentacoes automaticas na finalizacao, com ajustes manuais e rastreabilidade completa
+- **Notificacoes WhatsApp** — Envio automatico de status de pedido via Twilio
+- **Analytics** — Dashboard com metricas de vendas, produtos mais vendidos e desempenho por cliente
+- **Multi-tenant** — Suporte a multiplas distribuidoras com contas e clientes independentes
+- **RBAC** — Controle de acesso com 5 niveis de permissao
+- **Suporte offline** — Pesagem funciona offline com sincronizacao automatica (IndexedDB)
+- **Audit log** — Registro completo de todas as acoes para compliance
+
+## Tech Stack
+
+| Backend | Frontend | Infraestrutura |
+|---------|----------|----------------|
+| Node.js 20 | React 18 | Docker |
+| Express | Vite | GitHub Actions CI |
+| tRPC v11 | TypeScript | Vitest + v8 coverage |
+| Prisma ORM | Tailwind CSS | pnpm monorepo |
+| PostgreSQL 16 | Radix UI | ESLint + Prettier |
+| Zod | TanStack React Query | |
+| Redis | tRPC Client | |
+| Twilio (WhatsApp) | Supabase Auth | |
+| PDFKit | Dexie (IndexedDB/offline) | |
+| Jose (JWT) | React Router v6 | |
+
+## Arquitetura
+
+```
+freshflow/
+├── backend/           # API (Express + tRPC), Prisma ORM, logica de negocio
+├── frontend/          # SPA (React + Vite), Tailwind CSS, Radix UI
+├── tests/             # Testes de integracao e E2E
+├── docker-compose.yml # PostgreSQL local
+├── Dockerfile         # Build multi-stage para producao
+└── pnpm-workspace.yaml
+```
+
+### Ambiente de Desenvolvimento
+
 ```
 ┌─────────────────┐       ┌──────────────────┐
 │   Frontend      │──────▶│    Backend       │
-│   (React)       │       │   (Express +     │
-│   :5173         │       │    tRPC)         │
-└─────────────────┘       │   :3001          │
-                          └──────────────────┘
+│   (React+Vite)  │       │   (Express+tRPC) │
+│   :5173         │       │   :3001          │
+└─────────────────┘       └──────────────────┘
                                   │
                     ┌─────────────┴─────────────┐
                     │                           │
@@ -30,409 +63,221 @@ B2B fresh produce ordering and warehouse management system with catch-weight sup
               │  Postgres  │             │  Auth       │
               │  :5432     │             │  (Cloud)    │
               └────────────┘             └─────────────┘
-              Local DB                   Remote Auth
 ```
 
-### Production Environment
-```
-┌─────────────────┐       ┌──────────────────┐
-│   Frontend      │──────▶│    Backend       │
-│   (Vercel)      │       │   (Render)       │
-│   Static        │       │   Node.js        │
-└─────────────────┘       └──────────────────┘
-                                  │
-                          ┌───────▼────────┐
-                          │   Supabase     │
-                          │ ┌────────────┐ │
-                          │ │ PostgreSQL │ │
-                          │ │ São Paulo  │ │
-                          │ └────────────┘ │
-                          │ ┌────────────┐ │
-                          │ │    Auth    │ │
-                          │ └────────────┘ │
-                          └────────────────┘
-                          All-in-one service
-                          R$ 0-150/month
-```
+### Padroes Arquiteturais
 
-**Why this architecture?**
-- **Development**: Docker = free, fast, no external dependencies
-- **Production**: Supabase = managed, scalable, Brazil region (São Paulo), FREE tier
+- **Type safety end-to-end** — tRPC compartilha tipos entre backend e frontend sem code generation
+- **State machine de pedidos** — `DRAFT` → `SENT` → `IN_SEPARATION` → `FINALIZED`
+- **Multi-tenant** — Hierarquia Tenant → Account → Customer com isolamento de dados
+- **Catch-weight** — Dois tipos de unidade (`FIXED` e `WEIGHT`) com fluxo de pesagem dedicado
+- **RBAC hierarquico** — 5 niveis: Platform Admin → Tenant Owner → Tenant Admin → Account Owner → Account Buyer
+- **Event-driven audit** — Todas as acoes criticas geram registros de auditoria
+- **18 modelos Prisma** — Schema completo em [`backend/prisma/schema.prisma`](backend/prisma/schema.prisma)
 
-## Tech Stack
+### Resolucao de Precos
 
-### Backend
-- **Runtime**: Node.js 20+
-- **Framework**: Express + tRPC v11
-- **Database**: PostgreSQL via Prisma 5.22
-- **Auth**: Supabase JWT (JWKS verification)
-- **PDF Generation**: pdfkit
-- **Notifications**: Twilio WhatsApp API
-- **Language**: TypeScript (strict mode)
+Precos seguem esta hierarquia (maior prioridade primeiro):
 
-### Frontend
-- **Framework**: React 18 + Vite
-- **Routing**: React Router v6
-- **Styling**: Tailwind CSS
-- **State**: React Query + tRPC React
-- **Offline**: Dexie (IndexedDB)
-- **Auth**: Supabase client
-- **Language**: TypeScript (strict mode)
+1. **Override manual** — Definido durante pesagem
+2. **Preco por cliente** — Override persistente por cliente (CustomerPrice)
+3. **Preco base** — Preco padrao do ProductOption
 
-### Infrastructure
-- **Dev Database**: Docker Compose PostgreSQL
-- **Prod Database**: Supabase PostgreSQL (São Paulo)
-- **Prod Backend**: Render/Railway (free tier)
-- **Prod Frontend**: Vercel/Netlify (free tier)
-- **Package Manager**: pnpm (monorepo)
+## Pre-requisitos
 
-## Prerequisites
-
-- Node.js 20+ and pnpm 8+
-- Docker and Docker Compose (for local Postgres)
-- Supabase account and project
-
-Install pnpm if you don't have it:
+- [Node.js](https://nodejs.org/) >= 20
+- [pnpm](https://pnpm.io/) >= 8
+- [Docker](https://www.docker.com/) (para PostgreSQL local)
+- Conta no [Supabase](https://supabase.com/) (autenticacao)
 
 ```bash
+# Instalar pnpm caso nao tenha
 npm install -g pnpm
 ```
 
-## Quick Start
-
-### 1. Clone and Install
+## Como Rodar
 
 ```bash
-git clone <repo-url> freshflow
+# 1. Clone o repositorio
+git clone https://github.com/USERNAME/freshflow.git
 cd freshflow
+
+# 2. Instale as dependencias
 pnpm install
-```
 
-### 2. Setup Environment
-
-```bash
+# 3. Configure as variaveis de ambiente
 cp .env.local.example .env
-```
+# Edite o .env com suas credenciais (Supabase, etc.)
 
-Edit `.env` with your Supabase credentials:
+# 4. Suba o PostgreSQL via Docker
+docker-compose up -d
 
-```env
-# Database
-DATABASE_URL=postgresql://postgres:password@localhost:5432/freshflow
-
-# Supabase (get from https://app.supabase.com/project/_/settings/api)
-SUPABASE_URL=https://xxxxx.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJI...
-SUPABASE_JWT_SECRET=your-jwt-secret-here
-
-# Backend
-PORT=3001
-NODE_ENV=development
-
-# Frontend
-VITE_SUPABASE_URL=https://xxxxx.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJI...
-VITE_API_URL=http://localhost:3001
-```
-
-### 3. Start Postgres
-
-```bash
-docker-compose up -d postgres
-```
-
-Wait for Postgres to be ready (check with `docker-compose logs postgres`).
-
-### 4. Run Migrations and Seed
-
-```bash
+# 5. Gere o Prisma Client e execute migrations
+cd backend && npx prisma generate && cd ..
 pnpm db:migrate
+
+# 6. Popule o banco com dados de exemplo
 pnpm db:seed
-```
 
-This creates:
-- 5 roles (PLATFORM_ADMIN, TENANT_OWNER, etc.)
-- 3 test users (see Test Credentials below)
-- 1 tenant: "FreshCo Distributors"
-- 1 account: "Chef's Table Restaurant"
-- 5 products (mix of FIXED and WEIGHT types)
-- 3 customer price overrides
-- 1 sample order in SENT status
-
-### 5. Start Dev Servers
-
-```bash
+# 7. Inicie o servidor de desenvolvimento
 pnpm dev
+# Backend: http://localhost:3001
+# Frontend: http://localhost:5173
 ```
 
-This starts:
-- Backend: http://localhost:3001
-- Frontend: http://localhost:5173
+### Dados do Seed
 
-## Test Credentials
+O seed cria um ambiente completo para desenvolvimento:
 
-After seeding, you can login with these users:
+- 1 tenant (Verde Campo Distribuidora) com configuracoes
+- 3 contas/restaurantes com dados brasileiros (CNPJ, CEP, telefone)
+- 7 usuarios com diferentes niveis de acesso
+- 35 produtos em 7 categorias (Frutas, Hortalicas, Legumes, Ovos, Carnes, Queijos, Temperos)
+- 8 pedidos em todos os status do ciclo de vida
+- Pesagens, movimentacoes de estoque, atividades e notas de entrega
 
-| Role | Email | Description |
-|------|-------|-------------|
-| Platform Admin | admin@freshflow.com | Full system access |
-| Tenant Owner | owner@freshco.com | FreshCo distributor owner |
-| Account Owner (Chef) | chef@chefstable.com | Chef's Table restaurant owner |
+## Scripts Disponiveis
 
-**Note**: Passwords are managed by Supabase. Create these users in your Supabase project Auth dashboard.
+| Comando | Descricao |
+|---------|-----------|
+| `pnpm dev` | Inicia backend e frontend em modo desenvolvimento |
+| `pnpm build` | Build de producao (backend + frontend) |
+| `pnpm test:unit` | Executa testes unitarios |
+| `pnpm test:coverage` | Testes com relatorio de cobertura HTML |
+| `pnpm typecheck` | Verificacao de tipos TypeScript |
+| `pnpm lint` | Linting com ESLint |
+| `pnpm db:migrate` | Executa migrations do Prisma |
+| `pnpm db:seed` | Popula o banco com dados de exemplo |
 
-## Project Structure
+## Testes
 
-```
-freshflow/
-├── backend/
-│   ├── src/
-│   │   ├── server.ts              # Express + tRPC server
-│   │   ├── trpc.ts                # tRPC context & middleware
-│   │   ├── auth.ts                # Supabase JWT verification
-│   │   ├── rbac.ts                # Role-based access control
-│   │   ├── router.ts              # Root tRPC router
-│   │   ├── db/prisma.ts           # Prisma client singleton
-│   │   ├── routers/               # Feature routers (auth, products, orders)
-│   │   ├── lib/                   # Business logic (price engine, order state)
-│   │   └── pdf/statement.ts       # PDF generator
-│   ├── prisma/
-│   │   ├── schema.prisma          # Database schema
-│   │   └── seed.ts                # Seed data
-│   └── package.json
-├── frontend/
-│   ├── src/
-│   │   ├── App.tsx                # Root component + routing
-│   │   ├── lib/                   # Core libraries (supabase, trpc, offline)
-│   │   ├── hooks/                 # React hooks (auth, cart, offline)
-│   │   ├── components/            # Shared components
-│   │   └── pages/                 # Page components (chef, admin)
-│   └── package.json
-├── tests/                         # Unit, integration, E2E tests
-├── docker-compose.yml             # Local dev stack
-├── Dockerfile                     # Production build
-└── .github/workflows/ci.yml       # CI pipeline
-```
+O projeto possui **119 testes unitarios** distribuidos em 6 suites, com **~86% de cobertura** na logica de negocio:
 
-## API Endpoints
-
-### tRPC (Primary API)
-
-**Base URL**: `http://localhost:3001/trpc`
-
-All tRPC procedures require authentication (JWT Bearer token) unless noted.
-
-#### Auth
-- `auth.session` - Get current user + memberships
-
-#### Products
-- `products.list({skip, take, search?, category?})` - List products (requires x-tenant-id header)
-- `products.get({id, customerId?})` - Get product with resolved prices
-
-#### Orders
-- `orders.create({notes?, items})` - Create order (SENT status, requires x-account-id header)
-- `orders.list({status?, skip, take})` - List orders (filtered by account context)
-- `orders.get({id})` - Get order details
-- `orders.weigh({orderItemId, actualWeight, finalPrice?, notes?, photoUrl?, persistPrice?})` - Weigh item
-- `orders.addItem({orderId, productOptionId, requestedQty})` - Add extra item (admin)
-- `orders.finalize({id})` - Finalize order (validates all weights)
-
-### HTTP Endpoints
-
-- `GET /health` - Health check
-- `GET /api/delivery-note/:orderId.pdf` - Generate and download PDF (requires auth)
-
-## Development
-
-### Available Scripts
+| Suite | Modulo | Testes |
+|-------|--------|--------|
+| Price Engine | `lib/price-engine.ts` | 14 |
+| RBAC | `rbac.ts` | 18 |
+| Order State | `lib/order-state.ts` | 29 |
+| CSV Export | `lib/csv-export.ts` | 10 |
+| Errors | `lib/errors.ts` | 19 |
+| Sanitize | `lib/sanitize.ts` | 29 |
 
 ```bash
-# Root
-npm run dev              # Start backend + frontend
-npm run build            # Build both workspaces
-npm run db:migrate       # Run Prisma migrations
-npm run db:seed          # Seed database
-pnpm typecheck           # TypeScript check all workspaces
-pnpm lint                # Lint all workspaces
-pnpm test                # Run all tests
-
-# Backend only
-pnpm --filter backend dev
-pnpm --filter backend build
-pnpm --filter backend start
-
-# Frontend only
-pnpm --filter frontend dev
-pnpm --filter frontend build
-```
-
-### Database Migrations
-
-```bash
-# Create a new migration
-cd backend
-pnpm prisma migrate dev --name add_something
-
-# Apply migrations (production)
-pnpm db:migrate
-
-# Reset database (careful!)
-cd backend
-pnpm prisma migrate reset
-```
-
-### Testing
-
-```bash
-# Unit tests (backend business logic)
+# Rodar testes
 pnpm test:unit
 
-# Integration tests (tRPC procedures)
-pnpm test:integration
-
-# E2E tests (Playwright)
-pnpm test:e2e
+# Rodar com cobertura (gera relatorio HTML em backend/coverage/)
+pnpm test:coverage
 ```
 
-## User Flows
+> Modulos de infraestrutura (banco de dados, Redis, Twilio) sao excluidos da cobertura por design — requerem testes de integracao com servicos reais, e mocka-los criaria falsos positivos.
 
-### Chef Flow (Order Creation)
+## Documentacao da API
 
-1. Login at `/login` with chef credentials
-2. Browse catalog at `/chef/catalog`
-3. Add products to cart (FIXED or WEIGHT types)
-4. Review cart at `/chef/cart`
-5. Submit order (creates order with status SENT, immutable)
-6. View orders at `/chef/orders`
+Com o servidor rodando, acesse a documentacao interativa:
 
-### Admin Flow (Warehouse Processing)
+- **Swagger UI**: [http://localhost:3001/docs](http://localhost:3001/docs)
+- **OpenAPI spec**: [`backend/src/docs/openapi.yaml`](backend/src/docs/openapi.yaml)
 
-1. Login with admin/tenant credentials
-2. Navigate to `/admin/weighing/:orderId`
-3. Weigh WEIGHT items:
-   - Enter actual weight (large numeric input for tablet)
-   - Optional: override price
-   - Optional: check "persist price" to save as customer override
-4. Operations queue offline, sync when online
-5. Navigate to `/admin/finalize/:orderId`
-6. Review totals (fixed + weighable subtotals)
-7. Finalize order (status → FINALIZED)
-8. Download PDF delivery statement
+### Endpoints Principais (tRPC)
 
-## Offline Capabilities
+| Procedimento | Descricao |
+|-------------|-----------|
+| `auth.session` | Sessao do usuario atual + memberships |
+| `products.list` | Listar produtos (filtro por categoria, busca) |
+| `products.get` | Produto com precos resolvidos por cliente |
+| `orders.create` | Criar pedido (status SENT) |
+| `orders.list` | Listar pedidos (filtro por status) |
+| `orders.weigh` | Pesar item (catch-weight) |
+| `orders.finalize` | Finalizar pedido (valida pesagens) |
+| `stock.movements` | Movimentacoes de estoque |
+| `analytics.dashboard` | Metricas e KPIs |
 
-The admin weighing UI supports offline operation:
+### Endpoints HTTP
 
-- **Queue**: Weighing operations saved to IndexedDB when offline
-- **Auto-Sync**: Queue syncs automatically when connection restored
-- **Conflict Resolution**: Last-write-wins strategy (no conflict UI)
-- **Status Indicator**: Shows pending sync count and online/offline status
+| Rota | Descricao |
+|------|-----------|
+| `GET /health` | Health check |
+| `GET /docs` | Swagger UI |
+| `GET /api/delivery-note/:orderId.pdf` | Download do romaneio PDF |
 
-## Price Resolution
+## Banco de Dados
 
-Prices follow this hierarchy (highest priority first):
+O schema Prisma define **18 modelos** que cobrem todo o dominio:
 
-1. **Manual Override**: Set during weighing (optional)
-2. **Customer Price**: Per-customer override (persistent)
-3. **Base Price**: Product option default price
+| Dominio | Modelos |
+|---------|---------|
+| Organizacao | Tenant, Account, User, Membership, Role |
+| Catalogo | Product, ProductOption, CustomerPrice |
+| Pedidos | Order, OrderItem, OrderActivity, DeliveryNote |
+| Estoque | StockMovement, Weighing |
+| Configuracao | TenantSettings, UserPreferences |
+| Auditoria | AuditLog |
 
-## Order Lifecycle
+Schema completo: [`backend/prisma/schema.prisma`](backend/prisma/schema.prisma)
 
-```
-DRAFT → SENT → IN_SEPARATION → FINALIZED
-```
+## RBAC (Controle de Acesso)
 
-- **DRAFT**: Editable (not implemented in current UI)
-- **SENT**: Immutable, ready for separation
-- **IN_SEPARATION**: Weighing in progress
-- **FINALIZED**: Complete, PDF available (terminal state)
+| Role | Permissoes |
+|------|------------|
+| `PLATFORM_ADMIN` | Acesso total a todos os tenants e contas |
+| `TENANT_OWNER` | Acesso total ao tenant e todas as contas |
+| `TENANT_ADMIN` | Administracao do tenant e contas |
+| `ACCOUNT_OWNER` | Gerenciar conta, criar pedidos |
+| `ACCOUNT_BUYER` | Criar e visualizar pedidos |
 
-## RBAC (Role-Based Access Control)
+Enforcement via middleware tRPC:
+- `protectedProcedure` — Requer JWT valido
+- `tenantProcedure` — Requer JWT + `x-tenant-id` + membership
+- `accountProcedure` — Requer JWT + `x-account-id` + membership
 
-| Role | Permissions |
-|------|-------------|
-| PLATFORM_ADMIN | Access to all tenants and accounts |
-| TENANT_OWNER | Full access to tenant and all accounts |
-| TENANT_ADMIN | Admin access to tenant and accounts |
-| ACCOUNT_OWNER | Manage account, create orders |
-| ACCOUNT_BUYER | Create and view orders |
-
-Enforce via tRPC middleware:
-- `protectedProcedure` - Requires valid JWT
-- `tenantProcedure` - Requires JWT + x-tenant-id + membership
-- `accountProcedure` - Requires JWT + x-account-id + membership
-
-## Production Deployment
-
-### Build
-
-```bash
-npm run build
-```
-
-This creates:
-- `backend/dist/` - Compiled backend
-- `frontend/dist/` - Static frontend assets
+## Deploy em Producao
 
 ### Docker
 
 ```bash
-# Build production image
 docker build -t freshflow:latest .
-
-# Run
 docker run -p 3001:3001 --env-file .env freshflow:latest
 ```
 
-### Environment Variables (Production)
-
-Ensure these are set in production:
+### Variaveis de Ambiente (Producao)
 
 ```env
 DATABASE_URL=postgresql://...
 SUPABASE_URL=https://...
-SUPABASE_JWT_SECRET=...
+SUPABASE_ANON_KEY=eyJ...
+SUPABASE_JWT_SECRET=your-jwt-secret
 PORT=3001
 NODE_ENV=production
 ```
 
-## Troubleshooting
+## Estrutura do Projeto
 
-### Backend won't start
+```
+backend/src/
+├── server.ts              # Express + tRPC server setup
+├── trpc.ts                # tRPC context e middleware
+├── auth.ts                # Verificacao JWT (Supabase)
+├── rbac.ts                # Controle de acesso por roles
+├── router.ts              # Root tRPC router
+├── routers/               # Feature routers (auth, products, orders, stock, analytics)
+├── lib/                   # Logica de negocio (price-engine, order-state, csv-export)
+├── repositories/          # Camada de acesso a dados
+├── services/              # Servicos de negocio
+├── middleware/             # Middleware Express
+├── pdf/                   # Geracao de PDF (romaneio)
+├── db/                    # Prisma client singleton
+├── docs/                  # OpenAPI/Swagger
+└── __tests__/             # Testes unitarios
 
-- Check Postgres is running: `docker-compose ps`
-- Check DATABASE_URL in `.env`
-- Check Prisma client generated: `cd backend && npx prisma generate`
+frontend/src/
+├── App.tsx                # Componente raiz + rotas
+├── pages/                 # Paginas (admin/, chef/, public/)
+├── components/            # Componentes compartilhados + UI library (Radix)
+├── hooks/                 # React hooks (auth, cart, offline, favorites)
+└── lib/                   # Utilitarios (supabase, trpc, sanitize, offline)
+```
 
-### Frontend build errors
+## Licenca
 
-- Check Node version: `node --version` (should be 20+)
-- Clear node_modules and reinstall: `rm -rf node_modules && npm ci`
-
-### Auth errors
-
-- Verify Supabase credentials in `.env`
-- Check JWT_SECRET matches your Supabase project
-- Ensure users exist in Supabase Auth dashboard
-
-### PDF generation fails
-
-- Check order is FINALIZED
-- Check all WEIGHT items have actualWeight set
-- Check user has access to the order's account
-
-## Contributing
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for development workflow, code style, and PR guidelines.
-
-## License
-
-Proprietary - All rights reserved
-
-## Support
-
-For issues and questions, contact: support@freshflow.com
-
----
-
-Built with by Claude Sonnet 4.5
+MIT
