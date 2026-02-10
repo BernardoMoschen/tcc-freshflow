@@ -1,0 +1,3314 @@
+openapi: 3.0.3
+info:
+  title: FreshFlow API
+  version: 1.0.0
+  description: |
+    **FreshFlow** is a multi-tenant B2B SaaS platform for fresh produce ordering and warehouse management.
+    It connects distributors with restaurant customers through an intelligent ordering system with catch-weight support,
+    per-customer pricing, and a complete order lifecycle (DRAFT → SENT → IN_SEPARATION → FINALIZED).
+
+    ## Architecture
+
+    This API uses a hybrid architecture:
+    - **tRPC endpoints** (`/trpc/*`) — Type-safe client-server communication via [tRPC v11](https://trpc.io)
+    - **REST endpoints** (`/api/v1/*`) — PDF generation, webhooks, Server-Sent Events, and error reporting
+
+    ### tRPC HTTP Convention
+    - **Queries** are sent as `GET /trpc/{router}.{procedure}?input={URL-encoded JSON}`
+    - **Mutations** are sent as `POST /trpc/{router}.{procedure}` with body `{ "json": <input> }`
+    - Responses are wrapped in a tRPC envelope: `{ "result": { "data": <payload> } }`
+
+    ## Authentication
+
+    All authenticated endpoints require a **Supabase JWT** in the `Authorization` header:
+    ```
+    Authorization: Bearer <supabase_jwt_token>
+    ```
+    Tokens are obtained by logging in through Supabase Auth on the frontend.
+
+    ## Multi-Tenancy
+
+    FreshFlow uses a tenant/account hierarchy. Most endpoints require context headers:
+    - `x-tenant-id` — UUID of the tenant (distributor) for tenant-scoped operations
+    - `x-account-id` — UUID of the account (restaurant) for account-scoped operations
+
+    ## RBAC (Role-Based Access Control)
+
+    | Role | Level | Scope |
+    |------|-------|-------|
+    | PLATFORM_ADMIN | 100 | Full system access |
+    | TENANT_OWNER | 50 | Manage tenant + all accounts |
+    | TENANT_ADMIN | 40 | Admin access to tenant operations |
+    | ACCOUNT_OWNER | 30 | Manage account + place orders |
+    | ACCOUNT_BUYER | 20 | Place orders only |
+
+    ## Rate Limiting
+
+    All responses include rate limit headers:
+    - `X-RateLimit-Limit` — Maximum requests per window
+    - `X-RateLimit-Remaining` — Remaining requests in current window
+    - `X-RateLimit-Reset` — Window reset time (ISO 8601)
+    - `Retry-After` — Seconds until retry (only on 429 responses)
+
+  contact:
+    name: FreshFlow Team
+  license:
+    name: Private
+
+servers:
+  - url: http://localhost:3001
+    description: Local Development
+
+tags:
+  - name: Health
+    description: System health check
+  - name: Auth
+    description: Authentication and session management
+  - name: Products
+    description: Product catalog management (tenant-scoped)
+  - name: Orders
+    description: Order lifecycle management (DRAFT → SENT → IN_SEPARATION → FINALIZED)
+  - name: Stock
+    description: Inventory and stock movement tracking
+  - name: Customers
+    description: Customer management and per-customer pricing
+  - name: Tenants
+    description: Tenant/distributor management (platform admin only)
+  - name: Analytics
+    description: Dashboard analytics and reporting
+  - name: Tenant Settings
+    description: Business rules and delivery scheduling configuration
+  - name: User Profile
+    description: User profile and UI preferences
+  - name: Documents
+    description: PDF delivery note generation
+  - name: Webhooks
+    description: External service integrations (WhatsApp/Twilio)
+  - name: Real-Time
+    description: Server-Sent Events for live order updates
+  - name: Error Reporting
+    description: Frontend error collection endpoint
+
+# ===========================================================================
+# Security Schemes
+# ===========================================================================
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase JWT token. Obtain via Supabase Auth login flow.
+
+  # =========================================================================
+  # Reusable Parameters
+  # =========================================================================
+  parameters:
+    TenantIdHeader:
+      name: x-tenant-id
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Tenant UUID for multi-tenant scoped operations.
+    AccountIdHeader:
+      name: x-account-id
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Account UUID for account-scoped operations (orders, cart).
+
+  # =========================================================================
+  # Reusable Responses
+  # =========================================================================
+  responses:
+    Unauthorized:
+      description: Missing or invalid JWT token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TRPCError"
+          example:
+            error:
+              message: "UNAUTHORIZED"
+              code: -32001
+              data:
+                code: "UNAUTHORIZED"
+                httpStatus: 401
+    Forbidden:
+      description: Insufficient permissions (RBAC)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TRPCError"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TRPCError"
+    BadRequest:
+      description: Invalid input (Zod validation failed)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TRPCError"
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until the rate limit resets
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Too many requests"
+              retryAfter:
+                type: integer
+                example: 60
+
+  # =========================================================================
+  # Schemas
+  # =========================================================================
+  schemas:
+    # --- tRPC Envelope ---
+    TRPCError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            code:
+              type: integer
+              description: tRPC error code
+            data:
+              type: object
+              properties:
+                code:
+                  type: string
+                  enum: [UNAUTHORIZED, BAD_REQUEST, FORBIDDEN, NOT_FOUND, CONFLICT, INTERNAL_SERVER_ERROR, TOO_MANY_REQUESTS]
+                httpStatus:
+                  type: integer
+                zodError:
+                  type: object
+                  nullable: true
+                  description: Zod validation error details (present only for BAD_REQUEST)
+
+    # --- Enums ---
+    RoleType:
+      type: string
+      enum: [PLATFORM_ADMIN, TENANT_OWNER, TENANT_ADMIN, ACCOUNT_OWNER, ACCOUNT_BUYER]
+    UnitType:
+      type: string
+      enum: [FIXED, WEIGHT]
+      description: "FIXED = sold by unit/box (price set at order). WEIGHT = sold by kg (price set after weighing)."
+    OrderStatus:
+      type: string
+      enum: [DRAFT, SENT, IN_SEPARATION, FINALIZED]
+      description: "Order lifecycle: DRAFT → SENT → IN_SEPARATION → FINALIZED"
+    StockMovementType:
+      type: string
+      enum: [ORDER_FINALIZED, MANUAL_ADDITION, MANUAL_DEDUCTION, ADJUSTMENT, RETURN]
+    OrderActivityType:
+      type: string
+      enum:
+        - ORDER_CREATED
+        - ORDER_SUBMITTED
+        - ORDER_STATUS_CHANGED
+        - ORDER_FINALIZED
+        - ORDER_CANCELLED
+        - ITEM_ADDED
+        - ITEM_REMOVED
+        - ITEM_QUANTITY_CHANGED
+        - ITEM_WEIGHED
+        - ITEM_PRICE_UPDATED
+        - NOTE_ADDED
+        - NOTE_UPDATED
+        - INTERNAL_NOTE_ADDED
+        - DELIVERY_INSTRUCTIONS_UPDATED
+        - DELIVERY_SCHEDULED
+        - DELIVERY_RESCHEDULED
+        - DELIVERY_COMPLETED
+        - PDF_GENERATED
+        - INVOICE_GENERATED
+        - NOTIFICATION_SENT
+
+    # --- Core Models ---
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        supabaseId:
+          type: string
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        contactEmail:
+          type: string
+          format: email
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Tenant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        cnpj:
+          type: string
+          nullable: true
+          description: Brazilian business tax ID (CNPJ)
+        razaoSocial:
+          type: string
+          nullable: true
+          description: Legal company name
+        phone:
+          type: string
+          nullable: true
+        address:
+          $ref: "#/components/schemas/BrazilianAddress"
+        deliveryAddress:
+          $ref: "#/components/schemas/BrazilianAddress"
+        createdAt:
+          type: string
+          format: date-time
+
+    BrazilianAddress:
+      type: object
+      nullable: true
+      properties:
+        street:
+          type: string
+        number:
+          type: string
+        complement:
+          type: string
+        neighborhood:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+          description: 2-letter Brazilian state code (SP, RJ, MG, etc.)
+          minLength: 2
+          maxLength: 2
+        zipCode:
+          type: string
+          description: CEP (8 digits, no dash)
+          minLength: 8
+          maxLength: 8
+
+    Account:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        tenantId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        account:
+          $ref: "#/components/schemas/Account"
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+        tenantId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductOption"
+
+    ProductOption:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sku:
+          type: string
+        unitType:
+          $ref: "#/components/schemas/UnitType"
+        basePrice:
+          type: number
+          description: Base price in cents
+        resolvedPrice:
+          type: number
+          description: Resolved price (customer-specific or base), present after price engine processing
+        stockQuantity:
+          type: number
+          nullable: true
+          default: 0
+        lowStockThreshold:
+          type: number
+          nullable: true
+          default: 10
+        isAvailable:
+          type: boolean
+          default: true
+        createdAt:
+          type: string
+          format: date-time
+
+    CustomerPrice:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        productOptionId:
+          type: string
+          format: uuid
+        price:
+          type: number
+          description: Override price in cents
+        createdAt:
+          type: string
+          format: date-time
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderNumber:
+          type: string
+        customerId:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        createdBy:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/OrderStatus"
+        notes:
+          type: string
+          nullable: true
+        requestedDeliveryDate:
+          type: string
+          format: date-time
+          nullable: true
+        deliveryTimeSlot:
+          type: string
+          nullable: true
+          description: "e.g. '08:00-12:00'"
+        deliveryInstructions:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        sentAt:
+          type: string
+          format: date-time
+          nullable: true
+        finalizedAt:
+          type: string
+          format: date-time
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+
+    OrderItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+        productOptionId:
+          type: string
+          format: uuid
+        requestedQty:
+          type: number
+          description: Units or kg requested
+        actualWeight:
+          type: number
+          nullable: true
+          description: Actual weight in kg (set during weighing for WEIGHT items)
+        finalPrice:
+          type: number
+          nullable: true
+          description: Final price in cents (set at order for FIXED, at weighing for WEIGHT)
+        isExtra:
+          type: boolean
+          default: false
+          description: Whether this item was added by admin after order was sent
+        notes:
+          type: string
+          nullable: true
+        productOption:
+          $ref: "#/components/schemas/ProductOption"
+
+    Weighing:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderItemId:
+          type: string
+          format: uuid
+        actualWeight:
+          type: number
+          description: Weight in kg
+        finalPrice:
+          type: number
+          nullable: true
+          description: Price override in cents (optional)
+        notes:
+          type: string
+          nullable: true
+        photoUrl:
+          type: string
+          format: uri
+          nullable: true
+        userId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+
+    StockMovement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        productOptionId:
+          type: string
+          format: uuid
+        type:
+          $ref: "#/components/schemas/StockMovementType"
+        quantity:
+          type: number
+          description: Positive for additions, negative for deductions
+        orderId:
+          type: string
+          format: uuid
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        userId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+
+    OrderActivity:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+        activityType:
+          $ref: "#/components/schemas/OrderActivityType"
+        userId:
+          type: string
+          format: uuid
+          nullable: true
+        description:
+          type: string
+        metadata:
+          type: object
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    TenantSettings:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        minDeliveryDaysAhead:
+          type: integer
+          default: 1
+          description: Minimum days in advance for ordering
+        maxDeliveryDaysAhead:
+          type: integer
+          default: 30
+          description: Maximum days in advance for scheduling
+        deliveryDaysAllowed:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 6
+          description: "Weekdays allowed for delivery (0=Sun, 1=Mon, ..., 6=Sat)"
+          default: [1, 2, 3, 4, 5]
+        deliveryTimeSlots:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: "Time slots per weekday, e.g. { \"1\": [\"08:00-12:00\", \"14:00-18:00\"] }"
+        operatingDays:
+          type: array
+          items:
+            type: integer
+          default: [1, 2, 3, 4, 5]
+          description: Days the tenant accepts orders
+        allowSameDayOrders:
+          type: boolean
+          default: false
+        autoConfirmOrders:
+          type: boolean
+          default: false
+
+    UserPreferences:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        theme:
+          type: string
+          enum: [light, dark, system]
+          default: light
+        density:
+          type: string
+          enum: [comfortable, compact]
+          default: comfortable
+        notifyOrderStatus:
+          type: boolean
+          default: true
+        notifyLowStock:
+          type: boolean
+          default: true
+        notifyNewOrders:
+          type: boolean
+          default: true
+
+    # --- Pagination ---
+    PaginatedResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items: {}
+        total:
+          type: integer
+          description: Total number of records matching the query
+
+    # --- SSE Event ---
+    OrderEvent:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [connected, CREATED, UPDATED, FINALIZED, CANCELLED]
+        orderId:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/OrderStatus"
+        timestamp:
+          type: string
+          format: date-time
+        data:
+          type: object
+          nullable: true
+
+# ===========================================================================
+# Paths
+# ===========================================================================
+paths:
+  # =========================================================================
+  # REST ENDPOINTS
+  # =========================================================================
+
+  /health:
+    get:
+      tags: [Health]
+      operationId: healthCheck
+      summary: System health check
+      description: Returns server status, cache connectivity, and version. No authentication required.
+      security: []
+      responses:
+        "200":
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                  timestamp:
+                    type: string
+                    format: date-time
+                  cache:
+                    type: string
+                    enum: [connected, memory-only]
+                  version:
+                    type: string
+              example:
+                status: ok
+                timestamp: "2025-01-15T10:30:00.000Z"
+                cache: memory-only
+                version: "1.0.0"
+
+  /api/v1/delivery-note/{orderId}.pdf:
+    get:
+      tags: [Documents]
+      operationId: getDeliveryNotePDF
+      summary: Download delivery note PDF
+      description: |
+        Generates and returns a PDF delivery statement ("Extrato de Conferencia") for a finalized order.
+        The user must have access to the order's account (via membership).
+
+        **Authorization**: Bearer JWT + account membership for the order
+        **Rate Limit**: 200 requests/minute
+        **Cache**: 5 minutes (private, max-age=300)
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Order UUID
+      responses:
+        "200":
+          description: PDF delivery note
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              example: 'inline; filename="delivery-note-ORD-20250115-ABC.pdf"'
+            Cache-Control:
+              schema:
+                type: string
+              example: "private, max-age=300"
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+                  requestId:
+                    type: string
+        "403":
+          description: Access denied — user does not belong to order's account
+        "404":
+          description: Order not found
+        "500":
+          description: PDF generation failed
+
+  /api/v1/whatsapp/webhook:
+    post:
+      tags: [Webhooks]
+      operationId: whatsappWebhook
+      summary: Twilio WhatsApp webhook
+      description: |
+        Receives incoming WhatsApp messages from Twilio. Processes the message and optionally
+        returns a TwiML auto-reply response.
+
+        **Authentication**: None (called by Twilio)
+        **Rate Limit**: 1000 requests/minute
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [From, Body]
+              properties:
+                From:
+                  type: string
+                  description: Sender phone number (WhatsApp format)
+                  example: "whatsapp:+5511999999999"
+                Body:
+                  type: string
+                  description: Message content
+                  example: "Quero ver meus pedidos"
+      responses:
+        "200":
+          description: Message processed (TwiML auto-reply or JSON acknowledgement)
+          content:
+            text/xml:
+              schema:
+                type: string
+                description: TwiML response with auto-reply message
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [received]
+        "400":
+          description: Missing From or Body fields
+        "500":
+          description: Webhook processing failed
+
+  /api/v1/orders/events:
+    get:
+      tags: [Real-Time]
+      operationId: orderEventsSSE
+      summary: Real-time order updates (Server-Sent Events)
+      description: |
+        Opens a persistent SSE connection that streams real-time order events to the client.
+        Events are filtered based on the user's memberships:
+        - Account members receive events for their account's orders
+        - Tenant admins receive events for all orders in their tenant
+
+        **Heartbeat**: Every 30 seconds (`:heartbeat {timestamp}`)
+        **Authentication**: Bearer JWT required
+
+        ### Event Format
+        ```
+        data: {"type":"CREATED","orderId":"...","status":"SENT","timestamp":"..."}
+        ```
+      responses:
+        "200":
+          description: SSE stream established
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                enum: [text/event-stream]
+            Cache-Control:
+              schema:
+                type: string
+                enum: [no-cache]
+            Connection:
+              schema:
+                type: string
+                enum: [keep-alive]
+          content:
+            text/event-stream:
+              schema:
+                $ref: "#/components/schemas/OrderEvent"
+        "401":
+          description: Authentication required
+
+  /api/v1/errors:
+    post:
+      tags: [Error Reporting]
+      operationId: reportFrontendError
+      summary: Report a frontend error
+      description: |
+        Receives error reports from the frontend application. Logs the error to the audit system
+        for monitoring and debugging. Authentication is optional — unauthenticated reports are accepted
+        but will not be linked to a user.
+
+        **Rate Limit**: 100 requests/minute
+      security:
+        - bearerAuth: []
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [errorId, message]
+              properties:
+                errorId:
+                  type: string
+                  description: Unique error identifier (generated by frontend)
+                message:
+                  type: string
+                  description: Error message
+                stack:
+                  type: string
+                  description: Stack trace (truncated to 2000 chars server-side)
+                componentStack:
+                  type: string
+                  description: React component stack
+                url:
+                  type: string
+                  description: Page URL where error occurred
+                userAgent:
+                  type: string
+                timestamp:
+                  type: string
+                  format: date-time
+      responses:
+        "201":
+          description: Error report received
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  errorId:
+                    type: string
+                  message:
+                    type: string
+                    example: "Error report received"
+
+  # =========================================================================
+  # tRPC ENDPOINTS — Auth
+  # =========================================================================
+
+  /trpc/auth.session:
+    get:
+      tags: [Auth]
+      operationId: auth.session
+      summary: Get current user session
+      description: |
+        Returns the authenticated user's profile and all memberships (tenants, accounts, roles).
+        This is typically called on app load to establish the user context.
+
+        **Authorization**: protectedProcedure (JWT required)
+      responses:
+        "200":
+          description: User session with memberships
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                                format: uuid
+                              email:
+                                type: string
+                                format: email
+                              name:
+                                type: string
+                                nullable: true
+                              supabaseId:
+                                type: string
+                              createdAt:
+                                type: string
+                                format: date-time
+                          memberships:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  format: uuid
+                                role:
+                                  $ref: "#/components/schemas/RoleType"
+                                tenant:
+                                  type: object
+                                  nullable: true
+                                  properties:
+                                    id:
+                                      type: string
+                                      format: uuid
+                                    name:
+                                      type: string
+                                    slug:
+                                      type: string
+                                account:
+                                  type: object
+                                  nullable: true
+                                  properties:
+                                    id:
+                                      type: string
+                                      format: uuid
+                                    name:
+                                      type: string
+                                    slug:
+                                      type: string
+                                    tenantId:
+                                      type: string
+                                      format: uuid
+                                    customerId:
+                                      type: string
+                                      format: uuid
+                                      nullable: true
+                                    tenant:
+                                      type: object
+                                      nullable: true
+                                      properties:
+                                        id:
+                                          type: string
+                                          format: uuid
+                                        name:
+                                          type: string
+                                        slug:
+                                          type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # =========================================================================
+  # tRPC ENDPOINTS — Tenants
+  # =========================================================================
+
+  /trpc/tenants.list:
+    get:
+      tags: [Tenants]
+      operationId: tenants.list
+      summary: List all tenants
+      description: |
+        Returns all tenants in the system. **Platform admin only** — requires PLATFORM_ADMIN role.
+
+        **Authorization**: protectedProcedure + PLATFORM_ADMIN role check
+      responses:
+        "200":
+          description: List of tenants
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            name:
+                              type: string
+                            slug:
+                              type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  # =========================================================================
+  # tRPC ENDPOINTS — Products
+  # =========================================================================
+
+  /trpc/products.categories:
+    get:
+      tags: [Products]
+      operationId: products.categories
+      summary: List product categories
+      description: |
+        Returns unique product categories for the authenticated user's tenant.
+
+        **Authorization**: tenantProcedure (JWT + x-tenant-id + tenant membership)
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      responses:
+        "200":
+          description: Array of category names
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: string
+                        example: ["Frutas", "Legumes", "Verduras"]
+
+  /trpc/products.list:
+    get:
+      tags: [Products]
+      operationId: products.list
+      summary: List products with pagination and filters
+      description: |
+        Returns a paginated product list for the tenant. Supports text search, category filtering,
+        price range, unit type filter, and sorting by name or price. Customer-specific pricing
+        is resolved when `customerId` is provided.
+
+        **Authorization**: tenantProcedure (JWT + x-tenant-id + tenant membership)
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+        - name: input
+          in: query
+          required: false
+          description: URL-encoded JSON input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  skip:
+                    type: integer
+                    minimum: 0
+                    default: 0
+                  take:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                    default: 20
+                  search:
+                    type: string
+                    description: Search in product name and description
+                  category:
+                    type: string
+                  minPrice:
+                    type: number
+                    minimum: 0
+                  maxPrice:
+                    type: number
+                    minimum: 0
+                  unitType:
+                    $ref: "#/components/schemas/UnitType"
+                  sortBy:
+                    type: string
+                    enum: [name, price]
+                    default: name
+                  sortOrder:
+                    type: string
+                    enum: [asc, desc]
+                    default: asc
+                  customerId:
+                    type: string
+                    format: uuid
+                    description: Include customer-specific resolved prices
+      responses:
+        "200":
+          description: Paginated product list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/Product"
+                          total:
+                            type: integer
+
+  /trpc/products.get:
+    get:
+      tags: [Products]
+      operationId: products.get
+      summary: Get product by ID
+      description: |
+        Returns a single product with all options and resolved customer prices.
+
+        **Authorization**: tenantProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+        - name: input
+          in: query
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  customerId:
+                    type: string
+                    format: uuid
+      responses:
+        "200":
+          description: Product with options
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Product"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /trpc/products.create:
+    post:
+      tags: [Products]
+      operationId: products.create
+      summary: Create a new product
+      description: |
+        Creates a product with one or more options (SKUs). Each option defines the unit type,
+        base price, and stock information.
+
+        **Authorization**: tenantAdminProcedure (TENANT_ADMIN+ role required)
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [name, options]
+                  properties:
+                    name:
+                      type: string
+                      minLength: 1
+                    description:
+                      type: string
+                    category:
+                      type: string
+                    imageUrl:
+                      type: string
+                      format: uri
+                    options:
+                      type: array
+                      items:
+                        type: object
+                        required: [name, sku, unitType, basePrice]
+                        properties:
+                          name:
+                            type: string
+                            minLength: 1
+                          sku:
+                            type: string
+                            minLength: 1
+                          unitType:
+                            $ref: "#/components/schemas/UnitType"
+                          basePrice:
+                            type: number
+                            exclusiveMinimum: true
+                            minimum: 0
+                          stockQuantity:
+                            type: number
+                            minimum: 0
+                            default: 0
+                          lowStockThreshold:
+                            type: number
+                            minimum: 0
+                            default: 10
+                          isAvailable:
+                            type: boolean
+                            default: true
+      responses:
+        "200":
+          description: Created product with options
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Product"
+
+  /trpc/products.update:
+    post:
+      tags: [Products]
+      operationId: products.update
+      summary: Update a product
+      description: |
+        Updates product metadata (name, description, category, image). Does not modify options — use
+        the option-specific endpoints for that.
+
+        **Authorization**: tenantAdminProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [id]
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: string
+                      minLength: 1
+                    description:
+                      type: string
+                    category:
+                      type: string
+                    imageUrl:
+                      type: string
+                      format: uri
+      responses:
+        "200":
+          description: Updated product
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /trpc/products.delete:
+    post:
+      tags: [Products]
+      operationId: products.delete
+      summary: Delete a product
+      description: |
+        Permanently deletes a product and all its options (cascading).
+
+        **Authorization**: tenantAdminProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [id]
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+      responses:
+        "200":
+          description: Product deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          success:
+                            type: boolean
+
+  /trpc/products.createOption:
+    post:
+      tags: [Products]
+      operationId: products.createOption
+      summary: Add a product option (SKU)
+      description: |
+        Adds a new option/SKU to an existing product.
+
+        **Authorization**: tenantAdminProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [productId, name, sku, unitType, basePrice]
+                  properties:
+                    productId:
+                      type: string
+                      format: uuid
+                    name:
+                      type: string
+                      minLength: 1
+                    sku:
+                      type: string
+                      minLength: 1
+                    unitType:
+                      $ref: "#/components/schemas/UnitType"
+                    basePrice:
+                      type: number
+                      exclusiveMinimum: true
+                      minimum: 0
+                    stockQuantity:
+                      type: number
+                      minimum: 0
+                      default: 0
+                    lowStockThreshold:
+                      type: number
+                      minimum: 0
+                      default: 10
+                    isAvailable:
+                      type: boolean
+                      default: true
+      responses:
+        "200":
+          description: Created product option
+
+  /trpc/products.updateOption:
+    post:
+      tags: [Products]
+      operationId: products.updateOption
+      summary: Update a product option
+      description: |
+        Updates an existing product option's properties (name, SKU, price, availability, etc.).
+
+        **Authorization**: tenantAdminProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [id]
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: string
+                    sku:
+                      type: string
+                    unitType:
+                      $ref: "#/components/schemas/UnitType"
+                    basePrice:
+                      type: number
+                      exclusiveMinimum: true
+                      minimum: 0
+                    stockQuantity:
+                      type: number
+                      minimum: 0
+                    lowStockThreshold:
+                      type: number
+                      minimum: 0
+                    isAvailable:
+                      type: boolean
+      responses:
+        "200":
+          description: Updated product option
+
+  /trpc/products.deleteOption:
+    post:
+      tags: [Products]
+      operationId: products.deleteOption
+      summary: Delete a product option
+      description: |
+        Permanently deletes a product option.
+
+        **Authorization**: tenantAdminProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [id]
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+      responses:
+        "200":
+          description: Option deleted
+
+  /trpc/products.publicCatalog:
+    get:
+      tags: [Products]
+      operationId: products.publicCatalog
+      summary: Public product catalog (no auth)
+      description: |
+        Returns the public product catalog for a tenant by slug. Only shows available, in-stock products.
+        Designed for sharing via WhatsApp links.
+
+        **Authorization**: publicProcedure (no authentication required)
+      security: []
+      parameters:
+        - name: input
+          in: query
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tenantSlug]
+                properties:
+                  tenantSlug:
+                    type: string
+                    description: Tenant slug (e.g. "freshco")
+                  category:
+                    type: string
+                  search:
+                    type: string
+      responses:
+        "200":
+          description: Public catalog with tenant info, products, and categories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          tenant:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                                format: uuid
+                              name:
+                                type: string
+                              slug:
+                                type: string
+                          products:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/Product"
+                          categories:
+                            type: array
+                            items:
+                              type: string
+
+  # =========================================================================
+  # tRPC ENDPOINTS — Orders
+  # =========================================================================
+
+  /trpc/orders.create:
+    post:
+      tags: [Orders]
+      operationId: orders.create
+      summary: Create and submit an order (status SENT)
+      description: |
+        Creates a new order with status SENT (immutable after creation). For FIXED unit type items,
+        the final price is calculated using the price engine (customer price > base price).
+        WEIGHT items will have their price set during the weighing step.
+
+        Triggers WhatsApp notification and real-time SSE event.
+
+        **Authorization**: accountProcedure (JWT + x-account-id + account membership)
+        **Rate Limit**: 10 requests/minute per user
+      parameters:
+        - $ref: "#/components/parameters/AccountIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [items]
+                  properties:
+                    notes:
+                      type: string
+                    requestedDeliveryDate:
+                      type: string
+                      description: ISO date string
+                    deliveryTimeSlot:
+                      type: string
+                      description: "e.g. '08:00-12:00'"
+                    deliveryInstructions:
+                      type: string
+                    items:
+                      type: array
+                      minItems: 1
+                      items:
+                        type: object
+                        required: [productOptionId, requestedQty]
+                        properties:
+                          productOptionId:
+                            type: string
+                            format: uuid
+                          requestedQty:
+                            type: number
+                            exclusiveMinimum: true
+                            minimum: 0
+                          isExtra:
+                            type: boolean
+                            default: false
+      responses:
+        "200":
+          description: Created order with items and relations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Order"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /trpc/orders.getDraft:
+    get:
+      tags: [Orders]
+      operationId: orders.getDraft
+      summary: Get or create draft order
+      description: |
+        Returns the current draft order for the authenticated user's account. If no draft exists,
+        one is automatically created. Handles race conditions with optimistic locking.
+
+        **Authorization**: accountProcedure
+        **Rate Limit**: 30 requests/minute per user
+      parameters:
+        - $ref: "#/components/parameters/AccountIdHeader"
+      responses:
+        "200":
+          description: Draft order
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Order"
+
+  /trpc/orders.updateDraft:
+    post:
+      tags: [Orders]
+      operationId: orders.updateDraft
+      summary: Update draft order items
+      description: |
+        Replaces all items in a draft order with the provided items. Recalculates FIXED item prices.
+        Only works on orders with DRAFT status owned by the current user.
+
+        **Authorization**: accountProcedure
+      parameters:
+        - $ref: "#/components/parameters/AccountIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [orderId, items]
+                  properties:
+                    orderId:
+                      type: string
+                      format: uuid
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        required: [productOptionId, requestedQty]
+                        properties:
+                          productOptionId:
+                            type: string
+                            format: uuid
+                          requestedQty:
+                            type: number
+                            exclusiveMinimum: true
+                            minimum: 0
+                    notes:
+                      type: string
+                    requestedDeliveryDate:
+                      type: string
+                    deliveryTimeSlot:
+                      type: string
+                    deliveryInstructions:
+                      type: string
+      responses:
+        "200":
+          description: Updated draft order
+
+  /trpc/orders.submitDraft:
+    post:
+      tags: [Orders]
+      operationId: orders.submitDraft
+      summary: Submit draft order (DRAFT → SENT)
+      description: |
+        Converts a draft order to SENT status with a proper order number. Validates stock availability,
+        sends WhatsApp notification, and logs activity.
+
+        **Authorization**: accountProcedure
+      parameters:
+        - $ref: "#/components/parameters/AccountIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [orderId]
+                  properties:
+                    orderId:
+                      type: string
+                      format: uuid
+                    notes:
+                      type: string
+                    requestedDeliveryDate:
+                      type: string
+                    deliveryTimeSlot:
+                      type: string
+                    deliveryInstructions:
+                      type: string
+      responses:
+        "200":
+          description: Submitted order (SENT status)
+        "400":
+          description: Empty order or not a draft
+
+  /trpc/orders.clearDraft:
+    post:
+      tags: [Orders]
+      operationId: orders.clearDraft
+      summary: Clear all items from draft order
+      description: |
+        Removes all items from a draft order. Only works on DRAFT status orders owned by the current user.
+
+        **Authorization**: accountProcedure
+      parameters:
+        - $ref: "#/components/parameters/AccountIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [orderId]
+                  properties:
+                    orderId:
+                      type: string
+                      format: uuid
+      responses:
+        "200":
+          description: Draft cleared
+
+  /trpc/orders.list:
+    get:
+      tags: [Orders]
+      operationId: orders.list
+      summary: List account orders
+      description: |
+        Returns paginated orders for the authenticated user's account. Optional status filter.
+
+        **Authorization**: accountProcedure
+      parameters:
+        - $ref: "#/components/parameters/AccountIdHeader"
+        - name: input
+          in: query
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    $ref: "#/components/schemas/OrderStatus"
+                  skip:
+                    type: integer
+                    minimum: 0
+                    default: 0
+                  take:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                    default: 20
+      responses:
+        "200":
+          description: Paginated order list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/Order"
+                          total:
+                            type: integer
+
+  /trpc/orders.adminList:
+    get:
+      tags: [Orders]
+      operationId: orders.adminList
+      summary: List all tenant orders (admin)
+      description: |
+        Returns all orders across all accounts in the tenant. Excludes DRAFT orders by default.
+        Supports search by order number or customer name.
+
+        **Authorization**: tenantAdminProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+        - name: input
+          in: query
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    $ref: "#/components/schemas/OrderStatus"
+                  search:
+                    type: string
+                    description: Search by order number or customer name
+                  skip:
+                    type: integer
+                    minimum: 0
+                    default: 0
+                  take:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                    default: 20
+      responses:
+        "200":
+          description: Paginated tenant order list
+
+  /trpc/orders.get:
+    get:
+      tags: [Orders]
+      operationId: orders.get
+      summary: Get order details
+      description: |
+        Returns full order details including items, weighings, customer data, and price information.
+        Access is verified: user must belong to the order's account OR be a tenant admin.
+
+        **Authorization**: protectedProcedure (access verified internally)
+      parameters:
+        - name: input
+          in: query
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+      responses:
+        "200":
+          description: Full order with items, weighings, and customer
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /trpc/orders.weigh:
+    post:
+      tags: [Orders]
+      operationId: orders.weigh
+      summary: Record weight for an order item
+      description: |
+        Records the actual weight for a WEIGHT-type order item. Creates a Weighing audit record
+        and updates the order item. Optionally saves the price as a customer-specific override.
+
+        Changes order status to IN_SEPARATION if it was SENT.
+
+        **Authorization**: tenantAdminProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [orderItemId, actualWeight]
+                  properties:
+                    orderItemId:
+                      type: string
+                      format: uuid
+                    actualWeight:
+                      type: number
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Weight in kg
+                    finalPrice:
+                      type: number
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Manual price override per kg (optional)
+                    notes:
+                      type: string
+                    photoUrl:
+                      type: string
+                      format: uri
+                    persistPrice:
+                      type: boolean
+                      default: false
+                      description: Save the finalPrice as a customer-specific price override
+      responses:
+        "200":
+          description: Updated order item with weighing record
+
+  /trpc/orders.addItem:
+    post:
+      tags: [Orders]
+      operationId: orders.addItem
+      summary: Add extra item to order (admin)
+      description: |
+        Adds an extra item to an existing order. Marked as `isExtra: true`.
+        Cannot add items to FINALIZED orders.
+
+        **Authorization**: tenantAdminProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [orderId, productOptionId, requestedQty]
+                  properties:
+                    orderId:
+                      type: string
+                      format: uuid
+                    productOptionId:
+                      type: string
+                      format: uuid
+                    requestedQty:
+                      type: number
+                      exclusiveMinimum: true
+                      minimum: 0
+      responses:
+        "200":
+          description: Added order item
+
+  /trpc/orders.finalize:
+    post:
+      tags: [Orders]
+      operationId: orders.finalize
+      summary: Finalize order (IN_SEPARATION → FINALIZED)
+      description: |
+        Validates all WEIGHT items have been weighed, validates stock availability,
+        deducts stock, and marks the order as FINALIZED. Triggers WhatsApp notification
+        and SSE event.
+
+        **Authorization**: tenantAdminProcedure
+        **Rate Limit**: 20 requests/minute per user
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [id]
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+      responses:
+        "200":
+          description: Finalized order
+        "400":
+          description: Not all items weighed or invalid status transition
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /trpc/orders.updateDraftNotes:
+    post:
+      tags: [Orders]
+      operationId: orders.updateDraftNotes
+      summary: Update draft order notes
+      description: |
+        Updates the notes field on a draft order. Only the order creator can edit their own draft.
+
+        **Authorization**: protectedProcedure
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [id]
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    notes:
+                      type: string
+      responses:
+        "200":
+          description: Updated order
+
+  /trpc/orders.removeItem:
+    post:
+      tags: [Orders]
+      operationId: orders.removeItem
+      summary: Remove item from order (admin)
+      description: |
+        Removes an item from a non-finalized order.
+
+        **Authorization**: tenantAdminProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [orderItemId]
+                  properties:
+                    orderItemId:
+                      type: string
+                      format: uuid
+      responses:
+        "200":
+          description: Item removed
+
+  /trpc/orders.updateItem:
+    post:
+      tags: [Orders]
+      operationId: orders.updateItem
+      summary: Update order item quantity/notes (admin)
+      description: |
+        Updates the requested quantity or notes on a non-finalized order item.
+
+        **Authorization**: tenantAdminProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [orderItemId]
+                  properties:
+                    orderItemId:
+                      type: string
+                      format: uuid
+                    requestedQty:
+                      type: number
+                      exclusiveMinimum: true
+                      minimum: 0
+                    notes:
+                      type: string
+      responses:
+        "200":
+          description: Updated order item
+
+  /trpc/orders.cancel:
+    post:
+      tags: [Orders]
+      operationId: orders.cancel
+      summary: Cancel an order (admin)
+      description: |
+        Cancels an order. If the order was FINALIZED, stock deductions are reversed
+        (RETURN stock movements created). The order is permanently deleted.
+
+        **Authorization**: tenantAdminProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [id]
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    reason:
+                      type: string
+      responses:
+        "200":
+          description: Order cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          success:
+                            type: boolean
+                          message:
+                            type: string
+
+  /trpc/orders.bulkUpdateStatus:
+    post:
+      tags: [Orders]
+      operationId: orders.bulkUpdateStatus
+      summary: Bulk update order status (admin)
+      description: |
+        Updates the status of multiple orders at once. When finalizing, validates stock availability
+        and deducts stock for each order.
+
+        **Authorization**: tenantAdminProcedure
+        **Rate Limit**: 5 requests/minute per user
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [orderIds, status]
+                  properties:
+                    orderIds:
+                      type: array
+                      minItems: 1
+                      items:
+                        type: string
+                        format: uuid
+                    status:
+                      $ref: "#/components/schemas/OrderStatus"
+      responses:
+        "200":
+          description: Bulk update result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          success:
+                            type: boolean
+                          updated:
+                            type: integer
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /trpc/orders.exportCsv:
+    get:
+      tags: [Orders]
+      operationId: orders.exportCsv
+      summary: Export orders as CSV
+      description: |
+        Exports tenant orders as a CSV file. Supports filtering by specific order IDs, status,
+        and date range. Draft orders are excluded.
+
+        **Authorization**: tenantAdminProcedure
+        **Rate Limit**: 5 requests/minute per user
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+        - name: input
+          in: query
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orderIds:
+                    type: array
+                    items:
+                      type: string
+                      format: uuid
+                  status:
+                    $ref: "#/components/schemas/OrderStatus"
+                  startDate:
+                    type: string
+                    description: ISO date string
+                  endDate:
+                    type: string
+                    description: ISO date string
+      responses:
+        "200":
+          description: CSV export data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          csv:
+                            type: string
+                            description: CSV content as string
+                          filename:
+                            type: string
+                            description: Suggested filename
+                          count:
+                            type: integer
+                            description: Number of exported orders
+
+  /trpc/orders.reorder:
+    post:
+      tags: [Orders]
+      operationId: orders.reorder
+      summary: Reorder from a previous order
+      description: |
+        Creates a new DRAFT order with the same items as a previous order.
+        Replaces any existing draft. Prices are recalculated using current pricing.
+
+        **Authorization**: accountProcedure
+      parameters:
+        - $ref: "#/components/parameters/AccountIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [orderId]
+                  properties:
+                    orderId:
+                      type: string
+                      format: uuid
+                      description: ID of the previous order to copy items from
+      responses:
+        "200":
+          description: New draft order with copied items
+
+  /trpc/orders.getActivities:
+    get:
+      tags: [Orders]
+      operationId: orders.getActivities
+      summary: Get order activity log
+      description: |
+        Returns the activity timeline for an order — all lifecycle events such as creation,
+        submission, weighing, finalization, notes, and notifications.
+
+        **Authorization**: protectedProcedure (access verified internally)
+      parameters:
+        - name: input
+          in: query
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [orderId]
+                properties:
+                  orderId:
+                    type: string
+                    format: uuid
+      responses:
+        "200":
+          description: Order activity list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/OrderActivity"
+
+  # =========================================================================
+  # tRPC ENDPOINTS — Stock
+  # =========================================================================
+
+  /trpc/stock.addStock:
+    post:
+      tags: [Stock]
+      operationId: stock.addStock
+      summary: Add stock (receive inventory)
+      description: |
+        Increases stock quantity for a product option. Creates a MANUAL_ADDITION stock movement record.
+
+        **Authorization**: tenantAdminProcedure
+        **Rate Limit**: 30 requests/minute per user
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [productOptionId, quantity]
+                  properties:
+                    productOptionId:
+                      type: string
+                      format: uuid
+                    quantity:
+                      type: number
+                      exclusiveMinimum: true
+                      minimum: 0
+                    notes:
+                      type: string
+      responses:
+        "200":
+          description: Updated stock
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          newQuantity:
+                            type: number
+
+  /trpc/stock.removeStock:
+    post:
+      tags: [Stock]
+      operationId: stock.removeStock
+      summary: Remove stock (manual deduction)
+      description: |
+        Decreases stock quantity. Creates a MANUAL_DEDUCTION stock movement record.
+
+        **Authorization**: tenantAdminProcedure
+        **Rate Limit**: 30 requests/minute per user
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [productOptionId, quantity]
+                  properties:
+                    productOptionId:
+                      type: string
+                      format: uuid
+                    quantity:
+                      type: number
+                      exclusiveMinimum: true
+                      minimum: 0
+                    notes:
+                      type: string
+      responses:
+        "200":
+          description: Updated stock
+
+  /trpc/stock.adjustStock:
+    post:
+      tags: [Stock]
+      operationId: stock.adjustStock
+      summary: Adjust stock (inventory reconciliation)
+      description: |
+        Sets stock to an exact quantity. Used for inventory reconciliation.
+        Creates an ADJUSTMENT stock movement record.
+
+        **Authorization**: tenantAdminProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [productOptionId, newQuantity]
+                  properties:
+                    productOptionId:
+                      type: string
+                      format: uuid
+                    newQuantity:
+                      type: number
+                      minimum: 0
+                    notes:
+                      type: string
+      responses:
+        "200":
+          description: Adjustment result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          previousQuantity:
+                            type: number
+                          newQuantity:
+                            type: number
+
+  /trpc/stock.getMovements:
+    get:
+      tags: [Stock]
+      operationId: stock.getMovements
+      summary: Get stock movement history
+      description: |
+        Returns paginated stock movement history. Can filter by product option and movement type.
+        Filtered by tenant to prevent cross-tenant data exposure.
+
+        **Authorization**: tenantProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+        - name: input
+          in: query
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  productOptionId:
+                    type: string
+                    format: uuid
+                  type:
+                    $ref: "#/components/schemas/StockMovementType"
+                  skip:
+                    type: integer
+                    minimum: 0
+                    default: 0
+                  take:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                    default: 50
+      responses:
+        "200":
+          description: Stock movements list
+
+  /trpc/stock.getStockLevels:
+    get:
+      tags: [Stock]
+      operationId: stock.getStockLevels
+      summary: Get current stock levels
+      description: |
+        Returns current stock levels for all products with low-stock alerts.
+        Can filter by category and show only low-stock items.
+
+        **Authorization**: tenantProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+        - name: input
+          in: query
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  category:
+                    type: string
+                  lowStockOnly:
+                    type: boolean
+                    default: false
+                  skip:
+                    type: integer
+                    minimum: 0
+                    default: 0
+                  take:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                    default: 50
+      responses:
+        "200":
+          description: Stock levels with alert status
+
+  /trpc/stock.toggleAvailability:
+    post:
+      tags: [Stock]
+      operationId: stock.toggleAvailability
+      summary: Toggle product option availability
+      description: |
+        Manually enables or disables a product option for ordering.
+
+        **Authorization**: tenantAdminProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [productOptionId, isAvailable]
+                  properties:
+                    productOptionId:
+                      type: string
+                      format: uuid
+                    isAvailable:
+                      type: boolean
+      responses:
+        "200":
+          description: Updated product option
+
+  /trpc/stock.validateForOrder:
+    get:
+      tags: [Stock]
+      operationId: stock.validateForOrder
+      summary: Validate stock for an order
+      description: |
+        Checks stock availability for all items in an order.
+
+        **Authorization**: protectedProcedure
+      parameters:
+        - name: input
+          in: query
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [orderId]
+                properties:
+                  orderId:
+                    type: string
+                    format: uuid
+      responses:
+        "200":
+          description: Stock validation result
+
+  # =========================================================================
+  # tRPC ENDPOINTS — Customers
+  # =========================================================================
+
+  /trpc/customers.list:
+    get:
+      tags: [Customers]
+      operationId: customers.list
+      summary: List customers
+      description: |
+        Returns paginated customer list with accounts, custom prices, and recent orders.
+        Supports search by account name.
+
+        **Authorization**: tenantAdminProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+        - name: input
+          in: query
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  search:
+                    type: string
+                    description: Search by account name
+                  skip:
+                    type: integer
+                    minimum: 0
+                    default: 0
+                  take:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                    default: 50
+      responses:
+        "200":
+          description: Paginated customer list
+
+  /trpc/customers.get:
+    get:
+      tags: [Customers]
+      operationId: customers.get
+      summary: Get customer details
+      description: |
+        Returns full customer details including account memberships, custom prices
+        (with product info), and recent orders with item totals.
+
+        **Authorization**: tenantAdminProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+        - name: input
+          in: query
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+      responses:
+        "200":
+          description: Customer with full details
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /trpc/customers.setCustomPrice:
+    post:
+      tags: [Customers]
+      operationId: customers.setCustomPrice
+      summary: Set customer-specific price
+      description: |
+        Sets or updates a per-customer price override for a product option.
+        Upserts: creates if not exists, updates if exists.
+
+        **Authorization**: tenantAdminProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [customerId, productOptionId, price]
+                  properties:
+                    customerId:
+                      type: string
+                      format: uuid
+                    productOptionId:
+                      type: string
+                      format: uuid
+                    price:
+                      type: number
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Price in cents
+      responses:
+        "200":
+          description: Created or updated customer price
+
+  /trpc/customers.removeCustomPrice:
+    post:
+      tags: [Customers]
+      operationId: customers.removeCustomPrice
+      summary: Remove customer-specific price
+      description: |
+        Removes a per-customer price override, reverting to the base price.
+
+        **Authorization**: tenantAdminProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [customerId, productOptionId]
+                  properties:
+                    customerId:
+                      type: string
+                      format: uuid
+                    productOptionId:
+                      type: string
+                      format: uuid
+      responses:
+        "200":
+          description: Price override removed
+
+  /trpc/customers.getStats:
+    get:
+      tags: [Customers]
+      operationId: customers.getStats
+      summary: Get customer statistics
+      description: |
+        Returns aggregated statistics for a customer: total orders, total revenue,
+        average order value, and last order date. Uses database-level aggregation for performance.
+
+        **Authorization**: tenantAdminProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+        - name: input
+          in: query
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [customerId]
+                properties:
+                  customerId:
+                    type: string
+                    format: uuid
+      responses:
+        "200":
+          description: Customer statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          totalOrders:
+                            type: integer
+                          totalRevenue:
+                            type: number
+                            description: Total revenue in cents
+                          averageOrderValue:
+                            type: number
+                          lastOrderDate:
+                            type: string
+                            format: date-time
+                            nullable: true
+
+  # =========================================================================
+  # tRPC ENDPOINTS — Analytics
+  # =========================================================================
+
+  /trpc/analytics.dashboard:
+    get:
+      tags: [Analytics]
+      operationId: analytics.dashboard
+      summary: Get dashboard analytics
+      description: |
+        Returns comprehensive analytics for the tenant dashboard including:
+        - Revenue (current vs. previous period with % change)
+        - Order counts (current vs. previous with % change)
+        - Average order value (with % change)
+        - Top 10 products by revenue
+        - Top 10 customers by revenue
+        - 30-day daily revenue time series
+        - Order status breakdown
+
+        **Authorization**: tenantAdminProcedure
+        **Rate Limit**: 5 requests/minute per user
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+        - name: input
+          in: query
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  startDate:
+                    type: string
+                    description: ISO date string (defaults to start of current month)
+                  endDate:
+                    type: string
+                    description: ISO date string (defaults to now)
+      responses:
+        "200":
+          description: Dashboard analytics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          overview:
+                            type: object
+                            properties:
+                              revenue:
+                                type: object
+                                properties:
+                                  current:
+                                    type: number
+                                  previous:
+                                    type: number
+                                  change:
+                                    type: number
+                                    description: Percentage change
+                              orders:
+                                type: object
+                                properties:
+                                  current:
+                                    type: integer
+                                  previous:
+                                    type: integer
+                                  change:
+                                    type: number
+                              avgOrderValue:
+                                type: object
+                                properties:
+                                  current:
+                                    type: number
+                                  previous:
+                                    type: number
+                                  change:
+                                    type: number
+                          topProducts:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                productId:
+                                  type: string
+                                  format: uuid
+                                productName:
+                                  type: string
+                                optionName:
+                                  type: string
+                                revenue:
+                                  type: number
+                                quantity:
+                                  type: number
+                                revenuePercentage:
+                                  type: number
+                          topCustomers:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                customerId:
+                                  type: string
+                                  format: uuid
+                                accountName:
+                                  type: string
+                                revenue:
+                                  type: number
+                                orderCount:
+                                  type: integer
+                                revenuePercentage:
+                                  type: number
+                                avgOrderValue:
+                                  type: number
+                          revenueTimeSeries:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                date:
+                                  type: string
+                                  format: date
+                                revenue:
+                                  type: number
+                                orders:
+                                  type: integer
+                          statusBreakdown:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                status:
+                                  $ref: "#/components/schemas/OrderStatus"
+                                count:
+                                  type: integer
+                          dateRange:
+                            type: object
+                            properties:
+                              start:
+                                type: string
+                                format: date-time
+                              end:
+                                type: string
+                                format: date-time
+
+  # =========================================================================
+  # tRPC ENDPOINTS — Tenant Settings
+  # =========================================================================
+
+  /trpc/tenantSettings.get:
+    get:
+      tags: [Tenant Settings]
+      operationId: tenantSettings.get
+      summary: Get tenant settings
+      description: |
+        Returns delivery scheduling and business rule settings. Creates default settings
+        if they don't exist yet (Mon-Fri delivery, 1-30 days ahead).
+
+        **Authorization**: tenantProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      responses:
+        "200":
+          description: Tenant settings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/TenantSettings"
+
+  /trpc/tenantSettings.update:
+    post:
+      tags: [Tenant Settings]
+      operationId: tenantSettings.update
+      summary: Update tenant settings
+      description: |
+        Updates business rules for the tenant. Validates that minDeliveryDaysAhead <= maxDeliveryDaysAhead.
+
+        **Authorization**: tenantProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  properties:
+                    minDeliveryDaysAhead:
+                      type: integer
+                      minimum: 0
+                      maximum: 30
+                    maxDeliveryDaysAhead:
+                      type: integer
+                      minimum: 1
+                      maximum: 365
+                    deliveryDaysAllowed:
+                      type: array
+                      items:
+                        type: integer
+                        minimum: 0
+                        maximum: 6
+                    deliveryTimeSlots:
+                      type: object
+                      additionalProperties:
+                        type: array
+                        items:
+                          type: string
+                    operatingDays:
+                      type: array
+                      items:
+                        type: integer
+                        minimum: 0
+                        maximum: 6
+                    allowSameDayOrders:
+                      type: boolean
+                    autoConfirmOrders:
+                      type: boolean
+      responses:
+        "200":
+          description: Updated settings
+
+  /trpc/tenantSettings.getAvailableDeliveryDates:
+    get:
+      tags: [Tenant Settings]
+      operationId: tenantSettings.getAvailableDeliveryDates
+      summary: Get available delivery date rules
+      description: |
+        Returns the computed delivery date rules for use by the frontend date picker.
+
+        **Authorization**: tenantProcedure
+      parameters:
+        - $ref: "#/components/parameters/TenantIdHeader"
+      responses:
+        "200":
+          description: Delivery date rules
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          minDaysAhead:
+                            type: integer
+                          maxDaysAhead:
+                            type: integer
+                          allowedWeekdays:
+                            type: array
+                            items:
+                              type: integer
+                          allowSameDay:
+                            type: boolean
+                          timeSlots:
+                            type: object
+                            nullable: true
+                            additionalProperties:
+                              type: array
+                              items:
+                                type: string
+
+  # =========================================================================
+  # tRPC ENDPOINTS — User Profile
+  # =========================================================================
+
+  /trpc/userProfile.get:
+    get:
+      tags: [User Profile]
+      operationId: userProfile.get
+      summary: Get user profile
+      description: |
+        Returns the current user's profile with preferences and all memberships
+        (including tenant details like CNPJ, address).
+
+        **Authorization**: protectedProcedure
+      responses:
+        "200":
+          description: User profile with preferences and memberships
+
+  /trpc/userProfile.update:
+    post:
+      tags: [User Profile]
+      operationId: userProfile.update
+      summary: Update user profile
+      description: |
+        Updates user contact information (name, phone, email).
+
+        **Authorization**: protectedProcedure
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      minLength: 1
+                      maxLength: 100
+                    phone:
+                      type: string
+                      minLength: 10
+                      maxLength: 20
+                      nullable: true
+                    contactEmail:
+                      type: string
+                      format: email
+                      nullable: true
+      responses:
+        "200":
+          description: Updated user
+
+  /trpc/userProfile.getPreferences:
+    get:
+      tags: [User Profile]
+      operationId: userProfile.getPreferences
+      summary: Get UI preferences
+      description: |
+        Returns user's UI preferences. Creates default preferences if they don't exist.
+
+        **Authorization**: protectedProcedure
+      responses:
+        "200":
+          description: User preferences
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/UserPreferences"
+
+  /trpc/userProfile.updatePreferences:
+    post:
+      tags: [User Profile]
+      operationId: userProfile.updatePreferences
+      summary: Update UI preferences
+      description: |
+        Updates user's UI preferences (theme, density, notification settings).
+
+        **Authorization**: protectedProcedure
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  properties:
+                    theme:
+                      type: string
+                      enum: [light, dark, system]
+                    density:
+                      type: string
+                      enum: [comfortable, compact]
+                    notifyOrderStatus:
+                      type: boolean
+                    notifyLowStock:
+                      type: boolean
+                    notifyNewOrders:
+                      type: boolean
+      responses:
+        "200":
+          description: Updated preferences
+
+  /trpc/userProfile.updateTenantProfile:
+    post:
+      tags: [User Profile]
+      operationId: userProfile.updateTenantProfile
+      summary: Update tenant business profile
+      description: |
+        Updates tenant business information including CNPJ, legal name, phone, and addresses.
+        Only accessible by TENANT_OWNER or TENANT_ADMIN.
+
+        **Authorization**: protectedProcedure (TENANT_OWNER or TENANT_ADMIN verified internally)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  type: object
+                  required: [tenantId]
+                  properties:
+                    tenantId:
+                      type: string
+                      format: uuid
+                    cnpj:
+                      type: string
+                      minLength: 14
+                      maxLength: 18
+                      nullable: true
+                      description: Brazilian CNPJ (14-18 chars)
+                    razaoSocial:
+                      type: string
+                      maxLength: 200
+                      nullable: true
+                      description: Legal company name
+                    phone:
+                      type: string
+                      minLength: 10
+                      maxLength: 20
+                      nullable: true
+                    address:
+                      $ref: "#/components/schemas/BrazilianAddress"
+                    deliveryAddress:
+                      $ref: "#/components/schemas/BrazilianAddress"
+      responses:
+        "200":
+          description: Updated tenant
+        "403":
+          description: Not a tenant owner/admin

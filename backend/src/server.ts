@@ -12,6 +12,7 @@ import { auditLogger, AuditEventType, AuditSeverity } from "./lib/audit-logger.j
 import { validateEnv } from "./lib/env.js";
 import { logger } from "./lib/logger.js";
 import { orderEvents, OrderEvent } from "./lib/event-emitter.js";
+import { createSwaggerMiddleware } from "./docs/swagger.js";
 
 // Import middleware
 import { rateLimiters, adaptiveRateLimit } from "./middleware/rate-limit.js";
@@ -72,6 +73,10 @@ app.get("/health", (_req, res) => {
     version: process.env.npm_package_version || "1.0.0",
   });
 });
+
+// ========== API Documentation (Swagger UI) ==========
+const swagger = createSwaggerMiddleware();
+app.use("/api/docs", swagger.serve, swagger.setup);
 
 // ========== API Versioning ==========
 // All API routes go under /api/v1
@@ -410,6 +415,7 @@ async function startServer() {
       `📡 Server:     http://localhost:${PORT}`,
       `📊 tRPC:       http://localhost:${PORT}/trpc`,
       `📄 API v1:     http://localhost:${PORT}/api/v1`,
+      `📚 Docs:       http://localhost:${PORT}/api/docs`,
       `🏥 Health:     http://localhost:${PORT}/health`,
       `🔒 Security:   Headers, CORS, Rate Limiting enabled`,
       `📦 Cache:      ${cache.isAvailable() ? "Redis connected" : "In-memory mode"}`,

@@ -51,3 +51,6 @@ backend/prisma/migrations/**/migration.sql
 # Build artifacts
 *.tgz
 .turbo
+
+# folders
+personal/*
