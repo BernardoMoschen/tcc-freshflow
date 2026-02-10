@@ -10,6 +10,7 @@
     "db:migrate": "pnpm --filter freshflow-backend prisma:migrate",
     "db:seed": "pnpm --filter freshflow-backend prisma:seed",
     "test:unit": "pnpm --filter freshflow-backend test:unit",
+    "test:coverage": "pnpm --filter freshflow-backend test:coverage",
     "test:integration": "pnpm --filter freshflow-backend test:integration",
     "test:e2e": "pnpm --filter tests test:e2e",
     "test": "pnpm test:unit && pnpm test:integration && pnpm test:e2e",

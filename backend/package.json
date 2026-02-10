@@ -17,6 +17,7 @@
     "prisma:seed": "tsx prisma/seed.ts",
     "test": "vitest",
     "test:unit": "vitest run src/__tests__",
+    "test:coverage": "vitest run --coverage",
     "test:integration": "vitest run tests/integration",
     "test:watch": "vitest"
   },
@@ -41,6 +42,7 @@
     "@types/node": "^20.11.13",
     "@types/pdfkit": "^0.13.4",
     "@types/swagger-ui-express": "^4.1.8",
+    "@vitest/coverage-v8": "^1.6.1",
     "prisma": "^5.22.0",
     "tsx": "^4.7.1",
     "typescript": "^5.3.3",

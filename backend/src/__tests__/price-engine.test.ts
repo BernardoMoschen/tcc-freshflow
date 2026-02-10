@@ -71,7 +71,7 @@ describe("Price Engine", () => {
       mockPrisma.productOption.findUnique.mockResolvedValue(null);
 
       await expect(resolvePrice("invalid-option")).rejects.toThrow(
-        "Product option invalid-option not found"
+        "Product option with ID invalid-option not found"
       );
     });
   });
