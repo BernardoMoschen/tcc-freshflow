@@ -1,11 +1,13 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { OrderDetailsSkeleton } from "@/components/ui/skeleton";
 import { OrderStatusTimeline } from "@/components/order-status-timeline";
 import { OrderActivityTimeline } from "@/components/order-activity-timeline";
-import { ShoppingCart, Package, XCircle, Trash2, History } from "lucide-react";
+import { ShoppingCart, Package, XCircle, Trash2, History, Plus, Pencil } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useCart } from "@/hooks/use-cart";
 import { toast } from "sonner";
@@ -18,13 +20,55 @@ interface OrderDetailsDialogProps {
 
 export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editQty, setEditQty] = useState("");
+  const [showAddItem, setShowAddItem] = useState(false);
+  const [addItemSearch, setAddItemSearch] = useState("");
+  const [selectedOptionId, setSelectedOptionId] = useState("");
+  const [addItemQty, setAddItemQty] = useState("1");
   const utils = trpc.useUtils();
+
+  const hasTenantContext = !!localStorage.getItem("freshflow:tenantId");
 
   const { data: order, isLoading } = trpc.orders.get.useQuery(
     { id: orderId! },
     { enabled: !!orderId }
   );
   const { addItem } = useCart();
+
+  // Products query for add item dialog
+  const productsQuery = trpc.products.list.useQuery(
+    { search: addItemSearch || undefined, take: 20 },
+    { enabled: showAddItem && hasTenantContext }
+  );
+
+  const addItemMutation = trpc.orders.addItem.useMutation({
+    onSuccess: () => {
+      toast.success("Item adicionado ao pedido");
+      utils.orders.get.invalidate();
+      utils.orders.list.invalidate();
+      utils.orders.adminList.invalidate();
+      setShowAddItem(false);
+      setSelectedOptionId("");
+      setAddItemQty("1");
+      setAddItemSearch("");
+    },
+    onError: (error) => {
+      toast.error("Falha ao adicionar item", { description: error.message });
+    },
+  });
+
+  const updateItemMutation = trpc.orders.updateItem.useMutation({
+    onSuccess: () => {
+      toast.success("Item atualizado");
+      utils.orders.get.invalidate();
+      utils.orders.list.invalidate();
+      setEditingItemId(null);
+    },
+    onError: (error) => {
+      toast.error("Falha ao atualizar item", { description: error.message });
+    },
+  });
 
   const cancelOrderMutation = trpc.orders.cancel.useMutation({
     onSuccess: () => {
@@ -114,6 +158,29 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
     ) {
       removeItemMutation.mutate({ orderItemId: itemId });
     }
+  };
+
+  const handleAddItem = () => {
+    if (!selectedOptionId || !addItemQty) return;
+    const qty = parseFloat(addItemQty);
+    if (isNaN(qty) || qty <= 0) {
+      toast.error("Quantidade inválida");
+      return;
+    }
+    addItemMutation.mutate({
+      orderId: orderId!,
+      productOptionId: selectedOptionId,
+      requestedQty: qty,
+    });
+  };
+
+  const handleUpdateItem = (itemId: string) => {
+    const qty = parseFloat(editQty);
+    if (isNaN(qty) || qty <= 0) {
+      toast.error("Quantidade inválida");
+      return;
+    }
+    updateItemMutation.mutate({ orderItemId: itemId, requestedQty: qty });
   };
 
   const calculateTotal = () => {
@@ -264,19 +331,32 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
                           {item.productOption.unitType}
                         </Badge>
                         {order.status !== "FINALIZED" && isEditing && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() =>
-                              handleRemoveItem(
-                                item.id,
-                                `${item.productOption.product.name} - ${item.productOption.name}`
-                              )
-                            }
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10 h-6 w-6 p-0"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setEditingItemId(item.id);
+                                setEditQty(item.requestedQty.toString());
+                              }}
+                              className="h-6 w-6 p-0"
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() =>
+                                handleRemoveItem(
+                                  item.id,
+                                  `${item.productOption.product.name} - ${item.productOption.name}`
+                                )
+                              }
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-6 w-6 p-0"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -327,6 +407,39 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
                       <p className="text-xs text-muted-foreground mt-2 italic">{item.notes}</p>
                     )}
 
+                    {editingItemId === item.id && (
+                      <div className="flex items-center gap-2 mt-2 pt-2 border-t">
+                        <Label className="text-xs whitespace-nowrap">Nova qtd:</Label>
+                        <Input
+                          type="number"
+                          min="0.1"
+                          step="0.1"
+                          value={editQty}
+                          onChange={(e) => setEditQty(e.target.value)}
+                          className="w-24 h-8 text-sm"
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {item.productOption.unitType === "WEIGHT" ? "kg" : "un"}
+                        </span>
+                        <Button
+                          size="sm"
+                          className="h-8"
+                          onClick={() => handleUpdateItem(item.id)}
+                          disabled={updateItemMutation.isPending}
+                        >
+                          Salvar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8"
+                          onClick={() => setEditingItemId(null)}
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    )}
+
                     {item.isExtra && (
                       <Badge variant="outline" className="mt-2 text-xs">
                         Item Extra
@@ -335,6 +448,19 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
                   </div>
                 ))}
               </div>
+
+              {/* Add item button */}
+              {order.status !== "FINALIZED" && isEditing && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-3"
+                  onClick={() => setShowAddItem(true)}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Adicionar Item
+                </Button>
+              )}
             </div>
 
             <Separator />
@@ -418,6 +544,77 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
           </div>
         )}
       </DialogContent>
+
+      {/* Add Item Dialog */}
+      <Dialog open={showAddItem} onOpenChange={(open) => !open && setShowAddItem(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adicionar Item ao Pedido</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label>Buscar produto</Label>
+              <Input
+                placeholder="Buscar..."
+                value={addItemSearch}
+                onChange={(e) => setAddItemSearch(e.target.value)}
+              />
+            </div>
+
+            {productsQuery.data && (
+              <div className="max-h-48 overflow-y-auto space-y-1 border rounded p-2">
+                {productsQuery.data.items.flatMap((product: any) =>
+                  product.options.map((option: any) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setSelectedOptionId(option.id)}
+                      className={`w-full text-left p-2 rounded text-sm hover:bg-accent ${
+                        selectedOptionId === option.id ? "bg-accent ring-1 ring-primary" : ""
+                      }`}
+                    >
+                      <span className="font-medium">{product.name}</span>
+                      <span className="text-muted-foreground"> - {option.name}</span>
+                      <span className="text-muted-foreground ml-2">
+                        R$ {(option.basePrice / 100).toFixed(2)}
+                      </span>
+                    </button>
+                  ))
+                )}
+                {productsQuery.data.items.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nenhum produto encontrado
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div>
+              <Label>Quantidade</Label>
+              <Input
+                type="number"
+                min="0.1"
+                step="0.1"
+                value={addItemQty}
+                onChange={(e) => setAddItemQty(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddItem(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleAddItem}
+              disabled={!selectedOptionId || addItemMutation.isPending}
+            >
+              {addItemMutation.isPending ? "Adicionando..." : "Adicionar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

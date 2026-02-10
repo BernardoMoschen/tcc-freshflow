@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Package,
   Plus,
@@ -95,6 +96,18 @@ export function StockManagementPage() {
     },
     onError: (error) => {
       toast.error("Falha ao ajustar estoque", { description: error.message });
+    },
+  });
+
+  const toggleAvailabilityMutation = trpc.stock.toggleAvailability.useMutation({
+    onSuccess: (_data, variables) => {
+      toast.success(
+        variables.isAvailable ? "Produto disponibilizado" : "Produto indisponibilizado"
+      );
+      utils.stock.getStockLevels.invalidate();
+    },
+    onError: (error) => {
+      toast.error("Falha ao alterar disponibilidade", { description: error.message });
     },
   });
 
@@ -239,6 +252,9 @@ export function StockManagementPage() {
                 <th className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Status
                 </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Disponível
+                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Ações
                 </th>
@@ -261,6 +277,18 @@ export function StockManagementPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-center">{getStockBadge(item)}</td>
+                  <td className="px-6 py-4 text-center">
+                    <Switch
+                      checked={item.isAvailable}
+                      onCheckedChange={(checked) =>
+                        toggleAvailabilityMutation.mutate({
+                          productOptionId: item.optionId,
+                          isAvailable: checked,
+                        })
+                      }
+                      disabled={toggleAvailabilityMutation.isPending}
+                    />
+                  </td>
                   <td className="px-6 py-4 text-right space-x-2">
                     <Button
                       variant="outline"

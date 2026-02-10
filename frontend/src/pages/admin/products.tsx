@@ -25,19 +25,22 @@ import { ImageUpload } from "@/components/image-upload";
 import { Package, Plus, Edit, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 
+type OptionFormData = {
+  id?: string; // existing option ID (undefined = new)
+  name: string;
+  sku: string;
+  unitType: "FIXED" | "WEIGHT";
+  basePrice: string;
+  stockQuantity: string;
+  lowStockThreshold: string;
+};
+
 type ProductFormData = {
   name: string;
   description: string;
   category: string;
   imageUrl: string;
-  options: Array<{
-    name: string;
-    sku: string;
-    unitType: "FIXED" | "WEIGHT";
-    basePrice: string;
-    stockQuantity: string;
-    lowStockThreshold: string;
-  }>;
+  options: OptionFormData[];
 };
 
 export function ProductsManagementPage() {
@@ -45,6 +48,7 @@ export function ProductsManagementPage() {
   const [category, setCategory] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [originalOptionIds, setOriginalOptionIds] = useState<string[]>([]);
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
     description: "",
@@ -87,16 +91,7 @@ export function ProductsManagementPage() {
     },
   });
 
-  const updateMutation = trpc.products.update.useMutation({
-    onSuccess: () => {
-      toast.success("Produto atualizado com sucesso");
-      utils.products.list.invalidate();
-      closeModal();
-    },
-    onError: (error) => {
-      toast.error("Falha ao atualizar produto", { description: error.message });
-    },
-  });
+  const updateMutation = trpc.products.update.useMutation();
 
   const deleteMutation = trpc.products.delete.useMutation({
     onSuccess: () => {
@@ -108,8 +103,13 @@ export function ProductsManagementPage() {
     },
   });
 
+  const createOptionMutation = trpc.products.createOption.useMutation();
+  const updateOptionMutation = trpc.products.updateOption.useMutation();
+  const deleteOptionMutation = trpc.products.deleteOption.useMutation();
+
   const openCreateModal = () => {
     setEditingProduct(null);
+    setOriginalOptionIds([]);
     setFormData({
       name: "",
       description: "",
@@ -131,12 +131,14 @@ export function ProductsManagementPage() {
 
   const openEditModal = (product: any) => {
     setEditingProduct(product);
+    setOriginalOptionIds(product.options.map((opt: any) => opt.id));
     setFormData({
       name: product.name,
       description: product.description || "",
       category: product.category || "",
       imageUrl: product.imageUrl || "",
       options: product.options.map((opt: any) => ({
+        id: opt.id,
         name: opt.name,
         sku: opt.sku,
         unitType: opt.unitType,
@@ -153,7 +155,9 @@ export function ProductsManagementPage() {
     setEditingProduct(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validate
@@ -174,31 +178,83 @@ export function ProductsManagementPage() {
       }
     }
 
-    const data = {
-      name: formData.name,
-      description: formData.description || undefined,
-      category: formData.category || undefined,
-      imageUrl: formData.imageUrl || undefined,
-      options: formData.options.map((opt) => ({
-        name: opt.name,
-        sku: opt.sku,
-        unitType: opt.unitType,
-        basePrice: Math.round(parseFloat(opt.basePrice) * 100),
-        stockQuantity: parseFloat(opt.stockQuantity) || 0,
-        lowStockThreshold: parseFloat(opt.lowStockThreshold) || 10,
-        isAvailable: true,
-      })),
-    };
-
     if (editingProduct) {
-      updateMutation.mutate({
-        id: editingProduct.id,
-        name: data.name,
-        description: data.description,
-        category: data.category,
-        imageUrl: data.imageUrl,
-      });
+      // Update product fields
+      setIsSaving(true);
+      try {
+        await updateMutation.mutateAsync({
+          id: editingProduct.id,
+          name: formData.name,
+          description: formData.description || undefined,
+          category: formData.category || undefined,
+          imageUrl: formData.imageUrl || undefined,
+        });
+
+        // Determine which options to create, update, or delete
+        const currentOptionIds = formData.options
+          .filter((opt) => opt.id)
+          .map((opt) => opt.id!);
+        const deletedIds = originalOptionIds.filter(
+          (id) => !currentOptionIds.includes(id)
+        );
+
+        // Delete removed options
+        for (const id of deletedIds) {
+          await deleteOptionMutation.mutateAsync({ id });
+        }
+
+        // Create or update options
+        for (const opt of formData.options) {
+          const optionData = {
+            name: opt.name,
+            sku: opt.sku,
+            unitType: opt.unitType,
+            basePrice: Math.round(parseFloat(opt.basePrice) * 100),
+            stockQuantity: parseFloat(opt.stockQuantity) || 0,
+            lowStockThreshold: parseFloat(opt.lowStockThreshold) || 10,
+          };
+
+          if (opt.id) {
+            // Update existing option
+            await updateOptionMutation.mutateAsync({
+              id: opt.id,
+              ...optionData,
+            });
+          } else {
+            // Create new option
+            await createOptionMutation.mutateAsync({
+              productId: editingProduct.id,
+              ...optionData,
+              isAvailable: true,
+            });
+          }
+        }
+
+        toast.success("Produto atualizado com sucesso");
+        utils.products.list.invalidate();
+        closeModal();
+      } catch (error: any) {
+        toast.error("Falha ao atualizar produto", { description: error.message });
+      } finally {
+        setIsSaving(false);
+      }
     } else {
+      // Create new product with all options
+      const data = {
+        name: formData.name,
+        description: formData.description || undefined,
+        category: formData.category || undefined,
+        imageUrl: formData.imageUrl || undefined,
+        options: formData.options.map((opt) => ({
+          name: opt.name,
+          sku: opt.sku,
+          unitType: opt.unitType,
+          basePrice: Math.round(parseFloat(opt.basePrice) * 100),
+          stockQuantity: parseFloat(opt.stockQuantity) || 0,
+          lowStockThreshold: parseFloat(opt.lowStockThreshold) || 10,
+          isAvailable: true,
+        })),
+      };
       createMutation.mutate(data as any);
     }
   };
@@ -516,9 +572,9 @@ export function ProductsManagementPage() {
               </Button>
               <Button
                 type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
+                disabled={createMutation.isPending || isSaving}
               >
-                {editingProduct ? "Atualizar Produto" : "Criar Produto"}
+                {isSaving ? "Salvando..." : editingProduct ? "Atualizar Produto" : "Criar Produto"}
               </Button>
             </DialogFooter>
           </form>

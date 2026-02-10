@@ -30,6 +30,7 @@ export function CartPage() {
   // Request deduplication ref
   const isSubmittingRef = useRef(false);
 
+  const utils = trpc.useUtils();
   const submitDraftMutation = trpc.orders.submitDraft.useMutation();
 
   // Fetch delivery settings from tenant
@@ -123,6 +124,24 @@ export function CartPage() {
     setSubmitting(true);
 
     try {
+      // Validate stock availability before submitting
+      const stockValidation = await utils.stock.validateForOrder.fetch({
+        orderId: draftOrderId,
+      });
+
+      if (!stockValidation.isValid) {
+        const itemNames = stockValidation.insufficientItems
+          .map((i: any) => `${i.productName} (disponível: ${i.available}, necessário: ${i.required})`)
+          .join("\n");
+        toast.error("Estoque insuficiente", {
+          description: itemNames,
+          duration: 6000,
+        });
+        setSubmitting(false);
+        isSubmittingRef.current = false;
+        return;
+      }
+
       const order = await submitDraftMutation.mutateAsync({
         orderId: draftOrderId,
         requestedDeliveryDate: deliveryDate,
