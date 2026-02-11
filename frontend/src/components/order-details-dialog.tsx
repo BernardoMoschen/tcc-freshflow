@@ -517,7 +517,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
 
             {order.status === "FINALIZED" && (
               <a
-                href={`http://localhost:3001/api/delivery-note/${order.id}.pdf`}
+                href={`/api/delivery-note/${order.id}.pdf`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block"

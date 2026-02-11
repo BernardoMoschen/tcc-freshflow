@@ -44,7 +44,9 @@ The FreshFlow backend is **100% complete** and ready for use!
   - `products.get` - Single product with customer prices
 
 - [x] **Orders Router** ([orders.router.ts](backend/src/routers/orders.router.ts))
-  - `orders.create` - Create order (SENT status, immutable)
+  - `orders.getDraft` - Get or create draft order
+  - `orders.updateDraft` - Update draft order items/notes
+  - `orders.submitDraft` - Submit draft order (DRAFT → SENT)
   - `orders.list` - List orders with filters
   - `orders.get` - Get order with full details
   - `orders.weigh` - Record weight measurement
@@ -154,7 +156,9 @@ Base URL: `http://localhost:3001/trpc`
 - `products.get({ id })` - Get product details
 
 **Orders:**
-- `orders.create({ notes?, items: [{ productOptionId, requestedQty, isExtra }] })` - Create order
+- `orders.getDraft()` - Get or create draft order
+- `orders.updateDraft({ orderId, items, notes? })` - Update draft
+- `orders.submitDraft({ orderId })` - Submit draft (DRAFT → SENT)
 - `orders.list({ status?, skip, take })` - List orders
 - `orders.get({ id })` - Get order details
 - `orders.weigh({ orderItemId, actualWeight, finalPrice?, persistPrice?, notes?, photoUrl? })` - Record weight

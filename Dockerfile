@@ -1,16 +1,19 @@
 # Multi-stage build for FreshFlow
 FROM node:20-alpine AS builder
 
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 # Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-COPY backend/package*.json ./backend/
-COPY frontend/package*.json ./frontend/
+# Copy workspace and package files
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY backend/package.json ./backend/
+COPY frontend/package.json ./frontend/
 
 # Install dependencies
-RUN npm ci
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
@@ -18,25 +21,25 @@ COPY . .
 # Generate Prisma client
 RUN cd backend && npx prisma generate
 
-# Build backend
-RUN npm run build -w backend
-
-# Build frontend
-RUN npm run build -w frontend
+# Build backend and frontend
+RUN pnpm --filter backend build && pnpm --filter frontend build
 
 # Production stage
 FROM node:20-alpine AS runner
 
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 # Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-COPY backend/package*.json ./backend/
-COPY frontend/package*.json ./frontend/
+# Copy workspace and package files
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY backend/package.json ./backend/
+COPY frontend/package.json ./frontend/
 
 # Install production dependencies only
-RUN npm ci --omit=dev
+RUN pnpm install --frozen-lockfile --prod
 
 # Copy built artifacts from builder
 COPY --from=builder /app/backend/dist ./backend/dist

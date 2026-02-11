@@ -458,7 +458,7 @@ export function OrdersPage() {
 
                 {order.status === "FINALIZED" && (
                   <a
-                    href={`http://localhost:3001/api/delivery-note/${order.id}.pdf`}
+                    href={`/api/delivery-note/${order.id}.pdf`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1"

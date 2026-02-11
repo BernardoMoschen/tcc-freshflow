@@ -185,11 +185,11 @@ Example:
 import { appRouter } from '../backend/src/router';
 
 describe('Orders Router', () => {
-  it('should require auth for orders.create', async () => {
+  it('should require auth for orders.submitDraft', async () => {
     const caller = appRouter.createCaller({ userId: null });
 
     await expect(
-      caller.orders.create({ items: [] })
+      caller.orders.submitDraft({ orderId: 'test-id' })
     ).rejects.toThrow('UNAUTHORIZED');
   });
 });

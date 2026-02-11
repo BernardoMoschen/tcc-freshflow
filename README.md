@@ -186,7 +186,8 @@ Com o servidor rodando, acesse a documentacao interativa:
 | `auth.session` | Sessao do usuario atual + memberships |
 | `products.list` | Listar produtos (filtro por categoria, busca) |
 | `products.get` | Produto com precos resolvidos por cliente |
-| `orders.create` | Criar pedido (status SENT) |
+| `orders.getDraft` | Obter ou criar rascunho de pedido |
+| `orders.submitDraft` | Enviar pedido (DRAFT → SENT) |
 | `orders.list` | Listar pedidos (filtro por status) |
 | `orders.weigh` | Pesar item (catch-weight) |
 | `orders.finalize` | Finalizar pedido (valida pesagens) |

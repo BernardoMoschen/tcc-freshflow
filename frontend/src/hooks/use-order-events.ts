@@ -51,12 +51,8 @@ export function useOrderEvents(
       return;
     }
 
-    // Construct SSE URL
-    const baseUrl = import.meta.env.DEV
-      ? "http://localhost:3001"
-      : window.location.origin;
-
-    let url = `${baseUrl}/api/v1/orders/events`;
+    // Construct SSE URL (relative — Vite proxy handles /api in dev)
+    let url = `/api/v1/orders/events`;
 
     // Add dev mode header as query param if needed
     if (import.meta.env.DEV) {

@@ -597,14 +597,10 @@ export function OrderDetailPage() {
   const navigate = useNavigate();
 
   const order = trpc.orders.get.useQuery({ id: orderId! });
-  const createOrder = trpc.orders.create.useMutation();
+  const reorderMutation = trpc.orders.reorder.useMutation();
 
   const handleReorder = async () => {
-    const items = order.data!.items.map((item) => ({
-      productOptionId: item.productOptionId,
-      requestedQty: item.requestedQty,
-      isExtra: false,
-    }));
+    reorderMutation.mutate({ orderId: orderId! });
 
     const newOrder = await createOrder.mutateAsync({ items });
     toast.success(`Order #${newOrder.orderNumber} created!`);

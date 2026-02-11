@@ -606,7 +606,7 @@ export function AdminOrdersPage() {
                     {order.status === "FINALIZED" && (
                       <Button variant="outline" size="sm" className="flex-1" asChild>
                         <a
-                          href={`http://localhost:3001/api/delivery-note/${order.id}.pdf`}
+                          href={`/api/delivery-note/${order.id}.pdf`}
                           target="_blank"
                           rel="noopener noreferrer"
                         >
