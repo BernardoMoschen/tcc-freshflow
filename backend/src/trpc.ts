@@ -17,7 +17,7 @@ export async function createContext({ req, res }: CreateExpressContextOptions) {
 
   // Attempt authentication (returns userId or null)
   let userId: string | null = null;
-  
+
   try {
     if (authHeader) {
       userId = await authenticateRequest(authHeader);
@@ -69,10 +69,7 @@ const t = initTRPC.context<Context>().create({
       ...shape,
       data: {
         ...shape.data,
-        zodError:
-          error.code === "BAD_REQUEST" && error.cause
-            ? error.cause
-            : null,
+        zodError: error.code === "BAD_REQUEST" && error.cause ? error.cause : null,
       },
     };
   },

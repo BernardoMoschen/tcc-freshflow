@@ -50,14 +50,13 @@ async function main() {
   // =============================================
   // ROLES
   // =============================================
-  const [platformAdmin, tenantOwner, tenantAdmin, accountOwner, accountBuyer] =
-    await Promise.all([
-      prisma.role.create({ data: { name: RoleType.PLATFORM_ADMIN } }),
-      prisma.role.create({ data: { name: RoleType.TENANT_OWNER } }),
-      prisma.role.create({ data: { name: RoleType.TENANT_ADMIN } }),
-      prisma.role.create({ data: { name: RoleType.ACCOUNT_OWNER } }),
-      prisma.role.create({ data: { name: RoleType.ACCOUNT_BUYER } }),
-    ]);
+  const [platformAdmin, tenantOwner, tenantAdmin, accountOwner, accountBuyer] = await Promise.all([
+    prisma.role.create({ data: { name: RoleType.PLATFORM_ADMIN } }),
+    prisma.role.create({ data: { name: RoleType.TENANT_OWNER } }),
+    prisma.role.create({ data: { name: RoleType.TENANT_ADMIN } }),
+    prisma.role.create({ data: { name: RoleType.ACCOUNT_OWNER } }),
+    prisma.role.create({ data: { name: RoleType.ACCOUNT_BUYER } }),
+  ]);
   console.log("✅ 5 roles criadas");
 
   // =============================================
@@ -1344,8 +1343,7 @@ async function main() {
       notes: "Pedido para sexta-feira, favor entregar pela manhã",
       requestedDeliveryDate: daysFromNow(3),
       deliveryTimeSlot: "06:00-10:00",
-      deliveryInstructions:
-        "Entregar nos fundos do restaurante, portão amarelo",
+      deliveryInstructions: "Entregar nos fundos do restaurante, portão amarelo",
       createdAt: daysAgo(1),
       sentAt: daysAgo(1),
       items: {
@@ -1795,18 +1793,14 @@ async function main() {
     include: { items: true },
   });
 
-  console.log(
-    "✅ 10 pedidos criados (2 DRAFT, 4 SENT, 1 IN_SEPARATION, 3 FINALIZED)"
-  );
+  console.log("✅ 10 pedidos criados (2 DRAFT, 4 SENT, 1 IN_SEPARATION, 3 FINALIZED)");
 
   // =============================================
   // WEIGHING RECORDS (for finalized orders)
   // =============================================
 
   // Order 4 weighings (Sabor da Terra - FINALIZED)
-  const order4WeightItems = order4.items.filter(
-    (i) => i.actualWeight !== null
-  );
+  const order4WeightItems = order4.items.filter((i) => i.actualWeight !== null);
   for (const item of order4WeightItems) {
     await prisma.weighing.create({
       data: {
@@ -1821,9 +1815,7 @@ async function main() {
   }
 
   // Order 7 weighings (Cantina Dona Maria - FINALIZED)
-  const order7WeightItems = order7.items.filter(
-    (i) => i.actualWeight !== null
-  );
+  const order7WeightItems = order7.items.filter((i) => i.actualWeight !== null);
   for (const item of order7WeightItems) {
     await prisma.weighing.create({
       data: {
@@ -1838,9 +1830,7 @@ async function main() {
   }
 
   // Order 10 weighings (Chef's Table - FINALIZED)
-  const order10WeightItems = order10.items.filter(
-    (i) => i.actualWeight !== null
-  );
+  const order10WeightItems = order10.items.filter((i) => i.actualWeight !== null);
   for (const item of order10WeightItems) {
     await prisma.weighing.create({
       data: {
@@ -2535,9 +2525,7 @@ async function main() {
   console.log("   - Roles: 5");
   console.log("   - Usuários: 9");
   console.log("   - Tenants: 2 (Verde Campo Distribuidora, FreshCo Distribuidora)");
-  console.log(
-    "   - Contas: 4 (Sabor da Terra, Cantina Dona Maria, Bistro Jardim, Chef's Table)"
-  );
+  console.log("   - Contas: 4 (Sabor da Terra, Cantina Dona Maria, Bistro Jardim, Chef's Table)");
   console.log("   - Clientes: 4");
   console.log("   - Produtos: 41 (11 categorias)");
   console.log("   - Preços especiais: 10");
@@ -2561,9 +2549,7 @@ async function main() {
   console.log("   Account Buyer:   juliana@sabordaterra.com.br");
   console.log("\n📦 Categorias de Produtos:");
   console.log("   Frutas (7) | Hortaliças (7) | Legumes (5)");
-  console.log(
-    "   Ovos (3) | Carnes (5) | Queijos (4) | Temperos e Ervas (4)"
-  );
+  console.log("   Ovos (3) | Carnes (5) | Queijos (4) | Temperos e Ervas (4)");
   console.log("   Gourmet (2) | Peixes (1) | Mercearia (2) | Padaria (1)");
   console.log("\n⚠️  Alertas de Estoque:");
   console.log("   - Espinafre: 8 maços (mínimo: 10)");

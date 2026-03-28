@@ -62,9 +62,7 @@ export function useAuth() {
     };
 
     // Check if user is platform admin (no tenant/account context required for basic operations)
-    const isPlatformAdminUser = memberships.some(
-      (m: Membership) => m.role === "PLATFORM_ADMIN"
-    );
+    const isPlatformAdminUser = memberships.some((m: Membership) => m.role === "PLATFORM_ADMIN");
 
     // Find first membership with tenant or account context
     const findContextMembership = (): Membership | undefined => {
@@ -223,22 +221,22 @@ export function useAuth() {
 
   // Only show loading on initial load, not on session query refetches
   // This prevents the page from blinking when session query retries
-  const isInitialLoading = loading || (!!user && !sessionQuery.data && sessionQuery.isLoading && !sessionQuery.isError);
+  const isInitialLoading =
+    loading || (!!user && !sessionQuery.data && sessionQuery.isLoading && !sessionQuery.isError);
 
   // Extract user roles from memberships
-  const userRoles: string[] = sessionQuery.data?.memberships?.map((m: { role: string }) => m.role) || [];
+  const userRoles: string[] =
+    sessionQuery.data?.memberships?.map((m: { role: string }) => m.role) || [];
 
   // Role check helpers
   const isPlatformAdmin = userRoles.includes("PLATFORM_ADMIN");
 
   // Tenant-level admins (can manage products, stock, orders, customers)
-  const isTenantAdmin = isPlatformAdmin ||
-    userRoles.some((role) => ["TENANT_OWNER", "TENANT_ADMIN"].includes(role));
+  const isTenantAdmin =
+    isPlatformAdmin || userRoles.some((role) => ["TENANT_OWNER", "TENANT_ADMIN"].includes(role));
 
   // Account-level users (can browse catalog, place orders)
-  const isAccountUser = userRoles.some((role) =>
-    ["ACCOUNT_OWNER", "ACCOUNT_BUYER"].includes(role)
-  );
+  const isAccountUser = userRoles.some((role) => ["ACCOUNT_OWNER", "ACCOUNT_BUYER"].includes(role));
 
   // ACCOUNT_OWNER is a special case - they can view account data but NOT manage tenant resources
   const isAccountOwner = userRoles.includes("ACCOUNT_OWNER");

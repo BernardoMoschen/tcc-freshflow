@@ -693,33 +693,30 @@ export function ProfilePage() {
                   <div className="grid grid-cols-3 gap-3">
                     <button
                       onClick={() => handleThemeChange("light")}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        localTheme === "light"
+                      className={`p-4 rounded-lg border-2 transition-all ${localTheme === "light"
                           ? "border-primary bg-primary/10 shadow-md"
                           : "border-border hover:border-primary/50 hover:shadow-sm hover:bg-accent/10"
-                      }`}
+                        }`}
                     >
                       <Sun className="h-6 w-6 mx-auto mb-2 text-yellow-600" />
                       <p className="text-sm font-medium">Claro</p>
                     </button>
                     <button
                       onClick={() => handleThemeChange("dark")}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        localTheme === "dark"
+                      className={`p-4 rounded-lg border-2 transition-all ${localTheme === "dark"
                           ? "border-primary bg-primary/10 shadow-md"
                           : "border-border hover:border-primary/50 hover:shadow-sm hover:bg-accent/10"
-                      }`}
+                        }`}
                     >
                       <Moon className="h-6 w-6 mx-auto mb-2 text-indigo-600" />
                       <p className="text-sm font-medium">Escuro</p>
                     </button>
                     <button
                       onClick={() => handleThemeChange("system")}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        localTheme === "system"
+                      className={`p-4 rounded-lg border-2 transition-all ${localTheme === "system"
                           ? "border-primary bg-primary/10 shadow-md"
                           : "border-border hover:border-primary/50 hover:shadow-sm hover:bg-accent/10"
-                      }`}
+                        }`}
                     >
                       <Monitor className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
                       <p className="text-sm font-medium">Sistema</p>
@@ -733,22 +730,20 @@ export function ProfilePage() {
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={() => setDensity("comfortable")}
-                      className={`p-4 rounded-lg border-2 transition-all text-left ${
-                        density === "comfortable"
+                      className={`p-4 rounded-lg border-2 transition-all text-left ${density === "comfortable"
                           ? "border-primary bg-primary/10 shadow-md"
                           : "border-border hover:border-primary/50 hover:shadow-sm hover:bg-accent/10"
-                      }`}
+                        }`}
                     >
                       <p className="font-medium mb-1">Confortável</p>
                       <p className="text-xs text-muted-foreground">Mais espaçamento e elementos maiores</p>
                     </button>
                     <button
                       onClick={() => setDensity("compact")}
-                      className={`p-4 rounded-lg border-2 transition-all text-left ${
-                        density === "compact"
+                      className={`p-4 rounded-lg border-2 transition-all text-left ${density === "compact"
                           ? "border-primary bg-primary/10 shadow-md"
                           : "border-border hover:border-primary/50 hover:shadow-sm hover:bg-accent/10"
-                      }`}
+                        }`}
                     >
                       <p className="font-medium mb-1">Compacta</p>
                       <p className="text-xs text-muted-foreground">Menos espaço, mais conteúdo visível</p>
