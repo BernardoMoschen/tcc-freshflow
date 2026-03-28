@@ -296,10 +296,10 @@ export async function sendCustomMessage(
  * - Request help
  * - Confirm delivery
  */
-export async function handleIncomingMessage(
+export function handleIncomingMessage(
   _from: string,
   body: string
-): Promise<string | null> {
+): string | null {
   const normalizedBody = body.toLowerCase().trim();
 
   // Auto-reply based on message content

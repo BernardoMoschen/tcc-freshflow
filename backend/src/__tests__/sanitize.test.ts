@@ -6,7 +6,7 @@ import {
   escapeHtml,
   limitLength,
   sanitizeInput,
-} from "../../../frontend/src/lib/sanitize.js";
+} from "../lib/sanitize.js";
 
 describe("Sanitize Utilities", () => {
   describe("sanitizeText", () => {

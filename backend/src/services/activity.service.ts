@@ -1,4 +1,4 @@
-import { PrismaClient, OrderActivityType, OrderStatus } from "@prisma/client";
+import { PrismaClient, OrderActivityType, OrderStatus, Prisma } from "@prisma/client";
 
 /**
  * Service for tracking order activities
@@ -34,7 +34,7 @@ export class ActivityService {
         activityType,
         userId: userId || null,
         description,
-        metadata: metadata || null,
+        metadata: metadata ? (metadata as Prisma.InputJsonValue) : Prisma.JsonNull,
       },
     });
   }

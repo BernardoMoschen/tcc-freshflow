@@ -156,7 +156,7 @@ export function CustomersManagementPage() {
 
       {customersQuery.data && customersQuery.data.items.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {customersQuery.data.items.map((customer) => (
+          {customersQuery.data.items.map((customer: any) => (
             <div
               key={customer.id}
               className="bg-card rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden cursor-pointer"
@@ -265,7 +265,7 @@ export function CustomersManagementPage() {
 
                 {customerDetailsQuery.data.customerPrices.length > 0 && (
                   <div className="space-y-2">
-                    {customerDetailsQuery.data.customerPrices.map((cp) => (
+                    {customerDetailsQuery.data.customerPrices.map((cp: any) => (
                       <div
                         key={cp.id}
                         className="flex items-center justify-between p-3 bg-muted rounded-lg"
@@ -315,7 +315,7 @@ export function CustomersManagementPage() {
 
                 {customerDetailsQuery.data.orders.length > 0 && (
                   <div className="space-y-2">
-                    {customerDetailsQuery.data.orders.slice(0, 10).map((order) => (
+                    {customerDetailsQuery.data.orders.slice(0, 10).map((order: any) => (
                       <div
                         key={order.id}
                         className="flex items-center justify-between p-3 bg-muted rounded-lg"
@@ -371,7 +371,7 @@ export function CustomersManagementPage() {
                 className="w-full p-2 border rounded-md"
               >
                 <option value="">Selecione uma opção de produto...</option>
-                {productsQuery.data?.items.flatMap((product) =>
+                {productsQuery.data?.items.flatMap((product: any) =>
                   product.options.map((option: any) => (
                     <option key={option.id} value={option.id}>
                       {product.name} - {option.name} (Base: {formatPrice(option.basePrice)})

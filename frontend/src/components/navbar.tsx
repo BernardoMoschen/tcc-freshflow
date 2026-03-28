@@ -31,7 +31,7 @@ import {
 export function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut, isTenantAdmin, isAccountUser, user } = useAuth();
+  const { signOut, isTenantAdmin, isAccountUser } = useAuth();
   const { items } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 

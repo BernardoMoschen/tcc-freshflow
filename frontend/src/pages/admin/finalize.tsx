@@ -60,17 +60,17 @@ export function FinalizePage() {
   }
 
   const order = orderQuery.data;
-  const fixedItems = order.items.filter((item) => item.productOption.unitType === "FIXED");
-  const weightItems = order.items.filter((item) => item.productOption.unitType === "WEIGHT");
+  const fixedItems = order.items.filter((item: any) => item.productOption.unitType === "FIXED");
+  const weightItems = order.items.filter((item: any) => item.productOption.unitType === "WEIGHT");
 
-  const fixedTotal = fixedItems.reduce((sum, item) => sum + (item.finalPrice || 0), 0);
+  const fixedTotal = fixedItems.reduce((sum: number, item: any) => sum + (item.finalPrice || 0), 0);
   const weightTotal = weightItems.reduce(
-    (sum, item) => sum + (item.actualWeight || 0) * (item.finalPrice || 0),
+    (sum: number, item: any) => sum + (item.actualWeight || 0) * (item.finalPrice || 0),
     0
   );
   const grandTotal = fixedTotal + weightTotal;
 
-  const allWeighed = weightItems.every((item) => item.actualWeight !== null);
+  const allWeighed = weightItems.every((item: any) => item.actualWeight !== null);
   const isFinalized = order.status === "FINALIZED";
 
   return (
@@ -145,7 +145,7 @@ export function FinalizePage() {
           <h3 className="font-semibold text-lg mb-4">Resumo do Pedido</h3>
 
           <div className="space-y-3">
-            {order.items.map((item) => {
+            {order.items.map((item: any) => {
               let itemTotal = 0;
               if (item.productOption.unitType === "FIXED" && item.finalPrice) {
                 itemTotal = item.finalPrice;

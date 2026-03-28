@@ -449,7 +449,7 @@ export function OrdersPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => reorderMutation.mutate({ orderId: order.id })}
-                    disabled={reorderMutation.isLoading}
+                    disabled={reorderMutation.isPending}
                     className="flex-1"
                   >
                     <RotateCcw className="mr-2 h-4 w-4" />

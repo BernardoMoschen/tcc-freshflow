@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { TRPCError } from "@trpc/server";
 
 /**
  * Extended Express Request with optional auth properties
@@ -104,7 +105,6 @@ export function checkRateLimit(
   const result = rateLimitStore.check(key, windowMs, maxRequests);
 
   if (!result.allowed) {
-    const { TRPCError } = require("@trpc/server");
     throw new TRPCError({
       code: "TOO_MANY_REQUESTS",
       message: `Rate limit exceeded for ${operation}. Please try again in ${Math.ceil((result.resetTime - Date.now()) / 1000)} seconds.`,

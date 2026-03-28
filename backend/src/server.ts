@@ -288,9 +288,10 @@ apiV1.get("/orders/events", rateLimiters.standard, async (req, res) => {
     });
 
     logger.debug(`SSE connection established for user ${userId}`);
+    return;
   } catch (error) {
     logger.error("SSE endpoint error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       error: "Failed to establish SSE connection",
     });
   }

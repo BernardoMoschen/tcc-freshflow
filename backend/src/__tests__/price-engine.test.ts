@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   resolvePrice,
+  resolvePricesBatch,
   calculateOrderItemTotal,
+  calculateOrderTotals,
   calculateFixedItemPrice,
   formatPrice,
   persistCustomerPrice,
@@ -166,6 +168,61 @@ describe("Price Engine", () => {
       const price = await calculateFixedItemPrice("option-1", 5, "customer-1");
 
       expect(price).toBe(800 * 5); // 4000 cents = R$ 40.00
+    });
+  });
+
+  describe("resolvePricesBatch", () => {
+    it("should resolve customer price when available", () => {
+      const result = resolvePricesBatch([
+        {
+          id: "option-1",
+          basePrice: 1000,
+          customerPrices: [{ id: "cp-1", price: 800 }],
+        },
+      ]);
+
+      expect(result[0].resolvedPrice).toBe(800);
+      expect(result[0].hasCustomerPrice).toBe(true);
+    });
+
+    it("should fall back to base price when no customer prices", () => {
+      const result = resolvePricesBatch([
+        {
+          id: "option-2",
+          basePrice: 1200,
+          customerPrices: [],
+        },
+      ]);
+
+      expect(result[0].resolvedPrice).toBe(1200);
+      expect(result[0].hasCustomerPrice).toBe(false);
+    });
+  });
+
+  describe("calculateOrderTotals", () => {
+    it("should sum fixed and weight totals", async () => {
+      mockPrisma.orderItem.findMany.mockResolvedValue([
+        {
+          id: "item-1",
+          finalPrice: 5000,
+          actualWeight: null,
+          requestedQty: 2,
+          productOption: { unitType: "FIXED" },
+        },
+        {
+          id: "item-2",
+          finalPrice: 2000,
+          actualWeight: 1.5,
+          requestedQty: 1,
+          productOption: { unitType: "WEIGHT" },
+        },
+      ]);
+
+      const totals = await calculateOrderTotals("order-1");
+
+      expect(totals.fixedTotal).toBe(5000);
+      expect(totals.weightTotal).toBe(3000);
+      expect(totals.total).toBe(8000);
     });
   });
 

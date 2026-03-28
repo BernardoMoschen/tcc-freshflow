@@ -96,7 +96,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
     if (!order) return;
 
     let itemsAdded = 0;
-    order.items.forEach((item) => {
+    order.items.forEach((item: any) => {
       // Only add items that have finalPrice (FIXED items or weighed WEIGHT items)
       if (item.finalPrice) {
         addItem({
@@ -185,7 +185,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
 
   const calculateTotal = () => {
     if (!order) return 0;
-    return order.items.reduce((sum, item) => {
+    return order.items.reduce((sum: number, item: any) => {
       if (item.productOption.unitType === "FIXED" && item.finalPrice) {
         return sum + item.finalPrice;
       } else if (item.productOption.unitType === "WEIGHT" && item.actualWeight && item.finalPrice) {
@@ -309,7 +309,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
               </div>
 
               <div className="space-y-3">
-                {order.items.map((item) => (
+                {order.items.map((item: any) => (
                   <div
                     key={item.id}
                     className="border rounded-lg p-4 bg-muted"

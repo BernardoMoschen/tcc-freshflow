@@ -1,6 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { TRPCError } from "@trpc/server";
-import { BusinessError, Errors, toTRPCError } from "../lib/errors.js";
+import { BusinessError, Errors, logError, toTRPCError, withErrorLogging } from "../lib/errors.js";
+import { logger } from "../lib/logger.js";
 
 describe("Error Utilities", () => {
   describe("BusinessError", () => {
@@ -130,6 +131,35 @@ describe("Error Utilities", () => {
       expect(result).toBeInstanceOf(TRPCError);
       expect(result.code).toBe("INTERNAL_SERVER_ERROR");
       expect(result.message).toBe("string error");
+    });
+  });
+
+  describe("logError", () => {
+    it("should log structured errors", () => {
+      const spy = vi.spyOn(logger, "error").mockImplementation(() => undefined);
+      logError(new Error("boom"), { operation: "test" });
+      expect(spy).toHaveBeenCalled();
+      spy.mockRestore();
+    });
+  });
+
+  describe("withErrorLogging", () => {
+    it("should return result when no error", async () => {
+      const result = await withErrorLogging(async () => "ok");
+      expect(result).toBe("ok");
+    });
+
+    it("should log and rethrow errors", async () => {
+      const spy = vi.spyOn(logger, "error").mockImplementation(() => undefined);
+
+      await expect(
+        withErrorLogging(async () => {
+          throw new Error("fail");
+        }, { operation: "test" })
+      ).rejects.toThrow("fail");
+
+      expect(spy).toHaveBeenCalled();
+      spy.mockRestore();
     });
   });
 });

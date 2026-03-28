@@ -82,7 +82,7 @@ export function OrderActivityTimeline({ orderId }: OrderActivityTimelineProps) {
     );
   }
 
-  const activities = activitiesQuery.data || [];
+  const activities = (activitiesQuery.data || []) as Array<any>;
 
   if (activities.length === 0) {
     return (
@@ -100,7 +100,7 @@ export function OrderActivityTimeline({ orderId }: OrderActivityTimelineProps) {
 
       {/* Activities */}
       <div className="space-y-6">
-        {activities.map((activity, index) => {
+        {activities.map((activity: any, index: number) => {
           const config = activityConfig[activity.activityType] || defaultConfig;
           const Icon = config.icon;
           const isFirst = index === 0;
