@@ -13,15 +13,17 @@ export function useAuth() {
   const [isRateLimited, setIsRateLimited] = useState(false);
 
   // Get session data from tRPC
+  // Note: No user state-based 'enabled' condition - prevents re-firing when user toggles
+  // Rate limiting is still enforced via retry: false + error handling below
   const sessionQuery = trpc.auth.session.useQuery(undefined, {
-    enabled: !!user && !isRateLimited,
+    enabled: !isRateLimited,
     retry: false,
     // Prevent rapid re-fetching
-    staleTime: Infinity, // Never consider data stale - manual refetch only
+    staleTime: 1000 * 60 * 5, // 5 minutes - cache the session data
     gcTime: 1000 * 60 * 30, // 30 minutes
     refetchOnMount: false,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    refetchOnReconnect: "stale", // Refetch if becomes stale
     refetchInterval: false, // Disable polling
   });
 
@@ -60,9 +62,7 @@ export function useAuth() {
     };
 
     // Check if user is platform admin (no tenant/account context required for basic operations)
-    const isPlatformAdminUser = memberships.some(
-      (m: Membership) => m.role === "PLATFORM_ADMIN"
-    );
+    const isPlatformAdminUser = memberships.some((m: Membership) => m.role === "PLATFORM_ADMIN");
 
     // Find first membership with tenant or account context
     const findContextMembership = (): Membership | undefined => {
@@ -221,22 +221,22 @@ export function useAuth() {
 
   // Only show loading on initial load, not on session query refetches
   // This prevents the page from blinking when session query retries
-  const isInitialLoading = loading || (!!user && !sessionQuery.data && sessionQuery.isLoading && !sessionQuery.isError);
+  const isInitialLoading =
+    loading || (!!user && !sessionQuery.data && sessionQuery.isLoading && !sessionQuery.isError);
 
   // Extract user roles from memberships
-  const userRoles: string[] = sessionQuery.data?.memberships?.map((m: { role: string }) => m.role) || [];
+  const userRoles: string[] =
+    sessionQuery.data?.memberships?.map((m: { role: string }) => m.role) || [];
 
   // Role check helpers
   const isPlatformAdmin = userRoles.includes("PLATFORM_ADMIN");
 
   // Tenant-level admins (can manage products, stock, orders, customers)
-  const isTenantAdmin = isPlatformAdmin ||
-    userRoles.some((role) => ["TENANT_OWNER", "TENANT_ADMIN"].includes(role));
+  const isTenantAdmin =
+    isPlatformAdmin || userRoles.some((role) => ["TENANT_OWNER", "TENANT_ADMIN"].includes(role));
 
   // Account-level users (can browse catalog, place orders)
-  const isAccountUser = userRoles.some((role) =>
-    ["ACCOUNT_OWNER", "ACCOUNT_BUYER"].includes(role)
-  );
+  const isAccountUser = userRoles.some((role) => ["ACCOUNT_OWNER", "ACCOUNT_BUYER"].includes(role));
 
   // ACCOUNT_OWNER is a special case - they can view account data but NOT manage tenant resources
   const isAccountOwner = userRoles.includes("ACCOUNT_OWNER");

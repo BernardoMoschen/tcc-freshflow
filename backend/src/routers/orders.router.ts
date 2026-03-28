@@ -138,6 +138,7 @@ export const ordersRouter = router({
           z.object({
             productOptionId: z.string().uuid(),
             requestedQty: z.number().positive(),
+            notes: z.string().optional().nullable(),
           })
         ),
         notes: z.string().optional(),
@@ -230,6 +231,7 @@ export const ordersRouter = router({
             productOptionId: item.productOptionId,
             requestedQty: item.requestedQty,
             finalPrice,
+            notes: item.notes,
           };
         })
       );

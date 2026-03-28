@@ -150,6 +150,9 @@ export function CartPage() {
         notes: orderNotes || undefined,
       });
 
+      // Clear stale draft cache after submit
+      utils.orders.getDraft.setData(undefined, undefined);
+
       const timeSlotText = deliveryTimeSlot ? ` (${deliveryTimeSlot})` : "";
       toast.success(`Pedido enviado: ${order.orderNumber}`, {
         description: `Agendado para ${new Date(deliveryDate).toLocaleDateString("pt-BR")}${timeSlotText}`,
@@ -186,6 +189,13 @@ export function CartPage() {
     }
   }, [updateQuantity]);
 
+  const handleQuantityBlur = useCallback((productOptionId: string, value: string) => {
+    const qty = parseFloat(value);
+    if (!isNaN(qty) && qty >= 0.1) {
+      updateQuantity(productOptionId, qty, true);
+    }
+  }, [updateQuantity]);
+
   const handleNotesChange = useCallback((productOptionId: string, value: string) => {
     // Allow unrestricted input while typing, only limit length
     if (value.length <= MAX_ITEM_NOTES_LENGTH) {
@@ -197,7 +207,9 @@ export function CartPage() {
     // Sanitize only on blur to prevent XSS while allowing natural typing
     const sanitized = sanitizeNotes(value);
     if (sanitized !== value) {
-      updateNotes(productOptionId, sanitized);
+      updateNotes(productOptionId, sanitized, true);
+    } else {
+      updateNotes(productOptionId, value, true);
     }
   }, [updateNotes]);
 
@@ -333,6 +345,7 @@ export function CartPage() {
                       step="0.1"
                       value={item.requestedQty}
                       onChange={(e) => handleQuantityChange(item.productOptionId, e.target.value)}
+                      onBlur={(e) => handleQuantityBlur(item.productOptionId, e.target.value)}
                       className="w-24"
                       disabled={isSyncing}
                       aria-describedby={`unit-${item.productOptionId}`}

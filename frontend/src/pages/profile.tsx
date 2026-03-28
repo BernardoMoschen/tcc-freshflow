@@ -247,12 +247,12 @@ export function ProfilePage() {
           {/* Personal Information Tab */}
           <TabsContent value="personal" className="space-y-4">
             <Card>
-              <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-indigo-50">
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5 text-blue-600" />
+              <CardHeader className="border-b dark:bg-gradient-to-r dark:from-blue-950 dark:to-indigo-950">
+                <CardTitle className="flex items-center gap-2 dark:text-white">
+                  <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   Informações Pessoais
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="dark:text-gray-300">
                   Gerencie seus dados pessoais e informações de contato
                 </CardDescription>
               </CardHeader>
@@ -276,16 +276,16 @@ export function ProfilePage() {
                       Email de Login
                     </Label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                      <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400 dark:text-gray-600" />
                       <Input
                         id="email"
                         type="email"
                         value={profileQuery.data?.email || ""}
                         disabled
-                        className="pl-10 h-11 bg-gray-50 cursor-not-allowed"
+                        className="pl-10 h-11 bg-gray-50 dark:bg-gray-900 cursor-not-allowed"
                       />
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       Email de autenticação não pode ser alterado
                     </p>
                   </div>
@@ -295,7 +295,7 @@ export function ProfilePage() {
                       Telefone
                     </Label>
                     <div className="relative">
-                      <Phone className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                      <Phone className="absolute left-3 top-3 h-5 w-5 text-gray-400 dark:text-gray-600" />
                       <Input
                         id="phone"
                         placeholder="(11) 98765-4321"
@@ -311,7 +311,7 @@ export function ProfilePage() {
                       Email de Contato Alternativo
                     </Label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                      <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400 dark:text-gray-600" />
                       <Input
                         id="contactEmail"
                         type="email"
@@ -321,7 +321,7 @@ export function ProfilePage() {
                         className="pl-10 h-11"
                       />
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       Email alternativo para comunicações (opcional)
                     </p>
                   </div>
@@ -355,12 +355,12 @@ export function ProfilePage() {
           {isTenantAdmin && (
             <TabsContent value="company" className="space-y-4">
               <Card>
-                <CardHeader className="border-b bg-gradient-to-r from-green-50 to-emerald-50">
-                  <CardTitle className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5 text-green-600" />
+                <CardHeader className="border-b dark:bg-gradient-to-r dark:from-green-950 dark:to-emerald-950">
+                  <CardTitle className="flex items-center gap-2 dark:text-white">
+                    <Building2 className="h-5 w-5 text-green-600 dark:text-green-400" />
                     Dados da Empresa
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="dark:text-gray-300">
                     Informações cadastrais e fiscais da sua empresa
                   </CardDescription>
                 </CardHeader>
@@ -384,7 +384,7 @@ export function ProfilePage() {
                         CNPJ
                       </Label>
                       <div className="relative">
-                        <FileText className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                        <FileText className="absolute left-3 top-3 h-5 w-5 text-gray-400 dark:text-gray-600" />
                         <Input
                           id="cnpj"
                           placeholder="00.000.000/0000-00"
@@ -401,7 +401,7 @@ export function ProfilePage() {
                         Telefone Comercial
                       </Label>
                       <div className="relative">
-                        <Phone className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                        <Phone className="absolute left-3 top-3 h-5 w-5 text-gray-400 dark:text-gray-600" />
                         <Input
                           id="tenantPhone"
                           placeholder="(11) 3000-0000"
@@ -418,7 +418,7 @@ export function ProfilePage() {
               <Card>
                 <CardHeader className="border-b">
                   <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-blue-600" />
+                    <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                     Endereço Principal
                   </CardTitle>
                 </CardHeader>
@@ -517,7 +517,7 @@ export function ProfilePage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-3 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                  <div className="flex items-center space-x-3 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-100 dark:border-blue-800">
                     <Switch
                       id="same-address"
                       checked={useSameAddress}
@@ -534,7 +534,7 @@ export function ProfilePage() {
                 <Card>
                   <CardHeader className="border-b">
                     <CardTitle className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5 text-green-600" />
+                      <MapPin className="h-5 w-5 text-green-600 dark:text-green-400" />
                       Endereço de Entrega
                     </CardTitle>
                   </CardHeader>
@@ -677,12 +677,12 @@ export function ProfilePage() {
           {/* Preferences Tab */}
           <TabsContent value="preferences" className="space-y-4">
             <Card>
-              <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50">
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5 text-purple-600" />
+              <CardHeader className="border-b dark:bg-gradient-to-r dark:from-purple-950 dark:to-pink-950">
+                <CardTitle className="flex items-center gap-2 dark:text-white">
+                  <Settings className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                   Preferências do Sistema
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="dark:text-gray-300">
                   Personalize a aparência e o comportamento do sistema
                 </CardDescription>
               </CardHeader>
@@ -693,33 +693,30 @@ export function ProfilePage() {
                   <div className="grid grid-cols-3 gap-3">
                     <button
                       onClick={() => handleThemeChange("light")}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        localTheme === "light"
+                      className={`p-4 rounded-lg border-2 transition-all ${localTheme === "light"
                           ? "border-primary bg-primary/10 shadow-md"
                           : "border-border hover:border-primary/50 hover:shadow-sm hover:bg-accent/10"
-                      }`}
+                        }`}
                     >
                       <Sun className="h-6 w-6 mx-auto mb-2 text-yellow-600" />
                       <p className="text-sm font-medium">Claro</p>
                     </button>
                     <button
                       onClick={() => handleThemeChange("dark")}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        localTheme === "dark"
+                      className={`p-4 rounded-lg border-2 transition-all ${localTheme === "dark"
                           ? "border-primary bg-primary/10 shadow-md"
                           : "border-border hover:border-primary/50 hover:shadow-sm hover:bg-accent/10"
-                      }`}
+                        }`}
                     >
                       <Moon className="h-6 w-6 mx-auto mb-2 text-indigo-600" />
                       <p className="text-sm font-medium">Escuro</p>
                     </button>
                     <button
                       onClick={() => handleThemeChange("system")}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        localTheme === "system"
+                      className={`p-4 rounded-lg border-2 transition-all ${localTheme === "system"
                           ? "border-primary bg-primary/10 shadow-md"
                           : "border-border hover:border-primary/50 hover:shadow-sm hover:bg-accent/10"
-                      }`}
+                        }`}
                     >
                       <Monitor className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
                       <p className="text-sm font-medium">Sistema</p>
@@ -733,22 +730,20 @@ export function ProfilePage() {
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={() => setDensity("comfortable")}
-                      className={`p-4 rounded-lg border-2 transition-all text-left ${
-                        density === "comfortable"
+                      className={`p-4 rounded-lg border-2 transition-all text-left ${density === "comfortable"
                           ? "border-primary bg-primary/10 shadow-md"
                           : "border-border hover:border-primary/50 hover:shadow-sm hover:bg-accent/10"
-                      }`}
+                        }`}
                     >
                       <p className="font-medium mb-1">Confortável</p>
                       <p className="text-xs text-muted-foreground">Mais espaçamento e elementos maiores</p>
                     </button>
                     <button
                       onClick={() => setDensity("compact")}
-                      className={`p-4 rounded-lg border-2 transition-all text-left ${
-                        density === "compact"
+                      className={`p-4 rounded-lg border-2 transition-all text-left ${density === "compact"
                           ? "border-primary bg-primary/10 shadow-md"
                           : "border-border hover:border-primary/50 hover:shadow-sm hover:bg-accent/10"
-                      }`}
+                        }`}
                     >
                       <p className="font-medium mb-1">Compacta</p>
                       <p className="text-xs text-muted-foreground">Menos espaço, mais conteúdo visível</p>

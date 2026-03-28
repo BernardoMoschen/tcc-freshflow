@@ -10,9 +10,7 @@ export const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/trpc",
       async headers() {
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json",
-        };
+        const headers: Record<string, string> = {};
 
         // Development mode bypass
         if (import.meta.env.DEV) {

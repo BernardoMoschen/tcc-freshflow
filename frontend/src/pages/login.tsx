@@ -107,19 +107,19 @@ export function LoginPage() {
             <div className="space-y-2">
               <button
                 onClick={() => handleDevLogin("chef")}
-                className="w-full py-3 px-4 bg-accent/10 border border-accent rounded-lg text-accent-foreground hover:bg-accent/20 transition-colors text-sm font-medium"
+                className="w-full py-3 px-4 bg-accent/20 dark:bg-accent/40 border border-accent rounded-lg text-accent-foreground hover:bg-accent/30 dark:hover:bg-accent/50 transition-colors text-sm font-medium"
               >
                 Entrar como Chef (ACCOUNT_OWNER)
               </button>
               <button
                 onClick={() => handleDevLogin("owner")}
-                className="w-full py-3 px-4 bg-secondary border border-border rounded-lg text-secondary-foreground hover:bg-secondary/80 transition-colors text-sm font-medium"
+                className="w-full py-3 px-4 bg-secondary border border-border rounded-lg text-secondary-foreground hover:bg-secondary/80 dark:hover:bg-secondary/70 transition-colors text-sm font-medium"
               >
                 Entrar como Dono do Tenant (TENANT_OWNER)
               </button>
               <button
                 onClick={() => handleDevLogin("admin")}
-                className="w-full py-3 px-4 bg-muted border border-border rounded-lg text-muted-foreground hover:bg-muted/80 transition-colors text-sm font-medium"
+                className="w-full py-3 px-4 bg-muted border border-border rounded-lg text-muted-foreground hover:bg-muted/80 dark:hover:bg-muted/70 transition-colors text-sm font-medium"
               >
                 Entrar como Admin da Plataforma
               </button>

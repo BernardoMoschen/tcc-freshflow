@@ -90,11 +90,10 @@ export function Navbar() {
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors ${
-                    active
+                  className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors ${active
                       ? "bg-primary text-primary-foreground"
                       : "text-foreground hover:bg-accent/10"
-                  }`}
+                    }`}
                 >
                   <Icon className="h-4 w-4" />
                   {link.label}
@@ -106,11 +105,10 @@ export function Navbar() {
             {isAccountUser && (
               <Link
                 to="/chef/cart"
-                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors relative ${
-                  isActive("/chef/cart")
+                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors relative ${isActive("/chef/cart")
                     ? "bg-primary text-primary-foreground"
                     : "text-foreground hover:bg-accent/10"
-                }`}
+                  }`}
               >
                 <ShoppingCart className="h-4 w-4" />
                 Carrinho
@@ -192,11 +190,10 @@ export function Navbar() {
                   key={link.path}
                   to={link.path}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2 ${
-                    active
+                  className={`block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2 ${active
                       ? "bg-primary text-primary-foreground"
                       : "text-foreground hover:bg-accent/10"
-                  }`}
+                    }`}
                 >
                   <Icon className="h-5 w-5" />
                   {link.label}
@@ -209,11 +206,10 @@ export function Navbar() {
               <Link
                 to="/chef/cart"
                 onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2 ${
-                  isActive("/chef/cart")
+                className={`block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2 ${isActive("/chef/cart")
                     ? "bg-primary text-primary-foreground"
                     : "text-foreground hover:bg-accent/10"
-                }`}
+                  }`}
               >
                 <ShoppingCart className="h-5 w-5" />
                 Carrinho

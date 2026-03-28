@@ -47,10 +47,10 @@ export function useCart() {
 
   // Update draft mutation with optimistic updates
   const updateDraftMutation = trpc.orders.updateDraft.useMutation({
-    onSuccess: () => {
-      // Clear optimistic state and refetch actual data
+    onSuccess: (data) => {
+      // Update cache from server response without refetching
+      utils.orders.getDraft.setData(undefined, data);
       setOptimisticItems(null);
-      utils.orders.getDraft.invalidate();
       // Clear offline storage on successful sync
       localStorage.removeItem(STORAGE_KEY);
     },
@@ -95,7 +95,7 @@ export function useCart() {
       unitType: item.productOption.unitType,
       requestedQty: item.requestedQty,
       price: item.finalPrice || item.productOption.basePrice,
-      notes: item.notes,
+      notes: item.notes ?? undefined,
     }));
   }, [draftQuery.data]);
 
@@ -165,6 +165,7 @@ export function useCart() {
       items: updatedItems.map((item) => ({
         productOptionId: item.productOptionId,
         requestedQty: item.requestedQty,
+        notes: item.notes ?? undefined,
       })),
     });
   }, [draftQuery.data?.id, updateDraftMutation]);
@@ -194,7 +195,7 @@ export function useCart() {
     syncToServer(updatedItems);
   }, [optimisticItems, serverItems, syncToServer]);
 
-  const updateQuantity = useCallback((productOptionId: string, requestedQty: number) => {
+  const updateQuantity = useCallback((productOptionId: string, requestedQty: number, immediate = false) => {
     if (requestedQty <= 0) {
       removeItem(productOptionId);
       return;
@@ -204,15 +205,26 @@ export function useCart() {
     const updatedItems = currentItems.map((i) =>
       i.productOptionId === productOptionId ? { ...i, requestedQty } : i
     );
-    syncToServer(updatedItems);
-  }, [optimisticItems, serverItems, removeItem, syncToServer]);
+    setOptimisticItems(updatedItems);
+    if (immediate) {
+      syncToServer(updatedItems);
+    } else {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedItems));
+    }
+  }, [optimisticItems, removeItem, serverItems, syncToServer]);
 
-  const updateNotes = useCallback((productOptionId: string, notes: string) => {
+  const updateNotes = useCallback((productOptionId: string, notes: string, immediate = false) => {
     const currentItems = optimisticItems !== null ? optimisticItems : serverItems;
     const updatedItems = currentItems.map((i) =>
       i.productOptionId === productOptionId ? { ...i, notes } : i
     );
-    syncToServer(updatedItems);
+    setOptimisticItems(updatedItems);
+    if (immediate) {
+      syncToServer(updatedItems);
+    } else {
+      // Keep local cache while typing; sync happens on blur
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedItems));
+    }
   }, [optimisticItems, serverItems, syncToServer]);
 
   const clear = useCallback(() => {

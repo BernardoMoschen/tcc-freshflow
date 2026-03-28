@@ -54,3 +54,5 @@ backend/prisma/migrations/**/migration.sql
 
 # folders
 personal/*
+.personal
+.claude
