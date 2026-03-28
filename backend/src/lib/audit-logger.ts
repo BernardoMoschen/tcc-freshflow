@@ -76,8 +76,11 @@ class AuditLogger {
           },
         });
       } catch (error) {
-        // Log to console if database write fails
-        console.error("Failed to write audit log to database:", error);
+        // Log to console if database write fails (but not as ERROR since we have fallback)
+        // Only log if it's not a "table doesn't exist" error to avoid spam
+        if (error instanceof Error && !error.message.includes("does not exist")) {
+          console.warn("Failed to write audit log to database:", error);
+        }
         this.storeFallback(entry);
       }
     } else {

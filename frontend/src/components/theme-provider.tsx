@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 
 type Theme = "light" | "dark" | "system";
 
@@ -23,7 +23,7 @@ export function ThemeProvider({
   defaultTheme = "system",
   storageKey = "freshflow-theme",
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(
+  const [theme, setThemeState] = useState<Theme>(
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   );
 
@@ -76,14 +76,18 @@ export function ThemeProvider({
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, [theme]);
 
-  const value = {
+  // Use useCallback to ensure setTheme has stable reference
+  const setTheme = useCallback((newTheme: Theme) => {
+    localStorage.setItem(storageKey, newTheme);
+    setThemeState(newTheme);
+  }, [storageKey]);
+
+  // Memoize the context value to prevent unnecessary re-renders of consumers
+  const value = useMemo<ThemeProviderState>(() => ({
     theme,
-    setTheme: (newTheme: Theme) => {
-      localStorage.setItem(storageKey, newTheme);
-      setTheme(newTheme);
-    },
+    setTheme,
     actualTheme,
-  };
+  }), [theme, setTheme, actualTheme]);
 
   return (
     <ThemeProviderContext.Provider value={value}>

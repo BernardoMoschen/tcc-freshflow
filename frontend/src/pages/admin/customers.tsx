@@ -196,7 +196,23 @@ export function CustomersManagementPage() {
             <DialogTitle>{selectedCustomer?.account.name}</DialogTitle>
           </DialogHeader>
 
-          {customerDetailsQuery.isLoading && <p className="text-center py-4">Carregando...</p>}
+          {(customerDetailsQuery.isLoading || statsQuery.isLoading) && (
+            <p className="text-center py-8">Carregando detalhes do cliente...</p>
+          )}
+
+          {customerDetailsQuery.error && (
+            <div className="bg-destructive/10 border border-destructive rounded-lg p-4 text-destructive">
+              <p className="font-semibold">Erro ao carregar detalhes</p>
+              <p className="text-sm">{customerDetailsQuery.error.message}</p>
+            </div>
+          )}
+
+          {statsQuery.error && (
+            <div className="bg-destructive/10 border border-destructive rounded-lg p-4 text-destructive">
+              <p className="font-semibold">Erro ao carregar estatísticas</p>
+              <p className="text-sm">{statsQuery.error.message}</p>
+            </div>
+          )}
 
           {customerDetailsQuery.data && statsQuery.data && (
             <div className="space-y-6">

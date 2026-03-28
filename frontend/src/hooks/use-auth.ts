@@ -13,15 +13,17 @@ export function useAuth() {
   const [isRateLimited, setIsRateLimited] = useState(false);
 
   // Get session data from tRPC
+  // Note: No user state-based 'enabled' condition - prevents re-firing when user toggles
+  // Rate limiting is still enforced via retry: false + error handling below
   const sessionQuery = trpc.auth.session.useQuery(undefined, {
-    enabled: !!user && !isRateLimited,
+    enabled: !isRateLimited,
     retry: false,
     // Prevent rapid re-fetching
-    staleTime: Infinity, // Never consider data stale - manual refetch only
+    staleTime: 1000 * 60 * 5, // 5 minutes - cache the session data
     gcTime: 1000 * 60 * 30, // 30 minutes
     refetchOnMount: false,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    refetchOnReconnect: "stale", // Refetch if becomes stale
     refetchInterval: false, // Disable polling
   });
 

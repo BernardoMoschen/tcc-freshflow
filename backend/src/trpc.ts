@@ -17,19 +17,30 @@ export async function createContext({ req, res }: CreateExpressContextOptions) {
 
   // Attempt authentication (returns userId or null)
   let userId: string | null = null;
+  
   try {
     if (authHeader) {
       userId = await authenticateRequest(authHeader);
     } else if (process.env.NODE_ENV === "development" && devUserEmail) {
       // Development bypass: use x-dev-user-email header to impersonate user
-      const user = await prisma.user.findUnique({
-        where: { email: devUserEmail },
-      });
-      if (user) {
-        userId = user.id;
-        logger.debug(`🔧 [DEV MODE] Authenticated as: ${devUserEmail}`);
-      } else {
-        logger.warn(`🔧 [DEV MODE] User not found: ${devUserEmail}`);
+      try {
+        const user = await prisma.user.findUnique({
+          where: { email: devUserEmail },
+        });
+        if (user) {
+          userId = user.id;
+          logger.debug(`🔧 [DEV MODE] Authenticated as: ${devUserEmail}`);
+        } else {
+          logger.debug(`🔧 [DEV MODE] User not found: ${devUserEmail}`);
+        }
+      } catch (dbError) {
+        // If database is unavailable in dev mode, log once at warn level
+        // This allows graceful degradation when DB is down
+        if (dbError instanceof Error && dbError.message.includes("Can't reach database")) {
+          logger.warn("⚠️  Database unavailable - dev mode user lookup failed");
+        } else {
+          throw dbError;
+        }
       }
     }
   } catch (error) {

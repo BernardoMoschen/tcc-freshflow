@@ -287,7 +287,7 @@ export const customersRouter = router({
           ), 0) as total
           FROM "OrderItem" oi
           INNER JOIN "Order" o ON o.id = oi."orderId"
-          WHERE o."customerId" = ${input.customerId}::uuid
+          WHERE o."customerId" = ${input.customerId}
             AND oi."finalPrice" IS NOT NULL
         `,
       ]);

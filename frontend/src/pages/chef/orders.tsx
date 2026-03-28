@@ -89,6 +89,7 @@ export function OrdersPage() {
 
   const reorderMutation = trpc.orders.reorder.useMutation({
     onSuccess: (data) => {
+      utils.orders.getDraft.setData(undefined, data);
       toast.success("Pedido adicionado ao carrinho!", {
         description: "Revise e confirme os itens antes de enviar",
       });

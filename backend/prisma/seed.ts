@@ -129,7 +129,27 @@ async function main() {
     },
   });
 
-  console.log("✅ 7 usuários criados");
+  const freshcoOwner = await prisma.user.create({
+    data: {
+      email: "owner@freshco.com",
+      supabaseId: "00000000-0000-0000-0000-000000000008",
+      name: "Fernanda Rocha",
+      phone: "(11) 93210-4567",
+      contactEmail: "fernanda.rocha@freshco.com",
+    },
+  });
+
+  const chefUser = await prisma.user.create({
+    data: {
+      email: "chef@chefstable.com",
+      supabaseId: "00000000-0000-0000-0000-000000000009",
+      name: "Rafael Moreira",
+      phone: "(11) 92123-9876",
+      contactEmail: "rafael@chefstable.com",
+    },
+  });
+
+  console.log("✅ 9 usuários criados");
 
   // =============================================
   // TENANT (Distribuidora)
@@ -163,6 +183,35 @@ async function main() {
   });
   console.log("✅ Tenant criado: Verde Campo Distribuidora");
 
+  const freshcoTenant = await prisma.tenant.create({
+    data: {
+      name: "FreshCo Distribuidora",
+      slug: "freshco",
+      cnpj: "45678912000155",
+      razaoSocial: "FreshCo Distribuidora de Alimentos LTDA",
+      phone: "(11) 3333-2211",
+      address: {
+        street: "Av. dos Produtores",
+        number: "820",
+        complement: "Bloco B",
+        neighborhood: "Butanta",
+        city: "Sao Paulo",
+        state: "SP",
+        zipCode: "05502000",
+      },
+      deliveryAddress: {
+        street: "Rua das Flores",
+        number: "150",
+        complement: "",
+        neighborhood: "Pinheiros",
+        city: "Sao Paulo",
+        state: "SP",
+        zipCode: "05422010",
+      },
+    },
+  });
+  console.log("✅ Tenant criado: FreshCo Distribuidora");
+
   // =============================================
   // MEMBERSHIPS (Tenant-level)
   // =============================================
@@ -181,6 +230,13 @@ async function main() {
       userId: anaUser.id,
       roleId: tenantAdmin.id,
       tenantId: tenant.id,
+    },
+  });
+  await prisma.membership.create({
+    data: {
+      userId: freshcoOwner.id,
+      roleId: tenantOwner.id,
+      tenantId: freshcoTenant.id,
     },
   });
   console.log("✅ Memberships de tenant criadas");
@@ -211,7 +267,15 @@ async function main() {
       tenantId: tenant.id,
     },
   });
-  console.log("✅ 3 contas (restaurantes) criadas");
+
+  const chefsTable = await prisma.account.create({
+    data: {
+      name: "Chef's Table",
+      slug: "chefs-table",
+      tenantId: freshcoTenant.id,
+    },
+  });
+  console.log("✅ 4 contas (restaurantes) criadas");
 
   // =============================================
   // MEMBERSHIPS (Account-level)
@@ -244,6 +308,13 @@ async function main() {
       accountId: bistroJardim.id,
     },
   });
+  await prisma.membership.create({
+    data: {
+      userId: chefUser.id,
+      roleId: accountOwner.id,
+      accountId: chefsTable.id,
+    },
+  });
   console.log("✅ Memberships de contas criadas");
 
   // =============================================
@@ -258,7 +329,10 @@ async function main() {
   const customerBistro = await prisma.customer.create({
     data: { accountId: bistroJardim.id },
   });
-  console.log("✅ 3 clientes criados");
+  const customerChefsTable = await prisma.customer.create({
+    data: { accountId: chefsTable.id },
+  });
+  console.log("✅ 4 clientes criados");
 
   // =============================================
   // PRODUCTS + OPTIONS
@@ -1009,6 +1083,137 @@ async function main() {
   console.log("✅ 35 produtos criados (7 categorias)");
 
   // =============================================
+  // PRODUCTS + OPTIONS (FreshCo)
+  // =============================================
+  const cogumeloParis = await prisma.product.create({
+    data: {
+      name: "Cogumelo Paris",
+      description: "Cogumelo paris fresco, ideal para risotos",
+      category: "Gourmet",
+      tenantId: freshcoTenant.id,
+      options: {
+        create: {
+          name: "Bandeja 500g",
+          sku: "FCO-COG-500",
+          unitType: UnitType.FIXED,
+          basePrice: 2400,
+          stockQuantity: 45,
+          lowStockThreshold: 10,
+          isAvailable: true,
+        },
+      },
+    },
+    include: { options: true },
+  });
+
+  const aspargos = await prisma.product.create({
+    data: {
+      name: "Aspargos Frescos",
+      description: "Aspargos frescos selecionados",
+      category: "Gourmet",
+      tenantId: freshcoTenant.id,
+      options: {
+        create: {
+          name: "Maço 500g",
+          sku: "FCO-ASP-500",
+          unitType: UnitType.FIXED,
+          basePrice: 3200,
+          stockQuantity: 30,
+          lowStockThreshold: 8,
+          isAvailable: true,
+        },
+      },
+    },
+    include: { options: true },
+  });
+
+  const salmao = await prisma.product.create({
+    data: {
+      name: "Salmao Premium",
+      description: "Salmao fresco para pratos especiais",
+      category: "Peixes",
+      tenantId: freshcoTenant.id,
+      options: {
+        create: {
+          name: "Por kg",
+          sku: "FCO-SAL-KG",
+          unitType: UnitType.WEIGHT,
+          basePrice: 9800,
+          stockQuantity: 20,
+          lowStockThreshold: 5,
+          isAvailable: true,
+        },
+      },
+    },
+    include: { options: true },
+  });
+
+  const massaFresca = await prisma.product.create({
+    data: {
+      name: "Massa Fresca",
+      description: "Massa fresca artesanal",
+      category: "Mercearia",
+      tenantId: freshcoTenant.id,
+      options: {
+        create: {
+          name: "Pacote 1kg",
+          sku: "FCO-MAS-1K",
+          unitType: UnitType.FIXED,
+          basePrice: 2800,
+          stockQuantity: 25,
+          lowStockThreshold: 6,
+          isAvailable: true,
+        },
+      },
+    },
+    include: { options: true },
+  });
+
+  const paoArtesanal = await prisma.product.create({
+    data: {
+      name: "Pao Artesanal",
+      description: "Pao de fermentacao natural",
+      category: "Padaria",
+      tenantId: freshcoTenant.id,
+      options: {
+        create: {
+          name: "Unidade",
+          sku: "FCO-PAO-UN",
+          unitType: UnitType.FIXED,
+          basePrice: 1400,
+          stockQuantity: 40,
+          lowStockThreshold: 10,
+          isAvailable: true,
+        },
+      },
+    },
+    include: { options: true },
+  });
+
+  const azeiteExtra = await prisma.product.create({
+    data: {
+      name: "Azeite Extra Virgem",
+      description: "Azeite extra virgem importado",
+      category: "Mercearia",
+      tenantId: freshcoTenant.id,
+      options: {
+        create: {
+          name: "Garrafa 500ml",
+          sku: "FCO-AZE-500",
+          unitType: UnitType.FIXED,
+          basePrice: 4500,
+          stockQuantity: 35,
+          lowStockThreshold: 8,
+          isAvailable: true,
+        },
+      },
+    },
+    include: { options: true },
+  });
+
+  console.log("✅ 6 produtos criados (FreshCo)");
+
+  // =============================================
   // CUSTOMER PRICES (Preços especiais)
   // =============================================
 
@@ -1502,7 +1707,97 @@ async function main() {
     include: { items: true },
   });
 
-  console.log("✅ 8 pedidos criados (2 DRAFT, 3 SENT, 1 IN_SEPARATION, 2 FINALIZED)");
+  // --- Order 9: Chef's Table - SENT (FreshCo) ---
+  const order9 = await prisma.order.create({
+    data: {
+      orderNumber: "FCO-001",
+      customerId: customerChefsTable.id,
+      accountId: chefsTable.id,
+      createdBy: chefUser.id,
+      status: OrderStatus.SENT,
+      notes: "Pedido degustacao do menu executivo",
+      requestedDeliveryDate: daysFromNow(2),
+      deliveryTimeSlot: "10:00-14:00",
+      deliveryInstructions: "Entregar na cozinha principal",
+      createdAt: daysAgo(0),
+      sentAt: daysAgo(0),
+      items: {
+        create: [
+          {
+            productOptionId: salmao.options[0].id,
+            requestedQty: 6,
+            finalPrice: null,
+            isExtra: false,
+          },
+          {
+            productOptionId: cogumeloParis.options[0].id,
+            requestedQty: 8,
+            finalPrice: 2400,
+            isExtra: false,
+          },
+          {
+            productOptionId: massaFresca.options[0].id,
+            requestedQty: 5,
+            finalPrice: 2800,
+            isExtra: false,
+          },
+          {
+            productOptionId: azeiteExtra.options[0].id,
+            requestedQty: 2,
+            finalPrice: 4500,
+            isExtra: false,
+          },
+        ],
+      },
+    },
+    include: { items: true },
+  });
+
+  // --- Order 10: Chef's Table - FINALIZED (FreshCo) ---
+  const order10 = await prisma.order.create({
+    data: {
+      orderNumber: "FCO-002",
+      customerId: customerChefsTable.id,
+      accountId: chefsTable.id,
+      createdBy: chefUser.id,
+      status: OrderStatus.FINALIZED,
+      notes: "Pedido encerrado - jantar harmonizado",
+      requestedDeliveryDate: daysAgo(3),
+      deliveryTimeSlot: "08:00-12:00",
+      deliveryInstructions: "Entregar no almoxarifado",
+      createdAt: daysAgo(6),
+      sentAt: daysAgo(5),
+      finalizedAt: daysAgo(3),
+      items: {
+        create: [
+          {
+            productOptionId: salmao.options[0].id,
+            requestedQty: 4,
+            actualWeight: 4.3,
+            finalPrice: 9800,
+            isExtra: false,
+          },
+          {
+            productOptionId: aspargos.options[0].id,
+            requestedQty: 6,
+            finalPrice: 3200,
+            isExtra: false,
+          },
+          {
+            productOptionId: paoArtesanal.options[0].id,
+            requestedQty: 10,
+            finalPrice: 1400,
+            isExtra: false,
+          },
+        ],
+      },
+    },
+    include: { items: true },
+  });
+
+  console.log(
+    "✅ 10 pedidos criados (2 DRAFT, 4 SENT, 1 IN_SEPARATION, 3 FINALIZED)"
+  );
 
   // =============================================
   // WEIGHING RECORDS (for finalized orders)
@@ -1542,7 +1837,24 @@ async function main() {
     });
   }
 
-  console.log("✅ 7 registros de pesagem criados");
+  // Order 10 weighings (Chef's Table - FINALIZED)
+  const order10WeightItems = order10.items.filter(
+    (i) => i.actualWeight !== null
+  );
+  for (const item of order10WeightItems) {
+    await prisma.weighing.create({
+      data: {
+        orderItemId: item.id,
+        actualWeight: item.actualWeight!,
+        finalPrice: item.finalPrice,
+        notes: "Pesagem registrada pelo time FreshCo",
+        userId: freshcoOwner.id,
+        createdAt: daysAgo(3),
+      },
+    });
+  }
+
+  console.log("✅ 9 registros de pesagem criados");
 
   // =============================================
   // STOCK MOVEMENTS
@@ -1662,12 +1974,39 @@ async function main() {
       userId: anaUser.id,
       createdAt: daysAgo(1),
     },
+    // FreshCo restock
+    {
+      productOptionId: salmao.options[0].id,
+      type: StockMovementType.MANUAL_ADDITION,
+      quantity: 25,
+      notes: "Recebimento de salmao premium",
+      userId: freshcoOwner.id,
+      createdAt: daysAgo(2),
+    },
+    {
+      productOptionId: cogumeloParis.options[0].id,
+      type: StockMovementType.MANUAL_ADDITION,
+      quantity: 40,
+      notes: "Recebimento de cogumelos frescos",
+      userId: freshcoOwner.id,
+      createdAt: daysAgo(1),
+    },
+    // Order finalized deductions (Order 10)
+    {
+      productOptionId: salmao.options[0].id,
+      type: StockMovementType.ORDER_FINALIZED,
+      quantity: -4.3,
+      orderId: order10.id,
+      notes: "Dedução pedido FCO-002",
+      userId: freshcoOwner.id,
+      createdAt: daysAgo(3),
+    },
   ];
 
   for (const mv of stockMovements) {
     await prisma.stockMovement.create({ data: mv });
   }
-  console.log("✅ 13 movimentações de estoque criadas");
+  console.log("✅ 16 movimentações de estoque criadas");
 
   // =============================================
   // ORDER ACTIVITIES
@@ -1889,12 +2228,72 @@ async function main() {
       description: "Entrega agendada para jantar harmonizado",
       createdAt: daysAgo(0),
     },
+    // Order 9 (Chef's Table - SENT)
+    {
+      orderId: order9.id,
+      activityType: OrderActivityType.ORDER_CREATED,
+      userId: chefUser.id,
+      description: "Pedido FCO-001 criado por Rafael Moreira",
+      createdAt: daysAgo(0),
+    },
+    {
+      orderId: order9.id,
+      activityType: OrderActivityType.ORDER_SUBMITTED,
+      userId: chefUser.id,
+      description: "Pedido FCO-001 enviado para a distribuidora",
+      createdAt: daysAgo(0),
+    },
+    {
+      orderId: order9.id,
+      activityType: OrderActivityType.DELIVERY_SCHEDULED,
+      userId: chefUser.id,
+      description: "Entrega agendada para 10:00-14:00",
+      createdAt: daysAgo(0),
+    },
+    // Order 10 (Chef's Table - FINALIZED)
+    {
+      orderId: order10.id,
+      activityType: OrderActivityType.ORDER_CREATED,
+      userId: chefUser.id,
+      description: "Pedido FCO-002 criado por Rafael Moreira",
+      createdAt: daysAgo(6),
+    },
+    {
+      orderId: order10.id,
+      activityType: OrderActivityType.ORDER_SUBMITTED,
+      userId: chefUser.id,
+      description: "Pedido FCO-002 enviado para a distribuidora",
+      createdAt: daysAgo(5),
+    },
+    {
+      orderId: order10.id,
+      activityType: OrderActivityType.ORDER_STATUS_CHANGED,
+      userId: freshcoOwner.id,
+      description: "Status alterado para Em Separação",
+      metadata: { oldStatus: "SENT", newStatus: "IN_SEPARATION" },
+      createdAt: daysAgo(4),
+    },
+    {
+      orderId: order10.id,
+      activityType: OrderActivityType.ITEM_WEIGHED,
+      userId: freshcoOwner.id,
+      description: "Salmao pesado: 4,3kg (solicitado: 4kg)",
+      metadata: { requestedQty: 4, actualWeight: 4.3 },
+      createdAt: daysAgo(3),
+    },
+    {
+      orderId: order10.id,
+      activityType: OrderActivityType.ORDER_FINALIZED,
+      userId: freshcoOwner.id,
+      description: "Pedido FCO-002 finalizado e entregue",
+      createdAt: daysAgo(3),
+    },
   ];
 
   for (const act of activities) {
     await prisma.orderActivity.create({ data: act });
   }
-  console.log("✅ 28 atividades de pedidos criadas");
+  console.log("✅ 36 atividades de pedidos criadas");
 
   // =============================================
   // TENANT SETTINGS
@@ -1917,7 +2316,25 @@ async function main() {
       autoConfirmOrders: false,
     },
   });
-  console.log("✅ Configurações do tenant criadas");
+  await prisma.tenantSettings.create({
+    data: {
+      tenantId: freshcoTenant.id,
+      minDeliveryDaysAhead: 2,
+      maxDeliveryDaysAhead: 21,
+      deliveryDaysAllowed: [2, 3, 4, 5, 6],
+      deliveryTimeSlots: {
+        "2": ["08:00-12:00", "12:00-16:00"],
+        "3": ["08:00-12:00", "12:00-16:00"],
+        "4": ["08:00-12:00", "12:00-16:00"],
+        "5": ["08:00-12:00", "12:00-16:00"],
+        "6": ["08:00-12:00"],
+      },
+      operatingDays: [2, 3, 4, 5, 6],
+      allowSameDayOrders: false,
+      autoConfirmOrders: true,
+    },
+  });
+  console.log("✅ Configurações dos tenants criadas");
 
   // =============================================
   // USER PREFERENCES
@@ -1980,9 +2397,25 @@ async function main() {
         notifyLowStock: false,
         notifyNewOrders: true,
       },
+      {
+        userId: freshcoOwner.id,
+        theme: "light",
+        density: "comfortable",
+        notifyOrderStatus: true,
+        notifyLowStock: true,
+        notifyNewOrders: true,
+      },
+      {
+        userId: chefUser.id,
+        theme: "dark",
+        density: "compact",
+        notifyOrderStatus: true,
+        notifyLowStock: false,
+        notifyNewOrders: false,
+      },
     ],
   });
-  console.log("✅ Preferências de 7 usuários criadas");
+  console.log("✅ Preferências de 9 usuários criadas");
 
   // =============================================
   // DELIVERY NOTES (for finalized orders)
@@ -2001,7 +2434,98 @@ async function main() {
       generatedAt: daysAgo(4),
     },
   });
-  console.log("✅ 2 notas de entrega criadas");
+  await prisma.deliveryNote.create({
+    data: {
+      orderId: order10.id,
+      generatedBy: freshcoOwner.id,
+      generatedAt: daysAgo(3),
+    },
+  });
+  console.log("✅ 3 notas de entrega criadas");
+
+  // =============================================
+  // AUDIT LOGS
+  // =============================================
+  await prisma.auditLog.createMany({
+    data: [
+      {
+        eventType: "AUTH_LOGIN",
+        severity: "INFO",
+        action: "User login",
+        success: true,
+        userId: chefUser.id,
+        tenantId: freshcoTenant.id,
+        accountId: chefsTable.id,
+        resourceType: "User",
+        resourceId: chefUser.id,
+        details: { method: "dev-mode" },
+        ipAddress: "127.0.0.1",
+        userAgent: "SeedScript",
+        createdAt: daysAgo(6),
+      },
+      {
+        eventType: "ORDER_SUBMITTED",
+        severity: "INFO",
+        action: "Order submitted",
+        success: true,
+        userId: chefUser.id,
+        tenantId: freshcoTenant.id,
+        accountId: chefsTable.id,
+        resourceType: "Order",
+        resourceId: order10.id,
+        details: { orderNumber: "FCO-002" },
+        ipAddress: "127.0.0.1",
+        userAgent: "SeedScript",
+        createdAt: daysAgo(5),
+      },
+      {
+        eventType: "ORDER_FINALIZED",
+        severity: "INFO",
+        action: "Order finalized",
+        success: true,
+        userId: freshcoOwner.id,
+        tenantId: freshcoTenant.id,
+        accountId: chefsTable.id,
+        resourceType: "Order",
+        resourceId: order10.id,
+        details: { orderNumber: "FCO-002" },
+        ipAddress: "127.0.0.1",
+        userAgent: "SeedScript",
+        createdAt: daysAgo(3),
+      },
+      {
+        eventType: "STOCK_ADJUSTED",
+        severity: "WARNING",
+        action: "Inventory adjustment",
+        success: true,
+        userId: carlosUser.id,
+        tenantId: tenant.id,
+        accountId: saborDaTerra.id,
+        resourceType: "ProductOption",
+        resourceId: costelaBovina.options[0].id,
+        details: { reason: "lote vencido" },
+        ipAddress: "127.0.0.1",
+        userAgent: "SeedScript",
+        createdAt: daysAgo(3),
+      },
+      {
+        eventType: "CUSTOMER_PRICE_SET",
+        severity: "INFO",
+        action: "Customer price override",
+        success: true,
+        userId: anaUser.id,
+        tenantId: tenant.id,
+        accountId: saborDaTerra.id,
+        resourceType: "CustomerPrice",
+        resourceId: "seed-customer-price",
+        details: { customerId: customerSabor.id },
+        ipAddress: "127.0.0.1",
+        userAgent: "SeedScript",
+        createdAt: daysAgo(4),
+      },
+    ],
+  });
+  console.log("✅ 5 logs de auditoria criados");
 
   // =============================================
   // SUMMARY
@@ -2009,30 +2533,38 @@ async function main() {
   console.log("\n🎉 Seed do banco de dados concluído com sucesso!\n");
   console.log("📋 Resumo:");
   console.log("   - Roles: 5");
-  console.log("   - Usuários: 7");
-  console.log("   - Tenant: 1 (Verde Campo Distribuidora)");
-  console.log("   - Contas: 3 (Sabor da Terra, Cantina Dona Maria, Bistrô Jardim)");
-  console.log("   - Clientes: 3");
-  console.log("   - Produtos: 35 (7 categorias)");
+  console.log("   - Usuários: 9");
+  console.log("   - Tenants: 2 (Verde Campo Distribuidora, FreshCo Distribuidora)");
+  console.log(
+    "   - Contas: 4 (Sabor da Terra, Cantina Dona Maria, Bistro Jardim, Chef's Table)"
+  );
+  console.log("   - Clientes: 4");
+  console.log("   - Produtos: 41 (11 categorias)");
   console.log("   - Preços especiais: 10");
-  console.log("   - Pedidos: 8 (2 DRAFT, 3 SENT, 1 IN_SEPARATION, 2 FINALIZED)");
-  console.log("   - Pesagens: 7");
-  console.log("   - Movimentações de estoque: 13");
-  console.log("   - Atividades de pedidos: 28");
-  console.log("   - Configurações de tenant: 1");
-  console.log("   - Preferências de usuário: 7");
-  console.log("   - Notas de entrega: 2");
+  console.log("   - Pedidos: 10 (2 DRAFT, 4 SENT, 1 IN_SEPARATION, 3 FINALIZED)");
+  console.log("   - Pesagens: 9");
+  console.log("   - Movimentações de estoque: 16");
+  console.log("   - Atividades de pedidos: 36");
+  console.log("   - Configurações de tenant: 2");
+  console.log("   - Preferências de usuário: 9");
+  console.log("   - Notas de entrega: 3");
+  console.log("   - Logs de auditoria: 5");
   console.log("\n🔑 Credenciais de Teste:");
   console.log("   Admin:           admin@freshflow.com");
   console.log("   Tenant Owner:    carlos@verdecampo.com.br");
+  console.log("   Tenant Owner:    owner@freshco.com");
   console.log("   Tenant Admin:    ana@verdecampo.com.br");
   console.log("   Account Owner:   roberto@sabordaterra.com.br");
   console.log("   Account Owner:   maria@cantinadonamaria.com.br");
   console.log("   Account Owner:   pedro@bistrojardim.com.br");
+  console.log("   Account Owner:   chef@chefstable.com");
   console.log("   Account Buyer:   juliana@sabordaterra.com.br");
   console.log("\n📦 Categorias de Produtos:");
   console.log("   Frutas (7) | Hortaliças (7) | Legumes (5)");
-  console.log("   Ovos (3) | Carnes (5) | Queijos (4) | Temperos e Ervas (4)");
+  console.log(
+    "   Ovos (3) | Carnes (5) | Queijos (4) | Temperos e Ervas (4)"
+  );
+  console.log("   Gourmet (2) | Peixes (1) | Mercearia (2) | Padaria (1)");
   console.log("\n⚠️  Alertas de Estoque:");
   console.log("   - Espinafre: 8 maços (mínimo: 10)");
   console.log("   - Picanha: 5kg (mínimo: 8)");

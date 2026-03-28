@@ -22,6 +22,7 @@ export interface UpdateDraftInput {
     productOptionId: string;
     requestedQty: number;
     finalPrice: number | null;
+    notes?: string;
   }>;
   notes?: string;
 }

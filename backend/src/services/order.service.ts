@@ -144,7 +144,7 @@ export class OrderService {
     orderId: string,
     accountId: string,
     userId: string,
-    items: Array<{ productOptionId: string; requestedQty: number }>,
+    items: Array<{ productOptionId: string; requestedQty: number; notes?: string }>,
     notes?: string
   ) {
     // Verify order is draft and belongs to user
@@ -203,6 +203,7 @@ export class OrderService {
           productOptionId: item.productOptionId,
           requestedQty: item.requestedQty,
           finalPrice,
+          notes: item.notes,
         };
       })
     );
