@@ -29,7 +29,11 @@ class RateLimitStore {
   /**
    * Check if request should be rate limited
    */
-  check(key: string, windowMs: number, maxRequests: number): {
+  check(
+    key: string,
+    windowMs: number,
+    maxRequests: number
+  ): {
     allowed: boolean;
     remaining: number;
     resetTime: number;

@@ -1,4 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   testDir: ".",
@@ -7,6 +11,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
+  globalSetup: path.resolve(__dirname, "./global-setup.ts"),
 
   use: {
     baseURL: "http://localhost:5173",

@@ -110,9 +110,8 @@ export function OrderActivityTimeline({ orderId }: OrderActivityTimelineProps) {
               {/* Icon */}
               <div className="flex-shrink-0 relative z-10">
                 <div
-                  className={`w-10 h-10 rounded-full ${config.bgColor} flex items-center justify-center ${
-                    isFirst ? "ring-4 ring-white shadow-md" : ""
-                  }`}
+                  className={`w-10 h-10 rounded-full ${config.bgColor} flex items-center justify-center ${isFirst ? "ring-4 ring-white shadow-md" : ""
+                    }`}
                 >
                   <Icon className={`h-5 w-5 ${config.color}`} />
                 </div>

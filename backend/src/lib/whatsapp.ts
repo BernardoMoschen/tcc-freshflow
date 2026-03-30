@@ -107,9 +107,10 @@ export async function sendOrderCreatedNotification(
 
   const moreText = itemCount > 8 ? `\n\n  ... e mais ${itemCount - 8} itens` : "";
 
-  const totalText = estimatedTotal > 0
-    ? `\n\n💰 *Total Estimado:* ${formatPrice(estimatedTotal)}\n(Produtos pesados podem ter pequenas variações)`
-    : "";
+  const totalText =
+    estimatedTotal > 0
+      ? `\n\n💰 *Total Estimado:* ${formatPrice(estimatedTotal)}\n(Produtos pesados podem ter pequenas variações)`
+      : "";
 
   const orderUrl = process.env.APP_BASE_URL
     ? `\n\n📱 Ver pedido: ${process.env.APP_BASE_URL}/chef/orders`
@@ -175,9 +176,7 @@ export async function sendOrderFinalizedNotification(
 
   const moreText = order.items.length > 10 ? `\n  ... e mais ${order.items.length - 10} itens` : "";
 
-  const pdfText = pdfUrl
-    ? `\n\n📄 *Extrato de Conferência:*\n${pdfUrl}`
-    : "";
+  const pdfText = pdfUrl ? `\n\n📄 *Extrato de Conferência:*\n${pdfUrl}` : "";
 
   const orderUrl = process.env.APP_BASE_URL
     ? `\n\n📱 Ver detalhes: ${process.env.APP_BASE_URL}/chef/orders`
@@ -259,9 +258,7 @@ export async function sendPromotionNotification(
   promotionDescription: string,
   catalogUrl?: string
 ): Promise<void> {
-  const catalogText = catalogUrl
-    ? `\n\n🛒 Ver produtos: ${catalogUrl}`
-    : "";
+  const catalogText = catalogUrl ? `\n\n🛒 Ver produtos: ${catalogUrl}` : "";
 
   const message = `🎊 *Promoção Especial!*
 
@@ -280,10 +277,7 @@ _FreshFlow - Sempre com as melhores ofertas_ 🥬🍅`;
   await sendWhatsAppMessage(phoneNumber, message);
 }
 
-export async function sendCustomMessage(
-  phoneNumber: string,
-  message: string
-): Promise<void> {
+export async function sendCustomMessage(phoneNumber: string, message: string): Promise<void> {
   await sendWhatsAppMessage(phoneNumber, message);
 }
 
@@ -296,10 +290,7 @@ export async function sendCustomMessage(
  * - Request help
  * - Confirm delivery
  */
-export function handleIncomingMessage(
-  _from: string,
-  body: string
-): string | null {
+export function handleIncomingMessage(_from: string, body: string): string | null {
   const normalizedBody = body.toLowerCase().trim();
 
   // Auto-reply based on message content

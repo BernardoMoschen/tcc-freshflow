@@ -14,7 +14,12 @@
   "parserOptions": {
     "ecmaVersion": "latest",
     "sourceType": "module",
-    "project": ["./backend/tsconfig.json", "./frontend/tsconfig.json", "./frontend/tsconfig.app.json", "./frontend/tsconfig.node.json"]
+    "project": [
+      "./backend/tsconfig.json",
+      "./frontend/tsconfig.json",
+      "./frontend/tsconfig.app.json",
+      "./frontend/tsconfig.node.json"
+    ]
   },
   "ignorePatterns": ["node_modules", "dist", "build", "*.js", "*.cjs"],
   "rules": {

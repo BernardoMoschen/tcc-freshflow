@@ -114,13 +114,10 @@ export const analyticsRouter = router({
           : 0;
 
       // Calculate average order value
-      const avgOrderValue =
-        currentOrders.length > 0 ? currentRevenue / currentOrders.length : 0;
+      const avgOrderValue = currentOrders.length > 0 ? currentRevenue / currentOrders.length : 0;
 
       const lastPeriodAvgOrderValue =
-        lastPeriodOrders.length > 0
-          ? lastPeriodRevenue / lastPeriodOrders.length
-          : 0;
+        lastPeriodOrders.length > 0 ? lastPeriodRevenue / lastPeriodOrders.length : 0;
 
       const avgOrderValueChange =
         lastPeriodAvgOrderValue > 0

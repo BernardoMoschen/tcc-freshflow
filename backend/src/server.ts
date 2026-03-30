@@ -41,12 +41,14 @@ app.use(requestId);
 app.use(securityHeaders);
 
 // 3. CORS configuration
-app.use(corsMiddleware({
-  origins: process.env.ALLOWED_ORIGINS?.split(",") || [
-    "http://localhost:5173",
-    "http://localhost:3000",
-  ],
-}));
+app.use(
+  corsMiddleware({
+    origins: process.env.ALLOWED_ORIGINS?.split(",") || [
+      "http://localhost:5173",
+      "http://localhost:3000",
+    ],
+  })
+);
 
 // 4. JSON body parser with size limit
 app.use(express.json({ limit: "10mb" }));
@@ -168,9 +170,13 @@ apiV1.get("/delivery-note/:orderId.pdf", rateLimiters.read, async (req, res) => 
   } catch (error) {
     logger.error("Error generating PDF:", error);
 
-    auditLogger.logError("pdf_generation", error instanceof Error ? error.message : "Unknown error", {
-      orderId: req.params.orderId,
-    });
+    auditLogger.logError(
+      "pdf_generation",
+      error instanceof Error ? error.message : "Unknown error",
+      {
+        orderId: req.params.orderId,
+      }
+    );
 
     return res.status(500).json({
       error: "PDF generation failed",
@@ -211,7 +217,10 @@ apiV1.post("/whatsapp/webhook", rateLimiters.webhook, async (req, res) => {
   } catch (error) {
     logger.error("WhatsApp webhook error:", error);
 
-    auditLogger.logError("whatsapp_webhook", error instanceof Error ? error.message : "Unknown error");
+    auditLogger.logError(
+      "whatsapp_webhook",
+      error instanceof Error ? error.message : "Unknown error"
+    );
 
     return res.status(500).json({
       error: "Webhook processing failed",
@@ -252,7 +261,9 @@ apiV1.get("/orders/events", rateLimiters.standard, async (req, res) => {
     res.setHeader("X-Accel-Buffering", "no"); // Disable nginx buffering
 
     // Send initial connection message
-    res.write(`data: ${JSON.stringify({ type: "connected", timestamp: new Date().toISOString() })}\n\n`);
+    res.write(
+      `data: ${JSON.stringify({ type: "connected", timestamp: new Date().toISOString() })}\n\n`
+    );
 
     // Create event listeners for each membership
     const unsubscribers: (() => void)[] = [];
@@ -260,9 +271,12 @@ apiV1.get("/orders/events", rateLimiters.standard, async (req, res) => {
     for (const membership of memberships) {
       if (membership.accountId) {
         // Subscribe to account events
-        const unsubscribe = orderEvents.onAccountEvents(membership.accountId, (event: OrderEvent) => {
-          res.write(`data: ${JSON.stringify(event)}\n\n`);
-        });
+        const unsubscribe = orderEvents.onAccountEvents(
+          membership.accountId,
+          (event: OrderEvent) => {
+            res.write(`data: ${JSON.stringify(event)}\n\n`);
+          }
+        );
         unsubscribers.push(unsubscribe);
       }
 
@@ -300,15 +314,7 @@ apiV1.get("/orders/events", rateLimiters.standard, async (req, res) => {
 // ========== Frontend Error Reporting Endpoint ==========
 apiV1.post("/errors", rateLimiters.standard, async (req, res) => {
   try {
-    const {
-      errorId,
-      message,
-      stack,
-      componentStack,
-      url,
-      userAgent,
-      timestamp,
-    } = req.body;
+    const { errorId, message, stack, componentStack, url, userAgent, timestamp } = req.body;
 
     // Validate required fields
     if (!errorId || !message) {

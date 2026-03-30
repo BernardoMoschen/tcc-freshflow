@@ -28,24 +28,32 @@ async function main() {
   // =============================================
   // LIMPEZA
   // =============================================
-  await prisma.orderActivity.deleteMany();
-  await prisma.stockMovement.deleteMany();
-  await prisma.weighing.deleteMany();
-  await prisma.deliveryNote.deleteMany();
-  await prisma.orderItem.deleteMany();
-  await prisma.order.deleteMany();
-  await prisma.customerPrice.deleteMany();
-  await prisma.customer.deleteMany();
-  await prisma.productOption.deleteMany();
-  await prisma.product.deleteMany();
-  await prisma.tenantSettings.deleteMany();
-  await prisma.userPreferences.deleteMany();
-  await prisma.membership.deleteMany();
-  await prisma.account.deleteMany();
-  await prisma.tenant.deleteMany();
-  await prisma.role.deleteMany();
-  await prisma.user.deleteMany();
-  console.log("✨ Dados existentes removidos\n");
+  try {
+    await prisma.orderActivity.deleteMany().catch(() => {});
+    await prisma.stockMovement.deleteMany().catch(() => {});
+    await prisma.weighing.deleteMany().catch(() => {});
+    await prisma.deliveryNote.deleteMany().catch(() => {});
+    await prisma.orderItem.deleteMany().catch(() => {});
+    await prisma.order.deleteMany().catch(() => {});
+    await prisma.customerPrice.deleteMany().catch(() => {});
+    await prisma.customer.deleteMany().catch(() => {});
+    await prisma.productOption.deleteMany().catch(() => {});
+    await prisma.product.deleteMany().catch(() => {});
+    await prisma.tenantSettings.deleteMany().catch(() => {});
+    await prisma.userPreferences.deleteMany().catch(() => {});
+    await prisma.membership.deleteMany().catch(() => {});
+    await prisma.account.deleteMany().catch(() => {});
+    await prisma.tenant.deleteMany().catch(() => {});
+    await prisma.role.deleteMany().catch(() => {});
+    await prisma.user.deleteMany().catch(() => {});
+    console.log("✨ Dados existentes removidos\n");
+  } catch (error) {
+    console.warn(
+      "⚠️  Warning during cleanup:",
+      error instanceof Error ? error.message : "Unknown error"
+    );
+    console.log("Attempting to continue with seeding...\n");
+  }
 
   // =============================================
   // ROLES

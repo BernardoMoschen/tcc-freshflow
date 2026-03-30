@@ -100,9 +100,8 @@ export function FinalizePage() {
               <p className="text-sm text-muted-foreground mt-1">
                 Status:{" "}
                 <span
-                  className={`font-medium ${
-                    isFinalized ? "text-success" : "text-primary"
-                  }`}
+                  className={`font-medium ${isFinalized ? "text-success" : "text-primary"
+                    }`}
                 >
                   {order.status === "SENT" ? "Enviado" : order.status === "IN_SEPARATION" ? "Em Separação" : order.status === "FINALIZED" ? "Finalizado" : order.status}
                 </span>
@@ -158,9 +157,8 @@ export function FinalizePage() {
               return (
                 <div
                   key={item.id}
-                  className={`flex flex-col sm:flex-row sm:justify-between gap-2 p-3 rounded-lg ${
-                    !isWeighed ? "bg-yellow-50" : ""
-                  }`}
+                  className={`flex flex-col sm:flex-row sm:justify-between gap-2 p-3 rounded-lg ${!isWeighed ? "bg-yellow-50" : ""
+                    }`}
                 >
                   <div className="flex-1">
                     <p className="font-medium text-sm">
@@ -170,8 +168,8 @@ export function FinalizePage() {
                       {item.productOption.unitType === "FIXED"
                         ? `Qtd: ${item.requestedQty}`
                         : item.actualWeight
-                        ? `Peso: ${item.actualWeight} kg`
-                        : "⚠️ Ainda não pesado"}
+                          ? `Peso: ${item.actualWeight} kg`
+                          : "⚠️ Ainda não pesado"}
                     </p>
                   </div>
                   <span className="font-semibold text-primary text-base">
@@ -210,8 +208,8 @@ export function FinalizePage() {
               {finalizeMutation.isPending
                 ? "Finalizando..."
                 : allWeighed
-                ? "Finalizar Pedido"
-                : "Complete a Pesagem Primeiro"}
+                  ? "Finalizar Pedido"
+                  : "Complete a Pesagem Primeiro"}
             </Button>
           ) : (
             <Button

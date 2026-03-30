@@ -47,6 +47,9 @@ export function CatalogPage() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
 
+  // Log initialization for debugging
+  console.log("[CatalogPage] Component mounted, session:", session);
+
   // Debounce search to prevent excessive API calls
   const debouncedSearch = useDebounce(search, 300);
 
@@ -418,222 +421,220 @@ export function CatalogPage() {
         {/* Product grid - single column on mobile, responsive grid on larger screens */}
         {!productsQuery.isLoading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          {productsQuery.data?.items.map((product) =>
-            product.options
-              .filter((option: ProductOption) => {
-                // Filter by favorites
-                if (showFavoritesOnly && !isFavorite(option.id)) return false;
+            {productsQuery.data?.items.map((product) =>
+              product.options
+                .filter((option: ProductOption) => {
+                  // Filter by favorites
+                  if (showFavoritesOnly && !isFavorite(option.id)) return false;
 
-                // Filter by availability
-                if (availability !== "all") {
+                  // Filter by availability
+                  if (availability !== "all") {
+                    const stockQty = option.stockQuantity ?? 0;
+                    const lowThreshold = option.lowStockThreshold ?? 10;
+                    const isOutOfStock = !option.isAvailable || stockQty === 0;
+                    const isLowStock = stockQty > 0 && stockQty <= lowThreshold;
+                    const isInStock = stockQty > lowThreshold;
+
+                    if (availability === "in_stock" && !isInStock) return false;
+                    if (availability === "low_stock" && !isLowStock) return false;
+                    if (availability === "out_of_stock" && !isOutOfStock) return false;
+                  }
+
+                  return true;
+                })
+                .map((option: ProductOption) => {
+                  const cartItem = items.find((item) => item.productOptionId === option.id);
+                  const inCart = !!cartItem;
+                  const justAdded = justAddedId === option.id;
+                  const favorite = isFavorite(option.id);
+
+                  // Stock status logic
                   const stockQty = option.stockQuantity ?? 0;
                   const lowThreshold = option.lowStockThreshold ?? 10;
                   const isOutOfStock = !option.isAvailable || stockQty === 0;
                   const isLowStock = stockQty > 0 && stockQty <= lowThreshold;
-                  const isInStock = stockQty > lowThreshold;
 
-                  if (availability === "in_stock" && !isInStock) return false;
-                  if (availability === "low_stock" && !isLowStock) return false;
-                  if (availability === "out_of_stock" && !isOutOfStock) return false;
-                }
+                  const handleAddToCart = () => {
+                    if (isOutOfStock) return;
+                    addItem({
+                      productOptionId: option.id,
+                      productName: product.name,
+                      optionName: option.name,
+                      unitType: option.unitType,
+                      requestedQty: 1,
+                      price: (option as any).resolvedPrice || option.basePrice,
+                    });
+                    setJustAddedId(option.id);
+                    setTimeout(() => setJustAddedId(null), 2000);
+                  };
 
-                return true;
-              })
-              .map((option: ProductOption) => {
-            const cartItem = items.find((item) => item.productOptionId === option.id);
-            const inCart = !!cartItem;
-            const justAdded = justAddedId === option.id;
-            const favorite = isFavorite(option.id);
+                  return (
+                    <div key={option.id} className={`bg-card rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all relative ${isOutOfStock ? 'opacity-75' : ''}`}>
+                      {/* Favorite Star */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(option.id);
+                        }}
+                        className="absolute top-2 right-2 z-10 bg-white/90 hover:bg-white rounded-full p-2 shadow-md transition-all hover:scale-110"
+                        aria-label={favorite ? `Remover ${product.name} dos favoritos` : `Adicionar ${product.name} aos favoritos`}
+                        aria-pressed={favorite}
+                      >
+                        <Star
+                          className={`h-5 w-5 ${favorite ? "fill-yellow-400 text-yellow-400" : "text-gray-400"
+                            }`}
+                          aria-hidden="true"
+                        />
+                      </button>
 
-            // Stock status logic
-            const stockQty = option.stockQuantity ?? 0;
-            const lowThreshold = option.lowStockThreshold ?? 10;
-            const isOutOfStock = !option.isAvailable || stockQty === 0;
-            const isLowStock = stockQty > 0 && stockQty <= lowThreshold;
+                      {/* Badge de Estoque */}
+                      <div className="absolute top-2 left-2 z-10">
+                        {isOutOfStock ? (
+                          <Badge variant="destructive" className="flex items-center gap-1">
+                            <XCircle className="h-3 w-3" />
+                            Esgotado
+                          </Badge>
+                        ) : isLowStock ? (
+                          <Badge variant="secondary" className="flex items-center gap-1 bg-yellow-100 text-yellow-800 border-yellow-300">
+                            <AlertTriangle className="h-3 w-3" />
+                            Estoque Baixo ({stockQty})
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="flex items-center gap-1 bg-green-100 text-green-800 border-green-300">
+                            <CheckCircle className="h-3 w-3" />
+                            Em Estoque
+                          </Badge>
+                        )}
+                      </div>
 
-            const handleAddToCart = () => {
-              if (isOutOfStock) return;
-              addItem({
-                productOptionId: option.id,
-                productName: product.name,
-                optionName: option.name,
-                unitType: option.unitType,
-                requestedQty: 1,
-                price: (option as any).resolvedPrice || option.basePrice,
-              });
-              setJustAddedId(option.id);
-              setTimeout(() => setJustAddedId(null), 2000);
-            };
-
-            return (
-              <div key={option.id} className={`bg-card rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all relative ${isOutOfStock ? 'opacity-75' : ''}`}>
-                {/* Favorite Star */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleFavorite(option.id);
-                  }}
-                  className="absolute top-2 right-2 z-10 bg-white/90 hover:bg-white rounded-full p-2 shadow-md transition-all hover:scale-110"
-                  aria-label={favorite ? `Remover ${product.name} dos favoritos` : `Adicionar ${product.name} aos favoritos`}
-                  aria-pressed={favorite}
-                >
-                  <Star
-                    className={`h-5 w-5 ${
-                      favorite ? "fill-yellow-400 text-yellow-400" : "text-gray-400"
-                    }`}
-                    aria-hidden="true"
-                  />
-                </button>
-
-                {/* Badge de Estoque */}
-                <div className="absolute top-2 left-2 z-10">
-                  {isOutOfStock ? (
-                    <Badge variant="destructive" className="flex items-center gap-1">
-                      <XCircle className="h-3 w-3" />
-                      Esgotado
-                    </Badge>
-                  ) : isLowStock ? (
-                    <Badge variant="secondary" className="flex items-center gap-1 bg-yellow-100 text-yellow-800 border-yellow-300">
-                      <AlertTriangle className="h-3 w-3" />
-                      Estoque Baixo ({stockQty})
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="flex items-center gap-1 bg-green-100 text-green-800 border-green-300">
-                      <CheckCircle className="h-3 w-3" />
-                      Em Estoque
-                    </Badge>
-                  )}
-                </div>
-
-                {product.imageUrl ? (
-                  <img
-                    src={product.imageUrl}
-                    alt={product.name}
-                    className="w-full h-48 object-cover"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                ) : (
-                  <div className="w-full h-48 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                    <span className="text-5xl font-bold text-primary/30">
-                      {product.name.charAt(0)}
-                    </span>
-                  </div>
-                )}
-                <div className="p-4 md:p-6">
-                  <h3 className="text-lg font-semibold text-card-foreground">{product.name}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">{option.name}</p>
-                  <div className="flex items-center justify-between mt-3">
-                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-secondary text-secondary-foreground">
-                      {option.unitType === "FIXED" ? "Unidade fixa" : "Por peso"}
-                    </span>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-primary">
-                        R$ {(((option as any).resolvedPrice || option.basePrice) / 100).toFixed(2)}
-                      </p>
-                      {(option as any).hasCustomerPrice && (
-                        <div className="flex items-center gap-1 text-xs text-green-600">
-                          <Tag className="h-3 w-3" />
-                          <span>Preço especial</span>
+                      {product.imageUrl ? (
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="w-full h-48 object-cover"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : (
+                        <div className="w-full h-48 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                          <span className="text-5xl font-bold text-primary/30">
+                            {product.name.charAt(0)}
+                          </span>
                         </div>
                       )}
-                    </div>
-                  </div>
-
-                  {/* Quick Quantity Picker - Only for account users who can add to cart */}
-                  {canAddToCart && (
-                    inCart ? (
-                      <div className="mt-4 flex items-center gap-2" role="group" aria-label={`Quantidade de ${product.name}`}>
-                        <button
-                          onClick={() => {
-                            const stepSize = option.unitType === "WEIGHT" ? 0.5 : 1;
-                            updateQuantity(option.id, Math.max(0.1, cartItem.requestedQty - stepSize));
-                          }}
-                          disabled={isOutOfStock || isSyncing}
-                          className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary text-primary hover:bg-primary hover:text-white transition-colors flex items-center justify-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                          aria-label={`Diminuir quantidade de ${product.name}`}
-                        >
-                          <Minus className="h-4 w-4" aria-hidden="true" />
-                        </button>
-                        <div className="flex-1 text-center">
-                          <input
-                            type="number"
-                            min="0.1"
-                            step={option.unitType === "WEIGHT" ? "0.1" : "1"}
-                            value={cartItem.requestedQty}
-                            onChange={(e) => {
-                              const qty = parseFloat(e.target.value);
-                              if (!isNaN(qty) && qty >= 0.1) {
-                                updateQuantity(option.id, qty);
-                              }
-                            }}
-                            onBlur={(e) => {
-                              const qty = parseFloat(e.target.value);
-                              if (isNaN(qty) || qty < 0.1) {
-                                updateQuantity(option.id, 0.1);
-                              }
-                            }}
-                            disabled={isOutOfStock || isSyncing}
-                            className="w-full text-lg font-bold text-primary text-center border-0 focus:ring-2 focus:ring-primary rounded px-2 py-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                            aria-live="polite"
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            {isSyncing ? "sincronizando..." : `${option.unitType === "WEIGHT" ? "kg" : "un."} no carrinho`}
-                          </p>
+                      <div className="p-4 md:p-6">
+                        <h3 className="text-lg font-semibold text-card-foreground">{product.name}</h3>
+                        <p className="text-sm text-muted-foreground mt-1">{option.name}</p>
+                        <div className="flex items-center justify-between mt-3">
+                          <span className="text-xs font-medium px-2 py-1 rounded-full bg-secondary text-secondary-foreground">
+                            {option.unitType === "FIXED" ? "Unidade fixa" : "Por peso"}
+                          </span>
+                          <div className="text-right">
+                            <p className="text-lg font-bold text-primary">
+                              R$ {(((option as any).resolvedPrice || option.basePrice) / 100).toFixed(2)}
+                            </p>
+                            {(option as any).hasCustomerPrice && (
+                              <div className="flex items-center gap-1 text-xs text-green-600">
+                                <Tag className="h-3 w-3" />
+                                <span>Preço especial</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <button
-                          onClick={() => {
-                            const stepSize = option.unitType === "WEIGHT" ? 0.5 : 1;
-                            updateQuantity(option.id, cartItem.requestedQty + stepSize);
-                          }}
-                          disabled={isOutOfStock || isSyncing}
-                          className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary bg-primary text-white hover:bg-primary/90 transition-colors flex items-center justify-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                          aria-label={`Aumentar quantidade de ${product.name}`}
-                        >
-                          <Plus className="h-4 w-4" aria-hidden="true" />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={handleAddToCart}
-                        disabled={isOutOfStock || isSyncing}
-                        className={`mt-4 w-full px-4 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                          isOutOfStock
-                            ? "bg-gray-300 text-gray-600"
-                            : justAdded
-                            ? "bg-green-500 text-white"
-                            : "bg-primary text-white hover:bg-primary/90"
-                        }`}
-                      >
-                        {isOutOfStock ? (
-                          <>
-                            <XCircle className="h-5 w-5" />
-                            Esgotado
-                          </>
-                        ) : justAdded ? (
-                          <>
-                            <Check className="h-5 w-5" />
-                            Adicionado!
-                          </>
-                        ) : isSyncing ? (
-                          <>
-                            <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            Adicionando...
-                          </>
-                        ) : (
-                          <>
-                            <Plus className="h-5 w-5" />
-                            Adicionar
-                          </>
+
+                        {/* Quick Quantity Picker - Only for account users who can add to cart */}
+                        {canAddToCart && (
+                          inCart ? (
+                            <div className="mt-4 flex items-center gap-2" role="group" aria-label={`Quantidade de ${product.name}`}>
+                              <button
+                                onClick={() => {
+                                  const stepSize = option.unitType === "WEIGHT" ? 0.5 : 1;
+                                  updateQuantity(option.id, Math.max(0.1, cartItem.requestedQty - stepSize));
+                                }}
+                                disabled={isOutOfStock || isSyncing}
+                                className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary text-primary hover:bg-primary hover:text-white transition-colors flex items-center justify-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                aria-label={`Diminuir quantidade de ${product.name}`}
+                              >
+                                <Minus className="h-4 w-4" aria-hidden="true" />
+                              </button>
+                              <div className="flex-1 text-center">
+                                <input
+                                  type="number"
+                                  min="0.1"
+                                  step={option.unitType === "WEIGHT" ? "0.1" : "1"}
+                                  value={cartItem.requestedQty}
+                                  onChange={(e) => {
+                                    const qty = parseFloat(e.target.value);
+                                    if (!isNaN(qty) && qty >= 0.1) {
+                                      updateQuantity(option.id, qty);
+                                    }
+                                  }}
+                                  onBlur={(e) => {
+                                    const qty = parseFloat(e.target.value);
+                                    if (isNaN(qty) || qty < 0.1) {
+                                      updateQuantity(option.id, 0.1);
+                                    }
+                                  }}
+                                  disabled={isOutOfStock || isSyncing}
+                                  className="w-full text-lg font-bold text-primary text-center border-0 focus:ring-2 focus:ring-primary rounded px-2 py-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  aria-live="polite"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                  {isSyncing ? "sincronizando..." : `${option.unitType === "WEIGHT" ? "kg" : "un."} no carrinho`}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  const stepSize = option.unitType === "WEIGHT" ? 0.5 : 1;
+                                  updateQuantity(option.id, cartItem.requestedQty + stepSize);
+                                }}
+                                disabled={isOutOfStock || isSyncing}
+                                className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary bg-primary text-white hover:bg-primary/90 transition-colors flex items-center justify-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                aria-label={`Aumentar quantidade de ${product.name}`}
+                              >
+                                <Plus className="h-4 w-4" aria-hidden="true" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={handleAddToCart}
+                              disabled={isOutOfStock || isSyncing}
+                              className={`mt-4 w-full px-4 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${isOutOfStock
+                                  ? "bg-gray-300 text-gray-600"
+                                  : justAdded
+                                    ? "bg-green-500 text-white"
+                                    : "bg-primary text-white hover:bg-primary/90"
+                                }`}
+                            >
+                              {isOutOfStock ? (
+                                <>
+                                  <XCircle className="h-5 w-5" />
+                                  Esgotado
+                                </>
+                              ) : justAdded ? (
+                                <>
+                                  <Check className="h-5 w-5" />
+                                  Adicionado!
+                                </>
+                              ) : isSyncing ? (
+                                <>
+                                  <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                  Adicionando...
+                                </>
+                              ) : (
+                                <>
+                                  <Plus className="h-5 w-5" />
+                                  Adicionar
+                                </>
+                              )}
+                            </button>
+                          )
                         )}
-                      </button>
-                    )
-                  )}
-                </div>
-              </div>
-            );
-            })
-          )}
+                      </div>
+                    </div>
+                  );
+                })
+            )}
           </div>
         )}
 

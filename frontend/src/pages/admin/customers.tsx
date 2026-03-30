@@ -332,8 +332,8 @@ export function CustomersManagementPage() {
                             order.status === "FINALIZED"
                               ? "secondary"
                               : order.status === "SENT"
-                              ? "default"
-                              : "outline"
+                                ? "default"
+                                : "outline"
                           }
                         >
                           {order.status === "SENT" ? "Enviado" : order.status === "IN_SEPARATION" ? "Em Separação" : order.status === "FINALIZED" ? "Finalizado" : order.status}

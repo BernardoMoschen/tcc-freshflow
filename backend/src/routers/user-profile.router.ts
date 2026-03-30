@@ -191,9 +191,7 @@ export const userProfileRouter = router({
       });
 
       if (!membership) {
-        throw new Error(
-          "Você não tem permissão para atualizar este perfil de tenant"
-        );
+        throw new Error("Você não tem permissão para atualizar este perfil de tenant");
       }
 
       const tenant = await ctx.prisma.tenant.update({

@@ -17,9 +17,7 @@ describe("Sanitize Utilities", () => {
     });
 
     it("should remove HTML tags", () => {
-      expect(sanitizeText("<script>alert('xss')</script>")).toBe(
-        "alert('xss')"
-      );
+      expect(sanitizeText("<script>alert('xss')</script>")).toBe("alert('xss')");
       expect(sanitizeText("<b>bold</b>")).toBe("bold");
       expect(sanitizeText("<img src=x onerror=alert(1)>")).toBe("");
     });
@@ -42,9 +40,7 @@ describe("Sanitize Utilities", () => {
     });
 
     it("should preserve normal text", () => {
-      expect(sanitizeText("Tomate Italiano - R$ 7,80/kg")).toBe(
-        "Tomate Italiano - R$ 7,80/kg"
-      );
+      expect(sanitizeText("Tomate Italiano - R$ 7,80/kg")).toBe("Tomate Italiano - R$ 7,80/kg");
     });
   });
 
@@ -54,9 +50,7 @@ describe("Sanitize Utilities", () => {
     });
 
     it("should normalize line endings", () => {
-      expect(sanitizeNotes("line1\r\nline2\rline3")).toBe(
-        "line1\nline2\nline3"
-      );
+      expect(sanitizeNotes("line1\r\nline2\rline3")).toBe("line1\nline2\nline3");
     });
 
     it("should collapse multiple newlines", () => {
@@ -79,9 +73,7 @@ describe("Sanitize Utilities", () => {
     });
 
     it("should collapse multiple spaces", () => {
-      expect(sanitizeSearchQuery("tomate   italiano")).toBe(
-        "tomate italiano"
-      );
+      expect(sanitizeSearchQuery("tomate   italiano")).toBe("tomate italiano");
     });
 
     it("should remove HTML tags", () => {
@@ -113,9 +105,7 @@ describe("Sanitize Utilities", () => {
     });
 
     it("should escape all entities together", () => {
-      expect(escapeHtml('<a href="x">&</a>')).toBe(
-        "&lt;a href=&quot;x&quot;&gt;&amp;&lt;/a&gt;"
-      );
+      expect(escapeHtml('<a href="x">&</a>')).toBe("&lt;a href=&quot;x&quot;&gt;&amp;&lt;/a&gt;");
     });
   });
 

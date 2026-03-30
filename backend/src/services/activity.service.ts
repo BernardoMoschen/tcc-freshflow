@@ -106,12 +106,7 @@ export class ActivityService {
   /**
    * Log item added
    */
-  async logItemAdded(
-    orderId: string,
-    userId: string,
-    itemName: string,
-    quantity: number
-  ) {
+  async logItemAdded(orderId: string, userId: string, itemName: string, quantity: number) {
     await this.logActivity({
       orderId,
       activityType: "ITEM_ADDED",
@@ -127,11 +122,7 @@ export class ActivityService {
   /**
    * Log item removed
    */
-  async logItemRemoved(
-    orderId: string,
-    userId: string,
-    itemName: string
-  ) {
+  async logItemRemoved(orderId: string, userId: string, itemName: string) {
     await this.logActivity({
       orderId,
       activityType: "ITEM_REMOVED",
@@ -169,12 +160,7 @@ export class ActivityService {
   /**
    * Log item weighed
    */
-  async logItemWeighed(
-    orderId: string,
-    userId: string,
-    itemName: string,
-    weight: number
-  ) {
+  async logItemWeighed(orderId: string, userId: string, itemName: string, weight: number) {
     await this.logActivity({
       orderId,
       activityType: "ITEM_WEIGHED",
@@ -191,9 +177,7 @@ export class ActivityService {
    * Log note added
    */
   async logNoteAdded(orderId: string, userId: string, noteContent: string) {
-    const preview = noteContent.length > 50
-      ? noteContent.substring(0, 50) + "..."
-      : noteContent;
+    const preview = noteContent.length > 50 ? noteContent.substring(0, 50) + "..." : noteContent;
 
     await this.logActivity({
       orderId,
@@ -247,11 +231,7 @@ export class ActivityService {
   /**
    * Log WhatsApp notification sent
    */
-  async logNotificationSent(
-    orderId: string,
-    notificationType: string,
-    recipient: string
-  ) {
+  async logNotificationSent(orderId: string, notificationType: string, recipient: string) {
     await this.logActivity({
       orderId,
       activityType: "NOTIFICATION_SENT",

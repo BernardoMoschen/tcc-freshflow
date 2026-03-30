@@ -10,16 +10,18 @@
 export function sanitizeText(input: string): string {
   if (!input || typeof input !== "string") return "";
 
-  return input
-    // Remove HTML tags
-    .replace(/<[^>]*>/g, "")
-    // Remove script-like content
-    .replace(/javascript:/gi, "")
-    .replace(/on\w+=/gi, "")
-    // Remove null bytes
-    .replace(/\0/g, "")
-    // Trim whitespace
-    .trim();
+  return (
+    input
+      // Remove HTML tags
+      .replace(/<[^>]*>/g, "")
+      // Remove script-like content
+      .replace(/javascript:/gi, "")
+      .replace(/on\w+=/gi, "")
+      // Remove null bytes
+      .replace(/\0/g, "")
+      // Trim whitespace
+      .trim()
+  );
 }
 
 /**
@@ -29,21 +31,23 @@ export function sanitizeText(input: string): string {
 export function sanitizeNotes(input: string): string {
   if (!input || typeof input !== "string") return "";
 
-  return input
-    // Remove HTML tags
-    .replace(/<[^>]*>/g, "")
-    // Remove script-like content
-    .replace(/javascript:/gi, "")
-    .replace(/on\w+=/gi, "")
-    // Remove null bytes
-    .replace(/\0/g, "")
-    // Normalize line endings
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n")
-    // Collapse multiple newlines
-    .replace(/\n{3,}/g, "\n\n")
-    // Trim whitespace while preserving internal structure
-    .trim();
+  return (
+    input
+      // Remove HTML tags
+      .replace(/<[^>]*>/g, "")
+      // Remove script-like content
+      .replace(/javascript:/gi, "")
+      .replace(/on\w+=/gi, "")
+      // Remove null bytes
+      .replace(/\0/g, "")
+      // Normalize line endings
+      .replace(/\r\n/g, "\n")
+      .replace(/\r/g, "\n")
+      // Collapse multiple newlines
+      .replace(/\n{3,}/g, "\n\n")
+      // Trim whitespace while preserving internal structure
+      .trim()
+  );
 }
 
 /**
@@ -53,17 +57,19 @@ export function sanitizeNotes(input: string): string {
 export function sanitizeSearchQuery(input: string): string {
   if (!input || typeof input !== "string") return "";
 
-  return input
-    // Remove HTML tags
-    .replace(/<[^>]*>/g, "")
-    // Remove regex special characters that could cause issues
-    .replace(/[\\^$.*+?()[\]{}|]/g, "")
-    // Remove null bytes
-    .replace(/\0/g, "")
-    // Collapse multiple spaces
-    .replace(/\s+/g, " ")
-    // Trim
-    .trim();
+  return (
+    input
+      // Remove HTML tags
+      .replace(/<[^>]*>/g, "")
+      // Remove regex special characters that could cause issues
+      .replace(/[\\^$.*+?()[\]{}|]/g, "")
+      // Remove null bytes
+      .replace(/\0/g, "")
+      // Collapse multiple spaces
+      .replace(/\s+/g, " ")
+      // Trim
+      .trim()
+  );
 }
 
 /**
