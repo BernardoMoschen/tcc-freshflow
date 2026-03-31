@@ -62,7 +62,7 @@ export function OrdersPage() {
 
   // Manual refresh handler
   const handleManualRefresh = useCallback(() => {
-    ordersQuery.refetch();
+    void ordersQuery.refetch();
     toast.success("Pedidos atualizados");
   }, [ordersQuery]);
 
@@ -80,7 +80,7 @@ export function OrdersPage() {
     onSuccess: (data) => {
       toast.success(`${data.updated} pedido(s) atualizado(s)`);
       setSelectedOrders(new Set());
-      utils.orders.list.invalidate();
+      void utils.orders.list.invalidate();
     },
     onError: (error) => {
       toast.error("Falha ao atualizar pedidos", { description: error.message });
@@ -430,7 +430,7 @@ export function OrdersPage() {
               </div>
 
               {/* Status Timeline */}
-              <OrderStatusTimeline status={order.status as any} compact />
+              <OrderStatusTimeline status={order.status} compact />
 
               {/* Actions */}
               <div className="flex flex-col sm:flex-row gap-2">

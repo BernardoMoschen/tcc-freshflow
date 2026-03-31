@@ -79,7 +79,7 @@ export function AdminOrdersPage() {
 
   // Manual refresh handler
   const handleManualRefresh = useCallback(() => {
-    ordersQuery.refetch();
+    void ordersQuery.refetch();
     toast.success("Pedidos atualizados");
   }, [ordersQuery]);
 
@@ -97,7 +97,7 @@ export function AdminOrdersPage() {
     }
 
     // Invalidate queries to refetch data
-    utils.orders.adminList.invalidate();
+    void utils.orders.adminList.invalidate();
   }, [utils]);
 
   const { isConnected } = useOrderEvents(handleOrderEvent, hasTenantContext);
@@ -116,7 +116,7 @@ export function AdminOrdersPage() {
     onSuccess: (data) => {
       toast.success(`${data.updated} pedido(s) atualizado(s)`);
       setSelectedOrders(new Set());
-      utils.orders.adminList.invalidate();
+      void utils.orders.adminList.invalidate();
     },
     onError: (error) => {
       toast.error("Falha ao atualizar pedidos", { description: error.message });

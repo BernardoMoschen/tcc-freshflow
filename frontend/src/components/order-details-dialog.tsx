@@ -45,9 +45,9 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
   const addItemMutation = trpc.orders.addItem.useMutation({
     onSuccess: () => {
       toast.success("Item adicionado ao pedido");
-      utils.orders.get.invalidate();
-      utils.orders.list.invalidate();
-      utils.orders.adminList.invalidate();
+      void utils.orders.get.invalidate();
+      void utils.orders.list.invalidate();
+      void utils.orders.adminList.invalidate();
       setShowAddItem(false);
       setSelectedOptionId("");
       setAddItemQty("1");
@@ -61,8 +61,8 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
   const updateItemMutation = trpc.orders.updateItem.useMutation({
     onSuccess: () => {
       toast.success("Item atualizado");
-      utils.orders.get.invalidate();
-      utils.orders.list.invalidate();
+      void utils.orders.get.invalidate();
+      void utils.orders.list.invalidate();
       setEditingItemId(null);
     },
     onError: (error) => {
@@ -73,7 +73,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
   const cancelOrderMutation = trpc.orders.cancel.useMutation({
     onSuccess: () => {
       toast.success("Pedido cancelado com sucesso");
-      utils.orders.list.invalidate();
+      void utils.orders.list.invalidate();
       onClose();
     },
     onError: (error) => {
@@ -84,8 +84,8 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
   const removeItemMutation = trpc.orders.removeItem.useMutation({
     onSuccess: () => {
       toast.success("Item removido do pedido");
-      utils.orders.get.invalidate();
-      utils.orders.list.invalidate();
+      void utils.orders.get.invalidate();
+      void utils.orders.list.invalidate();
     },
     onError: (error) => {
       toast.error("Falha ao remover item", { description: error.message });
@@ -237,7 +237,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
           <div className="space-y-6">
             {/* Status Timeline */}
             <div className="bg-muted rounded-lg p-4">
-              <OrderStatusTimeline status={order.status as any} />
+              <OrderStatusTimeline status={order.status} />
             </div>
 
             {/* Order Info */}

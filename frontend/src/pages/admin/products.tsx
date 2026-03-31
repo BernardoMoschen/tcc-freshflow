@@ -83,7 +83,7 @@ export function ProductsManagementPage() {
   const createMutation = trpc.products.create.useMutation({
     onSuccess: () => {
       toast.success("Produto criado com sucesso");
-      utils.products.list.invalidate();
+      void utils.products.list.invalidate();
       closeModal();
     },
     onError: (error) => {
@@ -96,7 +96,7 @@ export function ProductsManagementPage() {
   const deleteMutation = trpc.products.delete.useMutation({
     onSuccess: () => {
       toast.success("Produto excluído com sucesso");
-      utils.products.list.invalidate();
+      void utils.products.list.invalidate();
     },
     onError: (error) => {
       toast.error("Falha ao excluir produto", { description: error.message });
@@ -231,7 +231,7 @@ export function ProductsManagementPage() {
         }
 
         toast.success("Produto atualizado com sucesso");
-        utils.products.list.invalidate();
+        await utils.products.list.invalidate();
         closeModal();
       } catch (error: any) {
         toast.error("Falha ao atualizar produto", { description: error.message });

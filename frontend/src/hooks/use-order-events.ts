@@ -86,8 +86,8 @@ export function useOrderEvents(
         onEvent(data as OrderEvent);
 
         // Invalidate relevant queries to refetch data
-        utils.orders.list.invalidate();
-        utils.orders.adminList.invalidate();
+        void utils.orders.list.invalidate();
+        void utils.orders.adminList.invalidate();
       } catch (error) {
         console.error("Failed to parse SSE message:", error);
       }

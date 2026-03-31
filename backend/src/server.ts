@@ -90,7 +90,7 @@ apiV1.get("/delivery-note/:orderId.pdf", rateLimiters.read, async (req, res) => 
 
   try {
     const { orderId } = req.params;
-    const authHeader = req.headers.authorization as string | undefined;
+    const authHeader = req.headers.authorization;
 
     // Authenticate request
     let userId: string;
@@ -201,7 +201,7 @@ apiV1.post("/whatsapp/webhook", rateLimiters.webhook, async (req, res) => {
     logger.info(`[WhatsApp Webhook] Received message from ${From}: ${Body}`);
 
     // Process incoming message and get auto-reply if available
-    const reply = await handleIncomingMessage(From, Body);
+    const reply = handleIncomingMessage(From, Body);
 
     if (reply) {
       // Twilio expects TwiML response for auto-reply
@@ -232,7 +232,7 @@ apiV1.post("/whatsapp/webhook", rateLimiters.webhook, async (req, res) => {
 // ========== Server-Sent Events for Real-Time Order Updates ==========
 apiV1.get("/orders/events", rateLimiters.standard, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization as string | undefined;
+    const authHeader = req.headers.authorization;
 
     // Authenticate request
     let userId: string;
@@ -326,7 +326,7 @@ apiV1.post("/errors", rateLimiters.standard, async (req, res) => {
 
     // Get user info from auth header if available
     let userId: string | undefined;
-    const authHeader = req.headers.authorization as string | undefined;
+    const authHeader = req.headers.authorization;
     if (authHeader) {
       try {
         userId = await authenticateRequest(authHeader);
@@ -336,7 +336,7 @@ apiV1.post("/errors", rateLimiters.standard, async (req, res) => {
     }
 
     // Log to audit system
-    auditLogger.log({
+    void auditLogger.log({
       eventType: AuditEventType.SYSTEM_ERROR,
       action: "frontend_error",
       success: false,
@@ -447,14 +447,14 @@ async function shutdown(signal: string) {
   }
 }
 
-process.on("SIGINT", () => shutdown("SIGINT"));
-process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => { void shutdown("SIGINT"); });
+process.on("SIGTERM", () => { void shutdown("SIGTERM"); });
 
 // Handle uncaught exceptions
 process.on("uncaughtException", (error) => {
   logger.error("Uncaught Exception:", error);
   auditLogger.logError("uncaught_exception", error.message, { stack: error.stack });
-  shutdown("uncaughtException");
+  void shutdown("uncaughtException");
 });
 
 process.on("unhandledRejection", (reason) => {

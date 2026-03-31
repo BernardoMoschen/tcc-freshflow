@@ -63,8 +63,8 @@ export function TenantSettingsPage() {
   const updateSettingsMutation = trpc.tenantSettings.update.useMutation({
     onSuccess: () => {
       toast.success("Configurações salvas com sucesso");
-      utils.tenantSettings.get.invalidate();
-      utils.tenantSettings.getAvailableDeliveryDates.invalidate();
+      void utils.tenantSettings.get.invalidate();
+      void utils.tenantSettings.getAvailableDeliveryDates.invalidate();
     },
     onError: (error) => {
       toast.error("Erro ao salvar configurações", {

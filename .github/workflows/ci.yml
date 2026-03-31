@@ -161,6 +161,7 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/freshflow_test
+      SUPABASE_JWT_SECRET: ci-test-secret-key-at-least-32-chars-long
 
     steps:
       - uses: actions/checkout@v4

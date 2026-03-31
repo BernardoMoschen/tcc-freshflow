@@ -25,7 +25,7 @@ export function FinalizePage() {
     try {
       await finalizeMutation.mutateAsync({ id: orderId });
       showToast("Pedido finalizado com sucesso!", "success");
-      orderQuery.refetch();
+      await orderQuery.refetch();
     } catch (error) {
       showToast(
         "Falha ao finalizar: " + (error instanceof Error ? error.message : "Erro desconhecido"),

@@ -181,7 +181,7 @@ export function WeighingPage() {
           photoUrl,
         });
         showToast("Peso salvo com sucesso!", "success");
-        orderQuery.refetch();
+        await orderQuery.refetch();
         // Clear the inputs for this item
         setWeights((prev) => ({ ...prev, [orderItemId]: 0 }));
         setPrices((prev) => ({ ...prev, [orderItemId]: 0 }));

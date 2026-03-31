@@ -37,12 +37,12 @@ export function CustomersManagementPage() {
   );
 
   const customerDetailsQuery = trpc.customers.get.useQuery(
-    { id: selectedCustomer?.id! },
+    { id: selectedCustomer?.id ?? "" },
     { enabled: !!selectedCustomer && hasTenantContext }
   );
 
   const statsQuery = trpc.customers.getStats.useQuery(
-    { customerId: selectedCustomer?.id! },
+    { customerId: selectedCustomer?.id ?? "" },
     { enabled: !!selectedCustomer && hasTenantContext }
   );
 
@@ -54,8 +54,8 @@ export function CustomersManagementPage() {
   const setCustomPriceMutation = trpc.customers.setCustomPrice.useMutation({
     onSuccess: () => {
       toast.success("Preço personalizado definido com sucesso");
-      utils.customers.get.invalidate();
-      utils.customers.list.invalidate();
+      void utils.customers.get.invalidate();
+      void utils.customers.list.invalidate();
       setShowPricingModal(false);
       setSelectedProductOption("");
       setCustomPrice("");
@@ -68,8 +68,8 @@ export function CustomersManagementPage() {
   const removeCustomPriceMutation = trpc.customers.removeCustomPrice.useMutation({
     onSuccess: () => {
       toast.success("Preço personalizado removido");
-      utils.customers.get.invalidate();
-      utils.customers.list.invalidate();
+      void utils.customers.get.invalidate();
+      void utils.customers.list.invalidate();
     },
     onError: (error) => {
       toast.error("Falha ao remover preço personalizado", { description: error.message });

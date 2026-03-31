@@ -158,7 +158,7 @@ export function useAuth() {
     }
 
     // Production: Get initial session from Supabase
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    void supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });

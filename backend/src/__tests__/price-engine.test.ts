@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import type { CustomerPrice } from "@prisma/client";
 import {
   resolvePrice,
   resolvePricesBatch,
@@ -177,7 +178,7 @@ describe("Price Engine", () => {
         {
           id: "option-1",
           basePrice: 1000,
-          customerPrices: [{ id: "cp-1", price: 800 }],
+          customerPrices: [{ id: "cp-1", price: 800 } as CustomerPrice],
         },
       ]);
 

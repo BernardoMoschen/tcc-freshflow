@@ -69,7 +69,7 @@ export function StockManagementPage() {
   const addStockMutation = trpc.stock.addStock.useMutation({
     onSuccess: () => {
       toast.success("Estoque adicionado com sucesso");
-      utils.stock.getStockLevels.invalidate();
+      void utils.stock.getStockLevels.invalidate();
       closeModal();
     },
     onError: (error) => {
@@ -80,7 +80,7 @@ export function StockManagementPage() {
   const removeStockMutation = trpc.stock.removeStock.useMutation({
     onSuccess: () => {
       toast.success("Estoque removido com sucesso");
-      utils.stock.getStockLevels.invalidate();
+      void utils.stock.getStockLevels.invalidate();
       closeModal();
     },
     onError: (error) => {
@@ -91,7 +91,7 @@ export function StockManagementPage() {
   const adjustStockMutation = trpc.stock.adjustStock.useMutation({
     onSuccess: () => {
       toast.success("Estoque ajustado com sucesso");
-      utils.stock.getStockLevels.invalidate();
+      void utils.stock.getStockLevels.invalidate();
       closeModal();
     },
     onError: (error) => {
@@ -104,7 +104,7 @@ export function StockManagementPage() {
       toast.success(
         variables.isAvailable ? "Produto disponibilizado" : "Produto indisponibilizado"
       );
-      utils.stock.getStockLevels.invalidate();
+      void utils.stock.getStockLevels.invalidate();
     },
     onError: (error) => {
       toast.error("Falha ao alterar disponibilidade", { description: error.message });
