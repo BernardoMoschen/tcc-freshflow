@@ -19,6 +19,11 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
 
+  expect: {
+    // CI backends are cold on first run — give assertions more time to settle
+    timeout: process.env.CI ? 15000 : 5000,
+  },
+
   projects: [
     {
       name: "chromium",

@@ -22,20 +22,36 @@ const BACKEND_URL = process.env.API_BASE_URL ?? "http://localhost:3001";
 // up on page load. Works because addInitScript runs before every goto().
 
 async function loginAs(page: Page, email: string): Promise<void> {
-  // Pass email as a serialised string so TypeScript doesn't type-check
-  // browser globals (localStorage) — the content runs in the page context.
+  // Set dev-mode email before first navigation — addInitScript runs before every goto().
   await page.addInitScript(`localStorage.setItem("freshflow:dev-user-email", ${JSON.stringify(email)})`);
-  // Fix #1 – waitForLoadState("networkidle") replaces the redundant
-  // waitForFunction + waitForTimeout double-wait.
   await page.goto("/dashboard");
+
+  // Wait for the auth + session query to fully settle, including any
+  // window.location.reload() triggered by the useAuth hook when it sets
+  // tenantId/accountId from the user's memberships on first load.
+  // The ProtectedRoute spinner (.animate-spin) is visible while loading and
+  // disappears once the session resolves, so this is more reliable than
+  // waitForLoadState("networkidle") alone (which can return before the reload).
   await page.waitForLoadState("networkidle");
-  // Fix #2 – verify login actually succeeded so that a missing seed user
-  // fails here rather than silently letting every subsequent assertion pass
-  // for the wrong reason.
+  await expect(page.locator(".animate-spin").first()).not.toBeVisible({ timeout: 20000 });
+
   await expect(
     page,
     `loginAs(${email}): auth failed – app redirected to /login. Check that the seed ran successfully.`
   ).not.toHaveURL(/\/login/, { timeout: 10000 });
+
+  // After auth has settled, read the tenant/account context that was set by
+  // useAuth from the session memberships and inject it for ALL subsequent
+  // page.goto() calls. This prevents the reload cycle on each navigation
+  // (useAuth won't need to set context because it's already in localStorage).
+  const tenantId = await page.evaluate(`localStorage.getItem("freshflow:tenantId")`) as string | null;
+  const accountId = await page.evaluate(`localStorage.getItem("freshflow:accountId")`) as string | null;
+  if (tenantId) {
+    await page.addInitScript(`localStorage.setItem("freshflow:tenantId", ${JSON.stringify(tenantId)})`);
+  }
+  if (accountId) {
+    await page.addInitScript(`localStorage.setItem("freshflow:accountId", ${JSON.stringify(accountId)})`);
+  }
 }
 
 // ─── ACCOUNT_OWNER – Buyer portal ────────────────────────────────────────────
