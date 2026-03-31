@@ -23,7 +23,7 @@ B2B ordering and warehouse management platform for fresh produce distributors. H
 ## Tech Stack
 
 | Layer | Technology |
-|---|---|
+| --- | --- |
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui |
 | Backend | Node.js, Express, tRPC |
 | Database | PostgreSQL 16, Prisma ORM |
@@ -37,7 +37,7 @@ B2B ordering and warehouse management platform for fresh produce distributors. H
 
 ## Project Structure
 
-```
+```text
 tcc-freshflow/
 ├── backend/          # Express + tRPC API server
 │   ├── prisma/       # Schema, migrations, seed
@@ -62,7 +62,7 @@ tcc-freshflow/
 ### Prerequisites
 
 - Node.js >= 20
-- pnpm >= 8
+- pnpm >= 10
 - Docker (for PostgreSQL)
 
 ### Installation
@@ -154,6 +154,7 @@ pnpm test:coverage      # Unit tests with coverage report
 ```
 
 The E2E suite seeds the database before running and covers:
+
 - RBAC routing (all five roles)
 - Buyer catalog → cart → order submission flow
 - Admin weighing station flow
@@ -166,7 +167,7 @@ The E2E suite seeds the database before running and covers:
 GitHub Actions runs five jobs on every push and pull request to `main`/`master`:
 
 | Job | What it checks |
-|---|---|
+| --- | --- |
 | `lint` | ESLint across backend and frontend |
 | `typecheck` | TypeScript strict mode compilation |
 | `unit-tests` | Business logic, pricing engine, RBAC |
@@ -180,7 +181,7 @@ Test artifacts (coverage reports, screenshots, traces) are retained for 7 days.
 ## API
 
 | Interface | URL |
-|---|---|
+| --- | --- |
 | tRPC | `http://localhost:3001/trpc` |
 | REST (PDF, SSE, webhooks) | `http://localhost:3001/api/v1` |
 | Swagger UI | `http://localhost:3001/api/docs` |
