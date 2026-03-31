@@ -24,10 +24,34 @@ export const DEV_USERS: Record<string, DevUser> = {
     role: "TENANT_OWNER",
     // tenantId auto-resolved from session memberships
   },
+  manager: {
+    email: "carlos@verdecampo.com.br",
+    name: "Carlos Silva (Verde Campo Owner)",
+    role: "TENANT_OWNER",
+    // tenantId auto-resolved from session memberships
+  },
+  warehouse: {
+    email: "ana@verdecampo.com.br",
+    name: "Ana Oliveira (Verde Campo Admin)",
+    role: "TENANT_ADMIN",
+    // tenantId auto-resolved from session memberships
+  },
   chef: {
     email: "chef@chefstable.com",
     name: "Head Chef",
     role: "ACCOUNT_OWNER",
+    // tenantId and accountId auto-resolved from session memberships
+  },
+  buyer: {
+    email: "roberto@sabordaterra.com.br",
+    name: "Roberto Santos (Sabor da Terra Owner)",
+    role: "ACCOUNT_OWNER",
+    // tenantId and accountId auto-resolved from session memberships
+  },
+  assistant: {
+    email: "juliana@sabordaterra.com.br",
+    name: "Juliana Lima (Sabor da Terra Buyer)",
+    role: "ACCOUNT_BUYER",
     // tenantId and accountId auto-resolved from session memberships
   },
 };
@@ -127,4 +151,5 @@ if (import.meta.env.DEV && typeof window !== "undefined") {
     users: DEV_USERS,
   };
   console.log("💡 Dev utilities available at: window.devSetup");
+  console.log("   Users: admin, owner, manager, warehouse, chef, buyer, assistant");
 }
