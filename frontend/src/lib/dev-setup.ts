@@ -20,7 +20,7 @@ export const DEV_USERS: Record<string, DevUser> = {
   },
   owner: {
     email: "owner@freshco.com",
-    name: "FreshCo Owner",
+    name: "Fernanda Rocha (FreshCo Owner)",
     role: "TENANT_OWNER",
     // tenantId auto-resolved from session memberships
   },
@@ -38,7 +38,7 @@ export const DEV_USERS: Record<string, DevUser> = {
   },
   chef: {
     email: "chef@chefstable.com",
-    name: "Head Chef",
+    name: "Rafael Moreira (Chef's Table Owner)",
     role: "ACCOUNT_OWNER",
     // tenantId and accountId auto-resolved from session memberships
   },
