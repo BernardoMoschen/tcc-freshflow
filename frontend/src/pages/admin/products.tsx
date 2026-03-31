@@ -83,7 +83,7 @@ export function ProductsManagementPage() {
   const createMutation = trpc.products.create.useMutation({
     onSuccess: () => {
       toast.success("Produto criado com sucesso");
-      utils.products.list.invalidate();
+      void utils.products.list.invalidate();
       closeModal();
     },
     onError: (error) => {
@@ -96,7 +96,7 @@ export function ProductsManagementPage() {
   const deleteMutation = trpc.products.delete.useMutation({
     onSuccess: () => {
       toast.success("Produto excluído com sucesso");
-      utils.products.list.invalidate();
+      void utils.products.list.invalidate();
     },
     onError: (error) => {
       toast.error("Falha ao excluir produto", { description: error.message });
@@ -231,7 +231,7 @@ export function ProductsManagementPage() {
         }
 
         toast.success("Produto atualizado com sucesso");
-        utils.products.list.invalidate();
+        await utils.products.list.invalidate();
         closeModal();
       } catch (error: any) {
         toast.error("Falha ao atualizar produto", { description: error.message });
@@ -345,7 +345,7 @@ export function ProductsManagementPage() {
 
       {productsQuery.data && productsQuery.data.items.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {productsQuery.data.items.map((product) => (
+          {productsQuery.data.items.map((product: any) => (
             <div
               key={product.id}
               className="bg-card rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden"

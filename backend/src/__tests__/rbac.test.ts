@@ -5,6 +5,10 @@ import {
   canAccessAccount,
   getUserRole,
   isPlatformAdmin,
+  getUserMemberships,
+  requireRole,
+  requireTenantAccess,
+  requireAccountAccess,
 } from "../rbac.js";
 import { mockPrisma } from "./setup.js";
 import { RoleType } from "@prisma/client";
@@ -119,6 +123,111 @@ describe("RBAC", () => {
     });
   });
 
+  describe("getUserRole", () => {
+    it("should return highest role in hierarchy", async () => {
+      mockPrisma.membership = {
+        findMany: vi.fn().mockResolvedValue([
+          { id: "m-1", role: { name: RoleType.ACCOUNT_OWNER } },
+          { id: "m-2", role: { name: RoleType.TENANT_ADMIN } },
+        ]),
+      };
+
+      const result = await getUserRole("user-1");
+
+      expect(result).toBe(RoleType.TENANT_ADMIN);
+    });
+
+    it("should return null when no memberships", async () => {
+      mockPrisma.membership = {
+        findMany: vi.fn().mockResolvedValue([]),
+      };
+
+      const result = await getUserRole("user-1");
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("getUserMemberships", () => {
+    it("should return memberships with includes", async () => {
+      const memberships = [{ id: "m-1" }];
+      mockPrisma.membership = {
+        findMany: vi.fn().mockResolvedValue(memberships),
+      };
+
+      const result = await getUserMemberships("user-1");
+
+      expect(result).toBe(memberships);
+      expect(mockPrisma.membership.findMany).toHaveBeenCalledWith({
+        where: { userId: "user-1" },
+        include: {
+          role: true,
+          tenant: true,
+          account: {
+            include: {
+              tenant: true,
+            },
+          },
+        },
+      });
+    });
+  });
+
+  describe("isPlatformAdmin", () => {
+    it("should return true when user has platform admin role", async () => {
+      mockPrisma.membership = {
+        findMany: vi.fn().mockResolvedValue([
+          { id: "m-1", role: { name: RoleType.PLATFORM_ADMIN } },
+        ]),
+      };
+
+      const result = await isPlatformAdmin("user-1");
+
+      expect(result).toBe(true);
+    });
+  });
+
+  describe("require access helpers", () => {
+    it("requireRole should throw with context", async () => {
+      mockPrisma.membership = {
+        findMany: vi.fn().mockResolvedValue([
+          { id: "m-1", role: { name: RoleType.ACCOUNT_BUYER } },
+        ]),
+      };
+
+      await expect(
+        requireRole("user-1", RoleType.TENANT_ADMIN, {
+          tenantId: "tenant-1",
+          accountId: "account-1",
+        })
+      ).rejects.toThrow("tenant tenant-1");
+    });
+
+    it("requireTenantAccess should throw when denied", async () => {
+      mockPrisma.membership = {
+        findMany: vi.fn().mockResolvedValue([]),
+        findFirst: vi.fn().mockResolvedValue(null),
+      };
+
+      await expect(requireTenantAccess("user-1", "tenant-1")).rejects.toThrow(
+        "Access denied to tenant tenant-1"
+      );
+    });
+
+    it("requireAccountAccess should throw when denied", async () => {
+      mockPrisma.membership = {
+        findMany: vi.fn().mockResolvedValue([]),
+        findFirst: vi.fn().mockResolvedValue(null),
+      };
+      mockPrisma.account = {
+        findUnique: vi.fn().mockResolvedValue(null),
+      };
+
+      await expect(requireAccountAccess("user-1", "account-1")).rejects.toThrow(
+        "Access denied to account account-1"
+      );
+    });
+  });
   describe("canAccessTenant", () => {
     it("should allow PLATFORM_ADMIN to access any tenant", async () => {
       mockPrisma.membership = {

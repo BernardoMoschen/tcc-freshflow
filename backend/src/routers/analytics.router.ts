@@ -21,8 +21,6 @@ export const analyticsRouter = router({
 
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
       // Date range filters
       const startDate = input.startDate ? new Date(input.startDate) : startOfMonth;
@@ -116,13 +114,10 @@ export const analyticsRouter = router({
           : 0;
 
       // Calculate average order value
-      const avgOrderValue =
-        currentOrders.length > 0 ? currentRevenue / currentOrders.length : 0;
+      const avgOrderValue = currentOrders.length > 0 ? currentRevenue / currentOrders.length : 0;
 
       const lastPeriodAvgOrderValue =
-        lastPeriodOrders.length > 0
-          ? lastPeriodRevenue / lastPeriodOrders.length
-          : 0;
+        lastPeriodOrders.length > 0 ? lastPeriodRevenue / lastPeriodOrders.length : 0;
 
       const avgOrderValueChange =
         lastPeriodAvgOrderValue > 0

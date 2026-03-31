@@ -23,7 +23,6 @@ import {
   Moon,
   Monitor,
   Bell,
-  BellOff,
 } from "lucide-react";
 
 export function ProfilePage() {
@@ -83,7 +82,7 @@ export function ProfilePage() {
 
       // Load tenant data if user is tenant admin
       const tenantMembership = profileQuery.data.memberships.find(
-        (m) => m.role.name === "TENANT_OWNER" || m.role.name === "TENANT_ADMIN"
+        (m: any) => m.role.name === "TENANT_OWNER" || m.role.name === "TENANT_ADMIN"
       );
 
       if (tenantMembership?.tenant) {
@@ -93,7 +92,7 @@ export function ProfilePage() {
         setTenantPhone(tenant.phone || "");
 
         if (tenant.address) {
-          const addr = tenant.address as any;
+          const addr = tenant.address;
           setAddress({
             street: addr.street || "",
             number: addr.number || "",
@@ -106,7 +105,7 @@ export function ProfilePage() {
         }
 
         if (tenant.deliveryAddress) {
-          const delAddr = tenant.deliveryAddress as any;
+          const delAddr = tenant.deliveryAddress;
           setDeliveryAddress({
             street: delAddr.street || "",
             number: delAddr.number || "",
@@ -135,7 +134,7 @@ export function ProfilePage() {
   const updateProfileMutation = trpc.userProfile.update.useMutation({
     onSuccess: () => {
       toast.success("Perfil atualizado com sucesso");
-      utils.userProfile.get.invalidate();
+      void utils.userProfile.get.invalidate();
     },
     onError: (error) => {
       toast.error("Erro ao atualizar perfil", {
@@ -147,7 +146,7 @@ export function ProfilePage() {
   const updateTenantMutation = trpc.userProfile.updateTenantProfile.useMutation({
     onSuccess: () => {
       toast.success("Dados da empresa atualizados com sucesso");
-      utils.userProfile.get.invalidate();
+      void utils.userProfile.get.invalidate();
     },
     onError: (error) => {
       toast.error("Erro ao atualizar dados da empresa", {
@@ -159,7 +158,7 @@ export function ProfilePage() {
   const updatePreferencesMutation = trpc.userProfile.updatePreferences.useMutation({
     onSuccess: () => {
       toast.success("Preferências atualizadas com sucesso");
-      utils.userProfile.getPreferences.invalidate();
+      void utils.userProfile.getPreferences.invalidate();
     },
     onError: (error) => {
       toast.error("Erro ao atualizar preferências", {
@@ -178,7 +177,7 @@ export function ProfilePage() {
 
   const handleSaveTenantInfo = () => {
     const tenantMembership = profileQuery.data?.memberships.find(
-      (m) => m.role.name === "TENANT_OWNER" || m.role.name === "TENANT_ADMIN"
+      (m: any) => m.role.name === "TENANT_OWNER" || m.role.name === "TENANT_ADMIN"
     );
 
     if (!tenantMembership?.tenant) {
@@ -207,7 +206,7 @@ export function ProfilePage() {
   };
 
   const isTenantAdmin = profileQuery.data?.memberships.some(
-    (m) => m.role.name === "TENANT_OWNER" || m.role.name === "TENANT_ADMIN"
+    (m: any) => m.role.name === "TENANT_OWNER" || m.role.name === "TENANT_ADMIN"
   );
 
   if (profileQuery.isLoading || preferencesQuery.isLoading) {

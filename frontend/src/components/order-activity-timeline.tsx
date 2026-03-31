@@ -82,7 +82,7 @@ export function OrderActivityTimeline({ orderId }: OrderActivityTimelineProps) {
     );
   }
 
-  const activities = activitiesQuery.data || [];
+  const activities = (activitiesQuery.data || []) as Array<any>;
 
   if (activities.length === 0) {
     return (
@@ -100,7 +100,7 @@ export function OrderActivityTimeline({ orderId }: OrderActivityTimelineProps) {
 
       {/* Activities */}
       <div className="space-y-6">
-        {activities.map((activity, index) => {
+        {activities.map((activity: any, index: number) => {
           const config = activityConfig[activity.activityType] || defaultConfig;
           const Icon = config.icon;
           const isFirst = index === 0;
@@ -110,9 +110,8 @@ export function OrderActivityTimeline({ orderId }: OrderActivityTimelineProps) {
               {/* Icon */}
               <div className="flex-shrink-0 relative z-10">
                 <div
-                  className={`w-10 h-10 rounded-full ${config.bgColor} flex items-center justify-center ${
-                    isFirst ? "ring-4 ring-white shadow-md" : ""
-                  }`}
+                  className={`w-10 h-10 rounded-full ${config.bgColor} flex items-center justify-center ${isFirst ? "ring-4 ring-white shadow-md" : ""
+                    }`}
                 >
                   <Icon className={`h-5 w-5 ${config.color}`} />
                 </div>

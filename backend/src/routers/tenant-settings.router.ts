@@ -16,7 +16,7 @@ export const tenantSettingsRouter = router({
    * Get tenant settings (creates default if doesn't exist)
    */
   get: tenantProcedure.query(async ({ ctx }) => {
-    const tenantId = ctx.tenantId!;
+    const tenantId = ctx.tenantId;
 
     // Get or create settings
     let settings = await ctx.prisma.tenantSettings.findUnique({
@@ -57,7 +57,7 @@ export const tenantSettingsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const tenantId = ctx.tenantId!;
+      const tenantId = ctx.tenantId;
 
       // Validate that minDeliveryDaysAhead <= maxDeliveryDaysAhead
       if (
@@ -98,7 +98,7 @@ export const tenantSettingsRouter = router({
    * Get available delivery dates based on settings
    */
   getAvailableDeliveryDates: tenantProcedure.query(async ({ ctx }) => {
-    const tenantId = ctx.tenantId!;
+    const tenantId = ctx.tenantId;
 
     const settings = await ctx.prisma.tenantSettings.findUnique({
       where: { tenantId },

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { router, protectedProcedure } from "../trpc";
 
 /**
@@ -169,7 +170,12 @@ export const userProfileRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { tenantId, ...updateData } = input;
+      const { tenantId, address, deliveryAddress, ...rest } = input;
+      const updateData = {
+        ...rest,
+        address: address === null ? Prisma.JsonNull : address,
+        deliveryAddress: deliveryAddress === null ? Prisma.JsonNull : deliveryAddress,
+      };
 
       // Verify user has permission for this tenant
       const membership = await ctx.prisma.membership.findFirst({
@@ -185,9 +191,7 @@ export const userProfileRouter = router({
       });
 
       if (!membership) {
-        throw new Error(
-          "Você não tem permissão para atualizar este perfil de tenant"
-        );
+        throw new Error("Você não tem permissão para atualizar este perfil de tenant");
       }
 
       const tenant = await ctx.prisma.tenant.update({

@@ -71,7 +71,7 @@ export function useCart() {
     },
     onSuccess: () => {
       setOptimisticItems(null);
-      utils.orders.getDraft.invalidate();
+      void utils.orders.getDraft.invalidate();
       localStorage.removeItem(STORAGE_KEY);
       toast.success("Cart cleared");
     },

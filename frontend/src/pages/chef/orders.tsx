@@ -62,7 +62,7 @@ export function OrdersPage() {
 
   // Manual refresh handler
   const handleManualRefresh = useCallback(() => {
-    ordersQuery.refetch();
+    void ordersQuery.refetch();
     toast.success("Pedidos atualizados");
   }, [ordersQuery]);
 
@@ -80,7 +80,7 @@ export function OrdersPage() {
     onSuccess: (data) => {
       toast.success(`${data.updated} pedido(s) atualizado(s)`);
       setSelectedOrders(new Set());
-      utils.orders.list.invalidate();
+      void utils.orders.list.invalidate();
     },
     onError: (error) => {
       toast.error("Falha ao atualizar pedidos", { description: error.message });
@@ -122,7 +122,7 @@ export function OrdersPage() {
     if (selectedOrders.size === filteredOrders.length) {
       setSelectedOrders(new Set());
     } else {
-      setSelectedOrders(new Set(filteredOrders.map((o) => o.id)));
+      setSelectedOrders(new Set(filteredOrders.map((o: any) => o.id)));
     }
   };
 
@@ -169,7 +169,7 @@ export function OrdersPage() {
   };
 
   // Filter orders by search query (client-side for order number)
-  const filteredOrders = ordersQuery.data?.items.filter((order) => {
+  const filteredOrders = ordersQuery.data?.items.filter((order: any) => {
     if (!searchQuery) return true;
     return order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase());
   }) || [];
@@ -379,7 +379,7 @@ export function OrdersPage() {
       )}
 
       <div className="space-y-4">
-        {filteredOrders.map((order) => (
+        {filteredOrders.map((order: any) => (
           <div
             key={order.id}
             className={`bg-card rounded-lg shadow-sm p-4 md:p-6 hover:shadow-md transition-shadow ${
@@ -430,7 +430,7 @@ export function OrdersPage() {
               </div>
 
               {/* Status Timeline */}
-              <OrderStatusTimeline status={order.status as any} compact />
+              <OrderStatusTimeline status={order.status} compact />
 
               {/* Actions */}
               <div className="flex flex-col sm:flex-row gap-2">
@@ -449,7 +449,7 @@ export function OrdersPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => reorderMutation.mutate({ orderId: order.id })}
-                    disabled={reorderMutation.isLoading}
+                    disabled={reorderMutation.isPending}
                     className="flex-1"
                   >
                     <RotateCcw className="mr-2 h-4 w-4" />

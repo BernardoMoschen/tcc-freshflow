@@ -12,7 +12,9 @@
     "test:unit": "pnpm --filter freshflow-backend test:unit",
     "test:coverage": "pnpm --filter freshflow-backend test:coverage",
     "test:integration": "pnpm --filter freshflow-backend test:integration",
-    "test:e2e": "pnpm --filter tests test:e2e",
+    "test:e2e": "pnpm --filter freshflow-tests test:e2e",
+    "test:e2e:seeded": "E2E_SEEDED=true pnpm test:e2e",
+    "e2e:seed": "pnpm --filter freshflow-backend prisma:seed",
     "test": "pnpm test:unit && pnpm test:integration && pnpm test:e2e",
     "typecheck": "pnpm --filter freshflow-backend typecheck && pnpm --filter freshflow-frontend typecheck",
     "lint": "pnpm --filter freshflow-backend lint && pnpm --filter freshflow-frontend lint"
@@ -23,10 +25,10 @@
     "@typescript-eslint/parser": "^6.19.0",
     "eslint": "^8.56.0",
     "prettier": "^3.2.4",
-    "typescript": "^5.3.3"
+    "typescript": "5.3.3"
   },
   "engines": {
     "node": ">=20.0.0",
-    "pnpm": ">=8.0.0"
+    "pnpm": ">=10.0.0"
   }
 }

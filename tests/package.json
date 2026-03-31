@@ -4,9 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:unit": "vitest run unit",
-    "test:integration": "vitest run integration",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test -c e2e/playwright.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.41.1",

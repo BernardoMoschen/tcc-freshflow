@@ -37,12 +37,12 @@ export function CustomersManagementPage() {
   );
 
   const customerDetailsQuery = trpc.customers.get.useQuery(
-    { id: selectedCustomer?.id! },
+    { id: selectedCustomer?.id ?? "" },
     { enabled: !!selectedCustomer && hasTenantContext }
   );
 
   const statsQuery = trpc.customers.getStats.useQuery(
-    { customerId: selectedCustomer?.id! },
+    { customerId: selectedCustomer?.id ?? "" },
     { enabled: !!selectedCustomer && hasTenantContext }
   );
 
@@ -54,8 +54,8 @@ export function CustomersManagementPage() {
   const setCustomPriceMutation = trpc.customers.setCustomPrice.useMutation({
     onSuccess: () => {
       toast.success("Preço personalizado definido com sucesso");
-      utils.customers.get.invalidate();
-      utils.customers.list.invalidate();
+      void utils.customers.get.invalidate();
+      void utils.customers.list.invalidate();
       setShowPricingModal(false);
       setSelectedProductOption("");
       setCustomPrice("");
@@ -68,8 +68,8 @@ export function CustomersManagementPage() {
   const removeCustomPriceMutation = trpc.customers.removeCustomPrice.useMutation({
     onSuccess: () => {
       toast.success("Preço personalizado removido");
-      utils.customers.get.invalidate();
-      utils.customers.list.invalidate();
+      void utils.customers.get.invalidate();
+      void utils.customers.list.invalidate();
     },
     onError: (error) => {
       toast.error("Falha ao remover preço personalizado", { description: error.message });
@@ -156,7 +156,7 @@ export function CustomersManagementPage() {
 
       {customersQuery.data && customersQuery.data.items.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {customersQuery.data.items.map((customer) => (
+          {customersQuery.data.items.map((customer: any) => (
             <div
               key={customer.id}
               className="bg-card rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden cursor-pointer"
@@ -265,7 +265,7 @@ export function CustomersManagementPage() {
 
                 {customerDetailsQuery.data.customerPrices.length > 0 && (
                   <div className="space-y-2">
-                    {customerDetailsQuery.data.customerPrices.map((cp) => (
+                    {customerDetailsQuery.data.customerPrices.map((cp: any) => (
                       <div
                         key={cp.id}
                         className="flex items-center justify-between p-3 bg-muted rounded-lg"
@@ -315,7 +315,7 @@ export function CustomersManagementPage() {
 
                 {customerDetailsQuery.data.orders.length > 0 && (
                   <div className="space-y-2">
-                    {customerDetailsQuery.data.orders.slice(0, 10).map((order) => (
+                    {customerDetailsQuery.data.orders.slice(0, 10).map((order: any) => (
                       <div
                         key={order.id}
                         className="flex items-center justify-between p-3 bg-muted rounded-lg"
@@ -332,8 +332,8 @@ export function CustomersManagementPage() {
                             order.status === "FINALIZED"
                               ? "secondary"
                               : order.status === "SENT"
-                              ? "default"
-                              : "outline"
+                                ? "default"
+                                : "outline"
                           }
                         >
                           {order.status === "SENT" ? "Enviado" : order.status === "IN_SEPARATION" ? "Em Separação" : order.status === "FINALIZED" ? "Finalizado" : order.status}
@@ -371,7 +371,7 @@ export function CustomersManagementPage() {
                 className="w-full p-2 border rounded-md"
               >
                 <option value="">Selecione uma opção de produto...</option>
-                {productsQuery.data?.items.flatMap((product) =>
+                {productsQuery.data?.items.flatMap((product: any) =>
                   product.options.map((option: any) => (
                     <option key={option.id} value={option.id}>
                       {product.name} - {option.name} (Base: {formatPrice(option.basePrice)})

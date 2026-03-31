@@ -33,7 +33,7 @@ export function useOffline() {
   // Auto-sync when coming online
   useEffect(() => {
     if (isOnline && unsyncedItems && unsyncedItems.length > 0 && !isSyncing) {
-      syncQueue();
+      void syncQueue();
     }
   }, [isOnline, unsyncedItems]);
 

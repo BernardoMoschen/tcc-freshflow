@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
-import { setupDevMode } from "@/lib/dev-setup";
+import { setupDevMode, DEV_USERS } from "@/lib/dev-setup";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
@@ -27,7 +27,7 @@ export function LoginPage() {
     }
   };
 
-  const handleDevLogin = (userKey: "chef" | "owner" | "admin") => {
+  const handleDevLogin = (userKey: keyof typeof DEV_USERS) => {
     if (setupDevMode(userKey)) {
       // Reload to apply dev mode
       window.location.href = "/dashboard";
@@ -44,7 +44,7 @@ export function LoginPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-6">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded text-sm">
               {error}
@@ -105,24 +105,16 @@ export function LoginPage() {
               🔧 Modo Desenvolvimento - Login Rápido
             </p>
             <div className="space-y-2">
-              <button
-                onClick={() => handleDevLogin("chef")}
-                className="w-full py-3 px-4 bg-accent/20 dark:bg-accent/40 border border-accent rounded-lg text-accent-foreground hover:bg-accent/30 dark:hover:bg-accent/50 transition-colors text-sm font-medium"
-              >
-                Entrar como Chef (ACCOUNT_OWNER)
-              </button>
-              <button
-                onClick={() => handleDevLogin("owner")}
-                className="w-full py-3 px-4 bg-secondary border border-border rounded-lg text-secondary-foreground hover:bg-secondary/80 dark:hover:bg-secondary/70 transition-colors text-sm font-medium"
-              >
-                Entrar como Dono do Tenant (TENANT_OWNER)
-              </button>
-              <button
-                onClick={() => handleDevLogin("admin")}
-                className="w-full py-3 px-4 bg-muted border border-border rounded-lg text-muted-foreground hover:bg-muted/80 dark:hover:bg-muted/70 transition-colors text-sm font-medium"
-              >
-                Entrar como Admin da Plataforma
-              </button>
+              {Object.entries(DEV_USERS).map(([key, user]) => (
+                <button
+                  key={key}
+                  onClick={() => handleDevLogin(key)}
+                  className="w-full py-3 px-4 bg-muted border border-border rounded-lg text-muted-foreground hover:bg-muted/80 transition-colors text-sm font-medium text-left"
+                >
+                  <span className="font-semibold text-foreground">{user.name}</span>
+                  <span className="ml-2 text-xs opacity-70">{user.role}</span>
+                </button>
+              ))}
             </div>
             <p className="text-xs text-muted-foreground mt-3 text-center">
               Senha não necessária no modo desenvolvimento

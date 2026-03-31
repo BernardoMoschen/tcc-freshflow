@@ -45,9 +45,9 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
   const addItemMutation = trpc.orders.addItem.useMutation({
     onSuccess: () => {
       toast.success("Item adicionado ao pedido");
-      utils.orders.get.invalidate();
-      utils.orders.list.invalidate();
-      utils.orders.adminList.invalidate();
+      void utils.orders.get.invalidate();
+      void utils.orders.list.invalidate();
+      void utils.orders.adminList.invalidate();
       setShowAddItem(false);
       setSelectedOptionId("");
       setAddItemQty("1");
@@ -61,8 +61,8 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
   const updateItemMutation = trpc.orders.updateItem.useMutation({
     onSuccess: () => {
       toast.success("Item atualizado");
-      utils.orders.get.invalidate();
-      utils.orders.list.invalidate();
+      void utils.orders.get.invalidate();
+      void utils.orders.list.invalidate();
       setEditingItemId(null);
     },
     onError: (error) => {
@@ -73,7 +73,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
   const cancelOrderMutation = trpc.orders.cancel.useMutation({
     onSuccess: () => {
       toast.success("Pedido cancelado com sucesso");
-      utils.orders.list.invalidate();
+      void utils.orders.list.invalidate();
       onClose();
     },
     onError: (error) => {
@@ -84,8 +84,8 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
   const removeItemMutation = trpc.orders.removeItem.useMutation({
     onSuccess: () => {
       toast.success("Item removido do pedido");
-      utils.orders.get.invalidate();
-      utils.orders.list.invalidate();
+      void utils.orders.get.invalidate();
+      void utils.orders.list.invalidate();
     },
     onError: (error) => {
       toast.error("Falha ao remover item", { description: error.message });
@@ -96,7 +96,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
     if (!order) return;
 
     let itemsAdded = 0;
-    order.items.forEach((item) => {
+    order.items.forEach((item: any) => {
       // Only add items that have finalPrice (FIXED items or weighed WEIGHT items)
       if (item.finalPrice) {
         addItem({
@@ -185,7 +185,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
 
   const calculateTotal = () => {
     if (!order) return 0;
-    return order.items.reduce((sum, item) => {
+    return order.items.reduce((sum: number, item: any) => {
       if (item.productOption.unitType === "FIXED" && item.finalPrice) {
         return sum + item.finalPrice;
       } else if (item.productOption.unitType === "WEIGHT" && item.actualWeight && item.finalPrice) {
@@ -237,7 +237,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
           <div className="space-y-6">
             {/* Status Timeline */}
             <div className="bg-muted rounded-lg p-4">
-              <OrderStatusTimeline status={order.status as any} />
+              <OrderStatusTimeline status={order.status} />
             </div>
 
             {/* Order Info */}
@@ -309,7 +309,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
               </div>
 
               <div className="space-y-3">
-                {order.items.map((item) => (
+                {order.items.map((item: any) => (
                   <div
                     key={item.id}
                     className="border rounded-lg p-4 bg-muted"

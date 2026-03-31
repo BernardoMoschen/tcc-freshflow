@@ -41,12 +41,14 @@ app.use(requestId);
 app.use(securityHeaders);
 
 // 3. CORS configuration
-app.use(corsMiddleware({
-  origins: process.env.ALLOWED_ORIGINS?.split(",") || [
-    "http://localhost:5173",
-    "http://localhost:3000",
-  ],
-}));
+app.use(
+  corsMiddleware({
+    origins: process.env.ALLOWED_ORIGINS?.split(",") || [
+      "http://localhost:5173",
+      "http://localhost:3000",
+    ],
+  })
+);
 
 // 4. JSON body parser with size limit
 app.use(express.json({ limit: "10mb" }));
@@ -88,7 +90,7 @@ apiV1.get("/delivery-note/:orderId.pdf", rateLimiters.read, async (req, res) => 
 
   try {
     const { orderId } = req.params;
-    const authHeader = req.headers.authorization as string | undefined;
+    const authHeader = req.headers.authorization;
 
     // Authenticate request
     let userId: string;
@@ -168,9 +170,13 @@ apiV1.get("/delivery-note/:orderId.pdf", rateLimiters.read, async (req, res) => 
   } catch (error) {
     logger.error("Error generating PDF:", error);
 
-    auditLogger.logError("pdf_generation", error instanceof Error ? error.message : "Unknown error", {
-      orderId: req.params.orderId,
-    });
+    auditLogger.logError(
+      "pdf_generation",
+      error instanceof Error ? error.message : "Unknown error",
+      {
+        orderId: req.params.orderId,
+      }
+    );
 
     return res.status(500).json({
       error: "PDF generation failed",
@@ -195,7 +201,7 @@ apiV1.post("/whatsapp/webhook", rateLimiters.webhook, async (req, res) => {
     logger.info(`[WhatsApp Webhook] Received message from ${From}: ${Body}`);
 
     // Process incoming message and get auto-reply if available
-    const reply = await handleIncomingMessage(From, Body);
+    const reply = handleIncomingMessage(From, Body);
 
     if (reply) {
       // Twilio expects TwiML response for auto-reply
@@ -211,7 +217,10 @@ apiV1.post("/whatsapp/webhook", rateLimiters.webhook, async (req, res) => {
   } catch (error) {
     logger.error("WhatsApp webhook error:", error);
 
-    auditLogger.logError("whatsapp_webhook", error instanceof Error ? error.message : "Unknown error");
+    auditLogger.logError(
+      "whatsapp_webhook",
+      error instanceof Error ? error.message : "Unknown error"
+    );
 
     return res.status(500).json({
       error: "Webhook processing failed",
@@ -223,7 +232,7 @@ apiV1.post("/whatsapp/webhook", rateLimiters.webhook, async (req, res) => {
 // ========== Server-Sent Events for Real-Time Order Updates ==========
 apiV1.get("/orders/events", rateLimiters.standard, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization as string | undefined;
+    const authHeader = req.headers.authorization;
 
     // Authenticate request
     let userId: string;
@@ -252,7 +261,9 @@ apiV1.get("/orders/events", rateLimiters.standard, async (req, res) => {
     res.setHeader("X-Accel-Buffering", "no"); // Disable nginx buffering
 
     // Send initial connection message
-    res.write(`data: ${JSON.stringify({ type: "connected", timestamp: new Date().toISOString() })}\n\n`);
+    res.write(
+      `data: ${JSON.stringify({ type: "connected", timestamp: new Date().toISOString() })}\n\n`
+    );
 
     // Create event listeners for each membership
     const unsubscribers: (() => void)[] = [];
@@ -260,9 +271,12 @@ apiV1.get("/orders/events", rateLimiters.standard, async (req, res) => {
     for (const membership of memberships) {
       if (membership.accountId) {
         // Subscribe to account events
-        const unsubscribe = orderEvents.onAccountEvents(membership.accountId, (event: OrderEvent) => {
-          res.write(`data: ${JSON.stringify(event)}\n\n`);
-        });
+        const unsubscribe = orderEvents.onAccountEvents(
+          membership.accountId,
+          (event: OrderEvent) => {
+            res.write(`data: ${JSON.stringify(event)}\n\n`);
+          }
+        );
         unsubscribers.push(unsubscribe);
       }
 
@@ -288,9 +302,10 @@ apiV1.get("/orders/events", rateLimiters.standard, async (req, res) => {
     });
 
     logger.debug(`SSE connection established for user ${userId}`);
+    return;
   } catch (error) {
     logger.error("SSE endpoint error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       error: "Failed to establish SSE connection",
     });
   }
@@ -299,15 +314,7 @@ apiV1.get("/orders/events", rateLimiters.standard, async (req, res) => {
 // ========== Frontend Error Reporting Endpoint ==========
 apiV1.post("/errors", rateLimiters.standard, async (req, res) => {
   try {
-    const {
-      errorId,
-      message,
-      stack,
-      componentStack,
-      url,
-      userAgent,
-      timestamp,
-    } = req.body;
+    const { errorId, message, stack, componentStack, url, userAgent, timestamp } = req.body;
 
     // Validate required fields
     if (!errorId || !message) {
@@ -319,7 +326,7 @@ apiV1.post("/errors", rateLimiters.standard, async (req, res) => {
 
     // Get user info from auth header if available
     let userId: string | undefined;
-    const authHeader = req.headers.authorization as string | undefined;
+    const authHeader = req.headers.authorization;
     if (authHeader) {
       try {
         userId = await authenticateRequest(authHeader);
@@ -329,7 +336,7 @@ apiV1.post("/errors", rateLimiters.standard, async (req, res) => {
     }
 
     // Log to audit system
-    auditLogger.log({
+    void auditLogger.log({
       eventType: AuditEventType.SYSTEM_ERROR,
       action: "frontend_error",
       success: false,
@@ -440,14 +447,14 @@ async function shutdown(signal: string) {
   }
 }
 
-process.on("SIGINT", () => shutdown("SIGINT"));
-process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => { void shutdown("SIGINT"); });
+process.on("SIGTERM", () => { void shutdown("SIGTERM"); });
 
 // Handle uncaught exceptions
 process.on("uncaughtException", (error) => {
   logger.error("Uncaught Exception:", error);
   auditLogger.logError("uncaught_exception", error.message, { stack: error.stack });
-  shutdown("uncaughtException");
+  void shutdown("uncaughtException");
 });
 
 process.on("unhandledRejection", (reason) => {

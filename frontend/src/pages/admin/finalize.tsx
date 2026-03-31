@@ -25,7 +25,7 @@ export function FinalizePage() {
     try {
       await finalizeMutation.mutateAsync({ id: orderId });
       showToast("Pedido finalizado com sucesso!", "success");
-      orderQuery.refetch();
+      await orderQuery.refetch();
     } catch (error) {
       showToast(
         "Falha ao finalizar: " + (error instanceof Error ? error.message : "Erro desconhecido"),
@@ -60,17 +60,17 @@ export function FinalizePage() {
   }
 
   const order = orderQuery.data;
-  const fixedItems = order.items.filter((item) => item.productOption.unitType === "FIXED");
-  const weightItems = order.items.filter((item) => item.productOption.unitType === "WEIGHT");
+  const fixedItems = order.items.filter((item: any) => item.productOption.unitType === "FIXED");
+  const weightItems = order.items.filter((item: any) => item.productOption.unitType === "WEIGHT");
 
-  const fixedTotal = fixedItems.reduce((sum, item) => sum + (item.finalPrice || 0), 0);
+  const fixedTotal = fixedItems.reduce((sum: number, item: any) => sum + (item.finalPrice || 0), 0);
   const weightTotal = weightItems.reduce(
-    (sum, item) => sum + (item.actualWeight || 0) * (item.finalPrice || 0),
+    (sum: number, item: any) => sum + (item.actualWeight || 0) * (item.finalPrice || 0),
     0
   );
   const grandTotal = fixedTotal + weightTotal;
 
-  const allWeighed = weightItems.every((item) => item.actualWeight !== null);
+  const allWeighed = weightItems.every((item: any) => item.actualWeight !== null);
   const isFinalized = order.status === "FINALIZED";
 
   return (
@@ -100,9 +100,8 @@ export function FinalizePage() {
               <p className="text-sm text-muted-foreground mt-1">
                 Status:{" "}
                 <span
-                  className={`font-medium ${
-                    isFinalized ? "text-success" : "text-primary"
-                  }`}
+                  className={`font-medium ${isFinalized ? "text-success" : "text-primary"
+                    }`}
                 >
                   {order.status === "SENT" ? "Enviado" : order.status === "IN_SEPARATION" ? "Em Separação" : order.status === "FINALIZED" ? "Finalizado" : order.status}
                 </span>
@@ -145,7 +144,7 @@ export function FinalizePage() {
           <h3 className="font-semibold text-lg mb-4">Resumo do Pedido</h3>
 
           <div className="space-y-3">
-            {order.items.map((item) => {
+            {order.items.map((item: any) => {
               let itemTotal = 0;
               if (item.productOption.unitType === "FIXED" && item.finalPrice) {
                 itemTotal = item.finalPrice;
@@ -158,9 +157,8 @@ export function FinalizePage() {
               return (
                 <div
                   key={item.id}
-                  className={`flex flex-col sm:flex-row sm:justify-between gap-2 p-3 rounded-lg ${
-                    !isWeighed ? "bg-yellow-50" : ""
-                  }`}
+                  className={`flex flex-col sm:flex-row sm:justify-between gap-2 p-3 rounded-lg ${!isWeighed ? "bg-yellow-50" : ""
+                    }`}
                 >
                   <div className="flex-1">
                     <p className="font-medium text-sm">
@@ -170,8 +168,8 @@ export function FinalizePage() {
                       {item.productOption.unitType === "FIXED"
                         ? `Qtd: ${item.requestedQty}`
                         : item.actualWeight
-                        ? `Peso: ${item.actualWeight} kg`
-                        : "⚠️ Ainda não pesado"}
+                          ? `Peso: ${item.actualWeight} kg`
+                          : "⚠️ Ainda não pesado"}
                     </p>
                   </div>
                   <span className="font-semibold text-primary text-base">
@@ -210,8 +208,8 @@ export function FinalizePage() {
               {finalizeMutation.isPending
                 ? "Finalizando..."
                 : allWeighed
-                ? "Finalizar Pedido"
-                : "Complete a Pesagem Primeiro"}
+                  ? "Finalizar Pedido"
+                  : "Complete a Pesagem Primeiro"}
             </Button>
           ) : (
             <Button

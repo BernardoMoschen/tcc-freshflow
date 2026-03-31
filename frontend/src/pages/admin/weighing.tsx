@@ -181,7 +181,7 @@ export function WeighingPage() {
           photoUrl,
         });
         showToast("Peso salvo com sucesso!", "success");
-        orderQuery.refetch();
+        await orderQuery.refetch();
         // Clear the inputs for this item
         setWeights((prev) => ({ ...prev, [orderItemId]: 0 }));
         setPrices((prev) => ({ ...prev, [orderItemId]: 0 }));
@@ -231,7 +231,7 @@ export function WeighingPage() {
   if (!orderQuery.data) return <div className="p-8 text-center">Pedido não encontrado</div>;
 
   const order = orderQuery.data;
-  const weightItems = order.items.filter((item) => item.productOption.unitType === "WEIGHT");
+  const weightItems = order.items.filter((item: any) => item.productOption.unitType === "WEIGHT");
 
   // Validate order status - only allow weighing for IN_SEPARATION status
   if (order.status !== "IN_SEPARATION") {
@@ -355,7 +355,7 @@ export function WeighingPage() {
           </div>
         ) : (
           <div className="space-y-5">
-            {weightItems.map((item) => {
+            {weightItems.map((item: any) => {
               const currentWeight = weights[item.id];
               const warning = currentWeight ? getWeightWarning(item.requestedQty, currentWeight) : null;
 

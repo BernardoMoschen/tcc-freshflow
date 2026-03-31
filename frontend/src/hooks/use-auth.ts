@@ -23,7 +23,7 @@ export function useAuth() {
     gcTime: 1000 * 60 * 30, // 30 minutes
     refetchOnMount: false,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: "stale", // Refetch if becomes stale
+    refetchOnReconnect: true, // Refetch if becomes stale
     refetchInterval: false, // Disable polling
   });
 
@@ -158,7 +158,7 @@ export function useAuth() {
     }
 
     // Production: Get initial session from Supabase
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    void supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });
