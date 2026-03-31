@@ -65,7 +65,7 @@ export function DashboardPage() {
   // Calculate metrics
   const totalOrders = ordersQuery.data?.total || 0;
   const todayOrders =
-    ordersQuery.data?.items.filter((order) => {
+    ordersQuery.data?.items.filter((order: any) => {
       const today = new Date();
       const orderDate = new Date(order.createdAt);
       return orderDate.toDateString() === today.toDateString();
@@ -73,18 +73,18 @@ export function DashboardPage() {
 
   const pendingOrders =
     ordersQuery.data?.items.filter(
-      (order) => order.status === "SENT" || order.status === "IN_SEPARATION"
+      (order: any) => order.status === "SENT" || order.status === "IN_SEPARATION"
     ).length || 0;
 
   const finalizedOrders =
-    ordersQuery.data?.items.filter((order) => order.status === "FINALIZED").length || 0;
+    ordersQuery.data?.items.filter((order: any) => order.status === "FINALIZED").length || 0;
 
   // Calculate revenue (only finalized orders) - admin only
   const totalRevenue =
     ordersQuery.data?.items
-      .filter((order) => order.status === "FINALIZED")
-      .reduce((sum, order) => {
-        const orderTotal = order.items.reduce((itemSum, item) => {
+      .filter((order: any) => order.status === "FINALIZED")
+      .reduce((sum: any, order: any) => {
+        const orderTotal = order.items.reduce((itemSum: any, item: any) => {
           if (item.finalPrice) {
             if (item.productOption.unitType === "WEIGHT" && item.actualWeight) {
               return itemSum + item.finalPrice * item.actualWeight;
@@ -313,7 +313,7 @@ export function DashboardPage() {
                 <p className="text-center text-muted-foreground py-8">Nenhum pedido ainda</p>
               ) : (
                 <div className="space-y-3">
-                  {recentOrders.map((order) => (
+                  {recentOrders.map((order: any) => (
                     <Link
                       key={order.id}
                       to={`/admin/weighing/${order.id}`}
@@ -540,7 +540,7 @@ export function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {recentOrders.map((order) => (
+              {recentOrders.map((order: any) => (
                 <Link
                   key={order.id}
                   to="/chef/orders"

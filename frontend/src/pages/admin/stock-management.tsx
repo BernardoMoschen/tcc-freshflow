@@ -431,7 +431,7 @@ export function StockManagementPage() {
 
           {movementsQuery.data && (
             <div className="space-y-3">
-              {movementsQuery.data.items.map((movement) => (
+              {movementsQuery.data.items.map((movement: any) => (
                 <div
                   key={movement.id}
                   className="border rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition"

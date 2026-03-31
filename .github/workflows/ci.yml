@@ -189,7 +189,7 @@ jobs:
         run: cd backend && npx prisma db seed
 
       - name: Install Playwright browsers
-        run: pnpm --filter tests exec playwright install --with-deps
+        run: pnpm --filter freshflow-tests exec playwright install --with-deps
 
       - name: Run E2E tests
         run: pnpm test:e2e

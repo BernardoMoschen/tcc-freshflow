@@ -47,9 +47,6 @@ export function CatalogPage() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
 
-  // Log initialization for debugging
-  console.log("[CatalogPage] Component mounted, session:", session);
-
   // Debounce search to prevent excessive API calls
   const debouncedSearch = useDebounce(search, 300);
 
@@ -421,7 +418,7 @@ export function CatalogPage() {
         {/* Product grid - single column on mobile, responsive grid on larger screens */}
         {!productsQuery.isLoading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {productsQuery.data?.items.map((product) =>
+            {productsQuery.data?.items.map((product: any) =>
               product.options
                 .filter((option: ProductOption) => {
                   // Filter by favorites

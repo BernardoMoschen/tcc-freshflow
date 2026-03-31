@@ -122,7 +122,7 @@ export function OrdersPage() {
     if (selectedOrders.size === filteredOrders.length) {
       setSelectedOrders(new Set());
     } else {
-      setSelectedOrders(new Set(filteredOrders.map((o) => o.id)));
+      setSelectedOrders(new Set(filteredOrders.map((o: any) => o.id)));
     }
   };
 
@@ -169,7 +169,7 @@ export function OrdersPage() {
   };
 
   // Filter orders by search query (client-side for order number)
-  const filteredOrders = ordersQuery.data?.items.filter((order) => {
+  const filteredOrders = ordersQuery.data?.items.filter((order: any) => {
     if (!searchQuery) return true;
     return order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase());
   }) || [];
@@ -379,7 +379,7 @@ export function OrdersPage() {
       )}
 
       <div className="space-y-4">
-        {filteredOrders.map((order) => (
+        {filteredOrders.map((order: any) => (
           <div
             key={order.id}
             className={`bg-card rounded-lg shadow-sm p-4 md:p-6 hover:shadow-md transition-shadow ${

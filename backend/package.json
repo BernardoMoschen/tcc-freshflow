@@ -18,7 +18,7 @@
     "test": "vitest",
     "test:unit": "vitest run src/__tests__",
     "test:coverage": "vitest run --coverage",
-    "test:integration": "vitest run tests/integration --passWithNoTests",
+    "test:integration": "vitest run tests/integration",
     "test:watch": "vitest"
   },
   "dependencies": {

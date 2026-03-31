@@ -121,7 +121,7 @@ export function PublicCatalogPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas Categorias</SelectItem>
-                {categories.map((category) => (
+                {categories.map((category: any) => (
                   <SelectItem key={category} value={category}>
                     {category}
                   </SelectItem>
@@ -144,7 +144,7 @@ export function PublicCatalogPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {products.map((product) => (
+            {products.map((product: any) => (
               <div
                 key={product.id}
                 className="bg-card rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
@@ -184,7 +184,7 @@ export function PublicCatalogPage() {
 
                   {/* Options */}
                   <div className="space-y-2">
-                    {product.options.map((option) => (
+                    {product.options.map((option: any) => (
                       <div
                         key={option.id}
                         className="flex items-center justify-between p-3 bg-muted rounded-lg"

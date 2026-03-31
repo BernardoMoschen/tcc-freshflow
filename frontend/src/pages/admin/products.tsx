@@ -345,7 +345,7 @@ export function ProductsManagementPage() {
 
       {productsQuery.data && productsQuery.data.items.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {productsQuery.data.items.map((product) => (
+          {productsQuery.data.items.map((product: any) => (
             <div
               key={product.id}
               className="bg-card rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden"

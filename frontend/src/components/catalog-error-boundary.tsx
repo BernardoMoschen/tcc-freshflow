@@ -56,7 +56,7 @@ export class CatalogErrorBoundary extends Component<Props, State> {
             <p className="text-sm text-muted-foreground mb-4">
               {this.state.error?.message || "Ocorreu um erro inesperado"}
             </p>
-            {process.env.NODE_ENV === "development" && (
+            {import.meta.env.DEV && (
               <details className="text-left bg-white p-2 rounded border border-border mb-4">
                 <summary className="text-xs cursor-pointer font-mono">Details</summary>
                 <pre className="text-xs overflow-auto max-h-40 mt-2">

@@ -9,13 +9,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * - Ensures database is seeded before tests run
  */
 async function globalSetup() {
+  // Skip seeding when E2E_SEEDED=true — useful when running against a pre-seeded DB
+  if (process.env.E2E_SEEDED === "true") {
+    console.log("\n⏭️  Skipping seed (E2E_SEEDED=true)\n");
+    return;
+  }
+
   console.log("\n🌱 Seeding database for E2E tests...");
 
   try {
-    // Get the backend directory
     const backendDir = path.resolve(__dirname, "../../backend");
 
-    // Run seed command
     execSync("pnpm prisma:seed", {
       cwd: backendDir,
       stdio: "inherit",
@@ -24,8 +28,6 @@ async function globalSetup() {
     console.log("✅ Database seeded successfully\n");
   } catch (error) {
     console.error("❌ Failed to seed database:", error);
-    // Don't fail completely - user might have intentionally skipped seeding
-    // This allows manual setup scenarios
     process.exit(1);
   }
 }

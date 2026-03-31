@@ -23,7 +23,6 @@ import {
   Moon,
   Monitor,
   Bell,
-  BellOff,
 } from "lucide-react";
 
 export function ProfilePage() {
@@ -83,7 +82,7 @@ export function ProfilePage() {
 
       // Load tenant data if user is tenant admin
       const tenantMembership = profileQuery.data.memberships.find(
-        (m) => m.role.name === "TENANT_OWNER" || m.role.name === "TENANT_ADMIN"
+        (m: any) => m.role.name === "TENANT_OWNER" || m.role.name === "TENANT_ADMIN"
       );
 
       if (tenantMembership?.tenant) {
@@ -178,7 +177,7 @@ export function ProfilePage() {
 
   const handleSaveTenantInfo = () => {
     const tenantMembership = profileQuery.data?.memberships.find(
-      (m) => m.role.name === "TENANT_OWNER" || m.role.name === "TENANT_ADMIN"
+      (m: any) => m.role.name === "TENANT_OWNER" || m.role.name === "TENANT_ADMIN"
     );
 
     if (!tenantMembership?.tenant) {
@@ -207,7 +206,7 @@ export function ProfilePage() {
   };
 
   const isTenantAdmin = profileQuery.data?.memberships.some(
-    (m) => m.role.name === "TENANT_OWNER" || m.role.name === "TENANT_ADMIN"
+    (m: any) => m.role.name === "TENANT_OWNER" || m.role.name === "TENANT_ADMIN"
   );
 
   if (profileQuery.isLoading || preferencesQuery.isLoading) {

@@ -29,11 +29,9 @@ import {
   AlertTriangle,
   Package,
   Clock,
-  TruckIcon,
   ShoppingCart,
   Calendar,
   User,
-  BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useOrderEvents, OrderEvent, OrderEventType } from "@/hooks/use-order-events";
@@ -147,7 +145,7 @@ export function AdminOrdersPage() {
     if (selectedOrders.size === filteredOrders.length) {
       setSelectedOrders(new Set());
     } else {
-      setSelectedOrders(new Set(filteredOrders.map((o) => o.id)));
+      setSelectedOrders(new Set(filteredOrders.map((o: any) => o.id)));
     }
   };
 
@@ -200,10 +198,10 @@ export function AdminOrdersPage() {
   // Calculate statistics
   const stats = {
     total: ordersQuery.data?.total || 0,
-    sent: filteredOrders.filter((o) => o.status === "SENT").length,
-    inSeparation: filteredOrders.filter((o) => o.status === "IN_SEPARATION").length,
-    finalized: filteredOrders.filter((o) => o.status === "FINALIZED").length,
-    today: filteredOrders.filter((o) => {
+    sent: filteredOrders.filter((o: any) => o.status === "SENT").length,
+    inSeparation: filteredOrders.filter((o: any) => o.status === "IN_SEPARATION").length,
+    finalized: filteredOrders.filter((o: any) => o.status === "FINALIZED").length,
+    today: filteredOrders.filter((o: any) => {
       const today = new Date();
       const orderDate = new Date(o.createdAt);
       return (
@@ -491,7 +489,7 @@ export function AdminOrdersPage() {
       {/* Orders Grid */}
       {filteredOrders.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredOrders.map((order) => {
+          {filteredOrders.map((order: any) => {
             const hasWeightItems = order.items.some(
               (item: any) => item.productOption?.unitType === "WEIGHT"
             );
