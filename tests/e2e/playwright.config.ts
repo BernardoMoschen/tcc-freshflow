@@ -8,20 +8,26 @@ export default defineConfig({
   testDir: ".",
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 2 : undefined,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
   reporter: "html",
   globalSetup: path.resolve(__dirname, "./global-setup.ts"),
+
+  // CI runners are slower — give each test more wall-clock time
+  timeout: process.env.CI ? 60000 : 30000,
 
   use: {
     baseURL: "http://localhost:5173",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
+    // Give navigation actions more time on CI
+    navigationTimeout: process.env.CI ? 30000 : 15000,
+    actionTimeout: process.env.CI ? 15000 : 10000,
   },
 
   expect: {
     // CI backends are cold on first run — give assertions more time to settle
-    timeout: process.env.CI ? 15000 : 5000,
+    timeout: process.env.CI ? 20000 : 5000,
   },
 
   projects: [

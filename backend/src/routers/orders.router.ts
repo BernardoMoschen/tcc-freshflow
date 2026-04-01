@@ -712,6 +712,7 @@ export const ordersRouter = router({
         where: { id: input.id },
         include: {
           items: {
+            orderBy: { createdAt: "asc" },
             include: {
               productOption: {
                 include: {
