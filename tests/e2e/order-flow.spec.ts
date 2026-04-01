@@ -32,16 +32,46 @@ const TIMEOUT = process.env.CI ? 15000 : 8000;
 // up on page load. Works because addInitScript runs before every goto().
 
 async function loginAs(page: Page, email: string): Promise<void> {
-  // Set dev-mode email before first navigation — addInitScript runs before every goto().
-  await page.addInitScript(`localStorage.setItem("freshflow:dev-user-email", ${JSON.stringify(email)})`);
-  await page.goto("/dashboard");
+  // Pre-fetch the user's session from the backend to extract tenant/account
+  // context BEFORE any browser navigation. This eliminates the race condition
+  // where useAuth's auto-context effect calls window.location.reload() after
+  // Playwright thinks the page is stable — on slow CI runners the reload fires
+  // late and causes blank pages / missing elements in subsequent navigations.
+  const scripts: string[] = [
+    `localStorage.setItem("freshflow:dev-user-email", ${JSON.stringify(email)})`,
+  ];
 
-  // Wait for the auth + session query to fully settle, including any
-  // window.location.reload() triggered by the useAuth hook when it sets
-  // tenantId/accountId from the user's memberships on first load.
-  // The ProtectedRoute spinner (.animate-spin) is visible while loading and
-  // disappears once the session resolves, so this is more reliable than
-  // waitForLoadState("networkidle") alone (which can return before the reload).
+  try {
+    const res = await fetch(`${BACKEND_URL}/trpc/auth.session`, {
+      headers: { "x-dev-user-email": email },
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const memberships = json?.result?.data?.memberships ?? [];
+      for (const m of memberships) {
+        if (m.account) {
+          scripts.push(`localStorage.setItem("freshflow:tenantId", ${JSON.stringify(m.account.tenantId)})`);
+          scripts.push(`localStorage.setItem("freshflow:accountId", ${JSON.stringify(m.account.id)})`);
+          break;
+        }
+        if (m.tenant) {
+          scripts.push(`localStorage.setItem("freshflow:tenantId", ${JSON.stringify(m.tenant.id)})`);
+          break;
+        }
+      }
+    }
+  } catch {
+    // If pre-fetch fails, we still set the dev email — the reload path
+    // in useAuth will handle context (slower but functional).
+  }
+
+  // Inject all localStorage values before navigation so useAuth's
+  // isContextValid() returns true on first load — no reload fires.
+  for (const script of scripts) {
+    await page.addInitScript(script);
+  }
+
+  await page.goto("/dashboard");
   await page.waitForLoadState("networkidle");
   await expect(page.locator(".animate-spin").first()).not.toBeVisible({ timeout: 20000 });
   await page.waitForLoadState("networkidle");
@@ -50,30 +80,6 @@ async function loginAs(page: Page, email: string): Promise<void> {
     page,
     `loginAs(${email}): auth failed – app redirected to /login. Check that the seed ran successfully.`
   ).not.toHaveURL(/\/login/, { timeout: 10000 });
-
-  // After auth has settled, read the tenant/account context that was set by
-  // useAuth from the session memberships and inject it for ALL subsequent
-  // page.goto() calls. This prevents the reload cycle on each navigation
-  // (useAuth won't need to set context because it's already in localStorage).
-  const tenantId = await page.evaluate(`localStorage.getItem("freshflow:tenantId")`) as string | null;
-  const accountId = await page.evaluate(`localStorage.getItem("freshflow:accountId")`) as string | null;
-  if (tenantId) {
-    await page.addInitScript(`localStorage.setItem("freshflow:tenantId", ${JSON.stringify(tenantId)})`);
-  }
-  if (accountId) {
-    await page.addInitScript(`localStorage.setItem("freshflow:accountId", ${JSON.stringify(accountId)})`);
-  }
-
-  // Re-navigate to /dashboard now that tenantId/accountId are injected via addInitScript.
-  // In CI, useAuth's context-setting effect (which calls window.location.reload()) can fire
-  // AFTER the networkidle check above, because React effects are scheduled asynchronously and
-  // a slower CI CPU may not flush them within Playwright's 500 ms networkidle window.
-  // That reload then races with the first test's page.goto(), producing a hidden body.
-  //
-  // By navigating again with context already pre-set, isContextValid() returns true on load
-  // and no reload fires — loginAs always returns from a clean, stable page.
-  await page.goto("/dashboard");
-  await page.waitForLoadState("networkidle");
 }
 
 // ─── ACCOUNT_OWNER – Buyer portal ────────────────────────────────────────────
@@ -350,17 +356,20 @@ test.describe("Admin interaction – weighing flow", () => {
     await page.goto("/admin/orders");
     await expect(page).not.toHaveURL(/\/login/, { timeout: TIMEOUT });
 
-    // Wait for the orders list to load. The page uses cards, not a table.
+    // Wait for the orders query to resolve — the "Mostrando X de Y" text
+    // only renders after ordersQuery.data is available.
+    await expect(page.getByText(/mostrando/i)).toBeVisible({ timeout: TIMEOUT });
+
     // PED-003 is the only IN_SEPARATION order, so "Pesar" appears exactly once.
     const pesarLink = page.getByRole("link", { name: /pesar/i }).first();
-    await expect(pesarLink).toBeVisible({ timeout: 10000 });
+    await expect(pesarLink).toBeVisible({ timeout: TIMEOUT });
     await pesarLink.click();
 
     // Should land on the weighing page for this specific order
     await expect(page).toHaveURL(/\/admin\/weighing\//, { timeout: TIMEOUT });
     await expect(
       page.getByRole("heading", { name: /estação de pesagem/i })
-    ).toBeVisible({ timeout: 5000 });
+    ).toBeVisible({ timeout: TIMEOUT });
   });
 
   test("TENANT_ADMIN records a weight for a WEIGHT item in PED-003", async ({ page }) => {
@@ -368,9 +377,12 @@ test.describe("Admin interaction – weighing flow", () => {
     await page.goto("/admin/orders");
     await expect(page).not.toHaveURL(/\/login/, { timeout: TIMEOUT });
 
+    // Wait for the orders query to resolve before looking for the Pesar link.
+    await expect(page.getByText(/mostrando/i)).toBeVisible({ timeout: TIMEOUT });
+
     // Navigate to weighing page via the "Pesar" link (PED-003 is the only IN_SEPARATION order)
     const pesarLink = page.getByRole("link", { name: /pesar/i }).first();
-    await expect(pesarLink).toBeVisible({ timeout: 10000 });
+    await expect(pesarLink).toBeVisible({ timeout: TIMEOUT });
     await pesarLink.click();
     await expect(page).toHaveURL(/\/admin\/weighing\//, { timeout: TIMEOUT });
 
