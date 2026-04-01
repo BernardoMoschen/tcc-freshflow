@@ -25,7 +25,7 @@ const BACKEND_URL = process.env.API_BASE_URL ?? "http://localhost:3001";
 // CI runners start cold — the first tRPC session query can take 8-12 s.
 // Use a longer timeout in CI so ProtectedRoute has time to resolve roles
 // before we assert on redirects or page content.
-const TIMEOUT = process.env.CI ? 30000 : 8000;
+const TIMEOUT = process.env.CI ? 20000 : 8000;
 
 // ─── Auth helper ──────────────────────────────────────────────────────────────
 // Sets the dev-mode email before the first navigation so the auth hook picks it
@@ -77,7 +77,7 @@ async function loginAs(page: Page, email: string): Promise<void> {
 
   await page.goto("/dashboard");
   await page.waitForLoadState("networkidle");
-  await expect(page.locator(".animate-spin").first()).not.toBeVisible({ timeout: 30000 });
+  await expect(page.locator(".animate-spin").first()).not.toBeVisible({ timeout: 20000 });
   await page.waitForLoadState("networkidle");
 
   // Guard against a late window.location.reload() from useAuth's context effect.

@@ -140,6 +140,11 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/freshflow_test
       SUPABASE_JWT_SECRET: ci-test-secret-key-at-least-32-chars-long
       NODE_ENV: development
+      # Vite exposes only VITE_* vars to the frontend.  The dev-mode auth
+      # bypass doesn't use Supabase, but the client module must still be
+      # importable without crashing.  Provide dummy values for CI.
+      VITE_SUPABASE_URL: http://localhost:54321
+      VITE_SUPABASE_ANON_KEY: ci-placeholder-anon-key
 
     steps:
       - uses: actions/checkout@v4

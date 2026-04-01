@@ -14,7 +14,7 @@ export default defineConfig({
   globalSetup: path.resolve(__dirname, "./global-setup.ts"),
 
   // CI runners are slower — give each test more wall-clock time
-  timeout: process.env.CI ? 120000 : 30000,
+  timeout: process.env.CI ? 60000 : 30000,
 
   use: {
     baseURL: "http://localhost:5173",
@@ -27,7 +27,7 @@ export default defineConfig({
 
   expect: {
     // CI backends are cold on first run — give assertions more time to settle
-    timeout: process.env.CI ? 30000 : 5000,
+    timeout: process.env.CI ? 20000 : 5000,
   },
 
   projects: [
