@@ -25,7 +25,7 @@ const BACKEND_URL = process.env.API_BASE_URL ?? "http://localhost:3001";
 // CI runners start cold — the first tRPC session query can take 8-12 s.
 // Use a longer timeout in CI so ProtectedRoute has time to resolve roles
 // before we assert on redirects or page content.
-const TIMEOUT = process.env.CI ? 15000 : 8000;
+const TIMEOUT = process.env.CI ? 30000 : 8000;
 
 // ─── Auth helper ──────────────────────────────────────────────────────────────
 // Sets the dev-mode email before the first navigation so the auth hook picks it
@@ -65,6 +65,10 @@ async function loginAs(page: Page, email: string): Promise<void> {
     // in useAuth will handle context (slower but functional).
   }
 
+  // Also mark the context-reload as already done so useAuth never fires
+  // window.location.reload() — we already set the correct context above.
+  scripts.push(`sessionStorage.setItem("freshflow:context-reload-pending", "true")`);
+
   // Inject all localStorage values before navigation so useAuth's
   // isContextValid() returns true on first load — no reload fires.
   for (const script of scripts) {
@@ -73,13 +77,28 @@ async function loginAs(page: Page, email: string): Promise<void> {
 
   await page.goto("/dashboard");
   await page.waitForLoadState("networkidle");
-  await expect(page.locator(".animate-spin").first()).not.toBeVisible({ timeout: 20000 });
+  await expect(page.locator(".animate-spin").first()).not.toBeVisible({ timeout: 30000 });
+  await page.waitForLoadState("networkidle");
+
+  // Guard against a late window.location.reload() from useAuth's context effect.
+  // On slow CI runners the reload can fire after Playwright considers the page stable.
+  // Wait briefly, then re-check stability.
+  await page.waitForTimeout(500);
+  await page.waitForLoadState("domcontentloaded");
   await page.waitForLoadState("networkidle");
 
   await expect(
     page,
     `loginAs(${email}): auth failed – app redirected to /login. Check that the seed ran successfully.`
-  ).not.toHaveURL(/\/login/, { timeout: 10000 });
+  ).not.toHaveURL(/\/login/, { timeout: 15000 });
+}
+
+// ─── Navigation helper ────────────────────────────────────────────────────────
+// Navigates to a route and waits for the page to fully stabilize (CI-safe).
+async function stableGoto(page: Page, route: string): Promise<void> {
+  await page.goto(route);
+  await page.waitForLoadState("domcontentloaded");
+  await page.waitForLoadState("networkidle");
 }
 
 // ─── ACCOUNT_OWNER – Buyer portal ────────────────────────────────────────────
@@ -87,41 +106,45 @@ async function loginAs(page: Page, email: string): Promise<void> {
 test.describe("ACCOUNT_OWNER – Buyer portal", () => {
   test("can view product catalog", async ({ page }) => {
     await loginAs(page, USERS.accountOwner);
-    await page.goto("/chef/catalog");
+    await stableGoto(page, "/chef/catalog");
     await expect(page).not.toHaveURL(/\/login/, { timeout: TIMEOUT });
     await expect(page.locator("h1, h2, [role='heading']").first()).toBeVisible({ timeout: TIMEOUT });
   });
 
   test("can access cart (draft order)", async ({ page }) => {
     await loginAs(page, USERS.accountOwner);
-    await page.goto("/chef/cart");
+    await stableGoto(page, "/chef/cart");
     await expect(page).not.toHaveURL(/\/login/, { timeout: TIMEOUT });
-    await expect(page.locator("body")).toBeVisible();
+    await expect(page.locator("body")).toBeVisible({ timeout: TIMEOUT });
   });
 
   test("can view order history", async ({ page }) => {
     await loginAs(page, USERS.accountOwner);
-    await page.goto("/chef/orders");
+    await stableGoto(page, "/chef/orders");
     await expect(page).not.toHaveURL(/\/login/, { timeout: TIMEOUT });
     await expect(page.locator("h1, h2, [role='heading']").first()).toBeVisible({ timeout: TIMEOUT });
   });
 
   test("is redirected away from admin order management", async ({ page }) => {
     await loginAs(page, USERS.accountOwner);
-    await page.goto("/admin/orders");
+    await stableGoto(page, "/admin/orders");
     // ProtectedRoute(requireTenantAdmin) redirects account users to /chef/catalog
+    // Wait for auth state to load so ProtectedRoute can evaluate roles and redirect
+    await expect(page.locator(".animate-spin").first()).not.toBeVisible({ timeout: TIMEOUT });
     await expect(page).not.toHaveURL(/\/admin\/orders/, { timeout: TIMEOUT });
   });
 
   test("is redirected away from weighing page", async ({ page }) => {
     await loginAs(page, USERS.accountOwner);
-    await page.goto(`/admin/weighing/${NONEXISTENT_ORDER_ID}`);
+    await stableGoto(page, `/admin/weighing/${NONEXISTENT_ORDER_ID}`);
+    await expect(page.locator(".animate-spin").first()).not.toBeVisible({ timeout: TIMEOUT });
     await expect(page).not.toHaveURL(/\/admin\/weighing/, { timeout: TIMEOUT });
   });
 
   test("is redirected away from finalization page", async ({ page }) => {
     await loginAs(page, USERS.accountOwner);
-    await page.goto(`/admin/finalize/${NONEXISTENT_ORDER_ID}`);
+    await stableGoto(page, `/admin/finalize/${NONEXISTENT_ORDER_ID}`);
+    await expect(page.locator(".animate-spin").first()).not.toBeVisible({ timeout: TIMEOUT });
     await expect(page).not.toHaveURL(/\/admin\/finalize/, { timeout: TIMEOUT });
   });
 });
@@ -131,20 +154,21 @@ test.describe("ACCOUNT_OWNER – Buyer portal", () => {
 test.describe("ACCOUNT_BUYER – Restricted buyer", () => {
   test("can access product catalog", async ({ page }) => {
     await loginAs(page, USERS.accountBuyer);
-    await page.goto("/chef/catalog");
+    await stableGoto(page, "/chef/catalog");
     await expect(page).not.toHaveURL(/\/login/, { timeout: TIMEOUT });
-    await expect(page.locator("body")).toBeVisible();
+    await expect(page.locator("body")).toBeVisible({ timeout: TIMEOUT });
   });
 
   test("can view order history", async ({ page }) => {
     await loginAs(page, USERS.accountBuyer);
-    await page.goto("/chef/orders");
+    await stableGoto(page, "/chef/orders");
     await expect(page).not.toHaveURL(/\/login/, { timeout: TIMEOUT });
   });
 
   test("is redirected away from admin panel", async ({ page }) => {
     await loginAs(page, USERS.accountBuyer);
-    await page.goto(`/admin/weighing/${NONEXISTENT_ORDER_ID}`);
+    await stableGoto(page, `/admin/weighing/${NONEXISTENT_ORDER_ID}`);
+    await expect(page.locator(".animate-spin").first()).not.toBeVisible({ timeout: TIMEOUT });
     await expect(page).not.toHaveURL(/\/admin\/weighing/, { timeout: TIMEOUT });
   });
 });
@@ -154,51 +178,51 @@ test.describe("ACCOUNT_BUYER – Restricted buyer", () => {
 test.describe("TENANT_ADMIN – Warehouse operations", () => {
   test("can access order management", async ({ page }) => {
     await loginAs(page, USERS.tenantAdmin);
-    await page.goto("/admin/orders");
+    await stableGoto(page, "/admin/orders");
     await expect(page).not.toHaveURL(/\/login/, { timeout: TIMEOUT });
     await expect(page.locator("h1, h2, [role='heading']").first()).toBeVisible({ timeout: TIMEOUT });
   });
 
   test("can access weighing page", async ({ page }) => {
     await loginAs(page, USERS.tenantAdmin);
-    await page.goto(`/admin/weighing/${NONEXISTENT_ORDER_ID}`);
+    await stableGoto(page, `/admin/weighing/${NONEXISTENT_ORDER_ID}`);
     // ProtectedRoute allows TENANT_ADMIN through — page renders even if order not found
     await expect(page).not.toHaveURL(/\/login/, { timeout: TIMEOUT });
-    await expect(page.locator("body")).toBeVisible();
+    await expect(page.locator("body")).toBeVisible({ timeout: TIMEOUT });
   });
 
   test("can access finalization page", async ({ page }) => {
     await loginAs(page, USERS.tenantAdmin);
-    await page.goto(`/admin/finalize/${NONEXISTENT_ORDER_ID}`);
+    await stableGoto(page, `/admin/finalize/${NONEXISTENT_ORDER_ID}`);
     await expect(page).not.toHaveURL(/\/login/, { timeout: TIMEOUT });
-    await expect(page.locator("body")).toBeVisible();
+    await expect(page.locator("body")).toBeVisible({ timeout: TIMEOUT });
   });
 
   test("can access stock management", async ({ page }) => {
     await loginAs(page, USERS.tenantAdmin);
-    await page.goto("/admin/stock");
+    await stableGoto(page, "/admin/stock");
     await expect(page).not.toHaveURL(/\/login/, { timeout: TIMEOUT });
     await expect(page.locator("h1, h2, [role='heading']").first()).toBeVisible({ timeout: TIMEOUT });
   });
 
   test("is redirected away from buyer cart", async ({ page }) => {
     await loginAs(page, USERS.tenantAdmin);
-    await page.goto("/chef/cart");
+    await stableGoto(page, "/chef/cart");
     // ProtectedRoute(requireAccountUser) redirects tenant admins to /admin/orders
+    await expect(page.locator(".animate-spin").first()).not.toBeVisible({ timeout: TIMEOUT });
     await expect(page).not.toHaveURL(/\/chef\/cart/, { timeout: TIMEOUT });
   });
 
   test("page remains stable after connectivity change", async ({ page, context }) => {
     await loginAs(page, USERS.tenantAdmin);
-    await page.goto("/admin/orders");
-    await page.waitForLoadState("networkidle");
+    await stableGoto(page, "/admin/orders");
 
     await context.setOffline(true);
     await context.setOffline(false);
     await page.waitForLoadState("networkidle");
 
-    await expect(page.locator("body")).toBeVisible();
-    await expect(page).not.toHaveURL(/\/login/, { timeout: 5000 });
+    await expect(page.locator("body")).toBeVisible({ timeout: TIMEOUT });
+    await expect(page).not.toHaveURL(/\/login/, { timeout: 10000 });
   });
 });
 
@@ -207,35 +231,36 @@ test.describe("TENANT_ADMIN – Warehouse operations", () => {
 test.describe("TENANT_OWNER – Full tenant management", () => {
   test("can access analytics dashboard", async ({ page }) => {
     await loginAs(page, USERS.tenantOwner);
-    await page.goto("/admin/analytics");
+    await stableGoto(page, "/admin/analytics");
     await expect(page).not.toHaveURL(/\/login/, { timeout: TIMEOUT });
     await expect(page.locator("h1, h2, [role='heading']").first()).toBeVisible({ timeout: TIMEOUT });
   });
 
   test("can access product management", async ({ page }) => {
     await loginAs(page, USERS.tenantOwner);
-    await page.goto("/admin/products");
+    await stableGoto(page, "/admin/products");
     await expect(page).not.toHaveURL(/\/login/, { timeout: TIMEOUT });
     await expect(page.locator("h1, h2, [role='heading']").first()).toBeVisible({ timeout: TIMEOUT });
   });
 
   test("can access customer management", async ({ page }) => {
     await loginAs(page, USERS.tenantOwner);
-    await page.goto("/admin/customers");
+    await stableGoto(page, "/admin/customers");
     await expect(page).not.toHaveURL(/\/login/, { timeout: TIMEOUT });
     await expect(page.locator("h1, h2, [role='heading']").first()).toBeVisible({ timeout: TIMEOUT });
   });
 
   test("can access tenant settings", async ({ page }) => {
     await loginAs(page, USERS.tenantOwner);
-    await page.goto("/admin/settings");
+    await stableGoto(page, "/admin/settings");
     await expect(page).not.toHaveURL(/\/login/, { timeout: TIMEOUT });
-    await expect(page.locator("body")).toBeVisible();
+    await expect(page.locator("body")).toBeVisible({ timeout: TIMEOUT });
   });
 
   test("is redirected away from buyer cart", async ({ page }) => {
     await loginAs(page, USERS.tenantOwner);
-    await page.goto("/chef/cart");
+    await stableGoto(page, "/chef/cart");
+    await expect(page.locator(".animate-spin").first()).not.toBeVisible({ timeout: TIMEOUT });
     await expect(page).not.toHaveURL(/\/chef\/cart/, { timeout: TIMEOUT });
   });
 });
@@ -258,7 +283,7 @@ test.describe("PLATFORM_ADMIN – Global platform access", () => {
     // Fix #3 – include the failing route in the assertion message so CI logs
     // immediately show which page blocked the admin instead of a generic failure.
     for (const route of adminRoutes) {
-      await page.goto(route);
+      await stableGoto(page, route);
       await expect(
         page,
         `PLATFORM_ADMIN should not be redirected to /login on route: ${route}`
@@ -283,9 +308,9 @@ test.describe("PDF delivery note endpoint", () => {
 
 test.describe("Public catalog – unauthenticated", () => {
   test("is accessible without login", async ({ page }) => {
-    await page.goto("/catalog/verde-campo");
+    await stableGoto(page, "/catalog/verde-campo");
     await expect(page).not.toHaveURL(/\/login/, { timeout: TIMEOUT });
-    await expect(page.locator("body")).toBeVisible();
+    await expect(page.locator("body")).toBeVisible({ timeout: TIMEOUT });
   });
 });
 
@@ -297,7 +322,7 @@ test.describe("Public catalog – unauthenticated", () => {
 test.describe("Buyer interaction – catalog to order submission", () => {
   test("ACCOUNT_OWNER adds an available product to cart from catalog", async ({ page }) => {
     await loginAs(page, USERS.accountOwner);
-    await page.goto("/chef/catalog");
+    await stableGoto(page, "/chef/catalog");
     await expect(page).not.toHaveURL(/\/login/, { timeout: TIMEOUT });
 
     // Wait for at least one "Adicionar" button to appear (products not yet in cart)
@@ -317,7 +342,7 @@ test.describe("Buyer interaction – catalog to order submission", () => {
 
   test("ACCOUNT_OWNER submits seeded draft order (PED-001) from cart", async ({ page }) => {
     await loginAs(page, USERS.accountOwner);
-    await page.goto("/chef/cart");
+    await stableGoto(page, "/chef/cart");
     await expect(page).not.toHaveURL(/\/login/, { timeout: TIMEOUT });
 
     // PED-001 was seeded as DRAFT with items — the submit button should be visible
@@ -353,7 +378,7 @@ test.describe("Admin interaction – weighing flow", () => {
 
   test("TENANT_ADMIN navigates from orders list to weighing page for PED-003", async ({ page }) => {
     await loginAs(page, USERS.tenantAdmin);
-    await page.goto("/admin/orders");
+    await stableGoto(page, "/admin/orders");
     await expect(page).not.toHaveURL(/\/login/, { timeout: TIMEOUT });
 
     // Wait for the orders query to resolve — the "Mostrando X de Y" text
@@ -374,7 +399,7 @@ test.describe("Admin interaction – weighing flow", () => {
 
   test("TENANT_ADMIN records a weight for a WEIGHT item in PED-003", async ({ page }) => {
     await loginAs(page, USERS.tenantAdmin);
-    await page.goto("/admin/orders");
+    await stableGoto(page, "/admin/orders");
     await expect(page).not.toHaveURL(/\/login/, { timeout: TIMEOUT });
 
     // Wait for the orders query to resolve before looking for the Pesar link.
