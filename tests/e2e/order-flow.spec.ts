@@ -44,11 +44,6 @@ async function loginAs(page: Page, email: string): Promise<void> {
   // waitForLoadState("networkidle") alone (which can return before the reload).
   await page.waitForLoadState("networkidle");
   await expect(page.locator(".animate-spin").first()).not.toBeVisible({ timeout: 20000 });
-  // A second networkidle wait catches any window.location.reload() that
-  // useAuth fires after the spinner disappears (reload briefly blanks the page,
-  // making the spinner locator "not found" and causing the check above to pass
-  // prematurely). Without this, loginAs can return while the reload is still
-  // in progress, causing the next page.goto() to see a hidden body.
   await page.waitForLoadState("networkidle");
 
   await expect(
@@ -68,6 +63,17 @@ async function loginAs(page: Page, email: string): Promise<void> {
   if (accountId) {
     await page.addInitScript(`localStorage.setItem("freshflow:accountId", ${JSON.stringify(accountId)})`);
   }
+
+  // Re-navigate to /dashboard now that tenantId/accountId are injected via addInitScript.
+  // In CI, useAuth's context-setting effect (which calls window.location.reload()) can fire
+  // AFTER the networkidle check above, because React effects are scheduled asynchronously and
+  // a slower CI CPU may not flush them within Playwright's 500 ms networkidle window.
+  // That reload then races with the first test's page.goto(), producing a hidden body.
+  //
+  // By navigating again with context already pre-set, isContextValid() returns true on load
+  // and no reload fires — loginAs always returns from a clean, stable page.
+  await page.goto("/dashboard");
+  await page.waitForLoadState("networkidle");
 }
 
 // ─── ACCOUNT_OWNER – Buyer portal ────────────────────────────────────────────
