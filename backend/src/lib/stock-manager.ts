@@ -1,4 +1,4 @@
-import { PrismaClient, StockMovementType, UnitType, Prisma } from "@prisma/client";
+import { PrismaClient, StockMovementType, UnitType } from "@prisma/client";
 import { Errors } from "./errors.js";
 
 type PrismaTransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
@@ -116,7 +116,7 @@ export async function deductStockForOrder(
   if (!('$transaction' in prisma)) {
     await doDeductions(prisma);
   } else {
-    await (prisma as PrismaClient).$transaction(async (tx) => {
+    await (prisma).$transaction(async (tx) => {
       await doDeductions(tx);
     });
   }
