@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { router, tenantProcedure } from "../trpc";
+import { TRPCError } from "@trpc/server";
+import { router, tenantProcedure, tenantAdminProcedure } from "../trpc";
 
 /**
  * Tenant Settings Router
@@ -44,7 +45,7 @@ export const tenantSettingsRouter = router({
   /**
    * Update tenant settings
    */
-  update: tenantProcedure
+  update: tenantAdminProcedure
     .input(
       z.object({
         minDeliveryDaysAhead: z.number().int().min(0).max(30).optional(),
@@ -59,21 +60,21 @@ export const tenantSettingsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const tenantId = ctx.tenantId;
 
-      // Validate that minDeliveryDaysAhead <= maxDeliveryDaysAhead
-      if (
-        input.minDeliveryDaysAhead !== undefined &&
-        input.maxDeliveryDaysAhead !== undefined &&
-        input.minDeliveryDaysAhead > input.maxDeliveryDaysAhead
-      ) {
-        throw new Error(
-          "O prazo mínimo não pode ser maior que o prazo máximo"
-        );
-      }
-
       // Get or create settings first
       let settings = await ctx.prisma.tenantSettings.findUnique({
         where: { tenantId },
       });
+
+      // Resolve effective min/max by merging input with existing (or defaults)
+      const effectiveMin = input.minDeliveryDaysAhead ?? settings?.minDeliveryDaysAhead ?? 1;
+      const effectiveMax = input.maxDeliveryDaysAhead ?? settings?.maxDeliveryDaysAhead ?? 30;
+
+      if (effectiveMin > effectiveMax) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "O prazo mínimo não pode ser maior que o prazo máximo",
+        });
+      }
 
       if (!settings) {
         // Create with provided values

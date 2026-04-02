@@ -57,6 +57,8 @@ export function useCart() {
     onError: (error) => {
       // Clear optimistic state on error (revert to server state)
       setOptimisticItems(null);
+      // Also clear offline storage to prevent stale data from re-triggering sync
+      localStorage.removeItem(STORAGE_KEY);
       toast.error("Failed to update cart", {
         description: error.message,
       });
@@ -102,20 +104,20 @@ export function useCart() {
   // Use optimistic items if available, otherwise use server items
   const items = optimisticItems !== null ? optimisticItems : serverItems;
 
-  // Sync offline cart to server when online (run once)
+  // Sync offline cart to server when online (run once per mount)
   useEffect(() => {
     if (draftQuery.data && !draftQuery.isLoading && !hasSyncedOffline.current) {
+      hasSyncedOffline.current = true;
       const offlineCart = localStorage.getItem(STORAGE_KEY);
       if (offlineCart) {
         try {
           const offlineItems = JSON.parse(offlineCart) as CartItem[];
           if (offlineItems.length > 0 && draftQuery.data.id) {
-            hasSyncedOffline.current = true;
-
             // Merge with existing items
             const currentItems = draftQuery.data.items.map((item: any) => ({
               productOptionId: item.productOptionId,
               requestedQty: item.requestedQty,
+              notes: item.notes ?? undefined,
             }));
 
             const merged = [...currentItems];
@@ -129,6 +131,7 @@ export function useCart() {
                 merged.push({
                   productOptionId: offlineItem.productOptionId,
                   requestedQty: offlineItem.requestedQty,
+                  notes: offlineItem.notes ?? undefined,
                 });
               }
             });
@@ -138,6 +141,9 @@ export function useCart() {
               orderId: draftQuery.data.id,
               items: merged,
             });
+          } else {
+            // Empty offline cart, just clear it
+            localStorage.removeItem(STORAGE_KEY);
           }
         } catch (error) {
           console.error("Failed to sync offline cart:", error);

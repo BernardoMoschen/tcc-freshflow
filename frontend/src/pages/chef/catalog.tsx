@@ -546,7 +546,7 @@ export function CatalogPage() {
                               <button
                                 onClick={() => {
                                   const stepSize = option.unitType === "WEIGHT" ? 0.5 : 1;
-                                  updateQuantity(option.id, Math.max(0.1, cartItem.requestedQty - stepSize));
+                                  updateQuantity(option.id, Math.max(0.1, cartItem.requestedQty - stepSize), true);
                                 }}
                                 disabled={isOutOfStock || isSyncing}
                                 className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary text-primary hover:bg-primary hover:text-white transition-colors flex items-center justify-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
@@ -569,7 +569,9 @@ export function CatalogPage() {
                                   onBlur={(e) => {
                                     const qty = parseFloat(e.target.value);
                                     if (isNaN(qty) || qty < 0.1) {
-                                      updateQuantity(option.id, 0.1);
+                                      updateQuantity(option.id, 0.1, true);
+                                    } else {
+                                      updateQuantity(option.id, qty, true);
                                     }
                                   }}
                                   disabled={isOutOfStock || isSyncing}
@@ -583,7 +585,7 @@ export function CatalogPage() {
                               <button
                                 onClick={() => {
                                   const stepSize = option.unitType === "WEIGHT" ? 0.5 : 1;
-                                  updateQuantity(option.id, cartItem.requestedQty + stepSize);
+                                  updateQuantity(option.id, cartItem.requestedQty + stepSize, true);
                                 }}
                                 disabled={isOutOfStock || isSyncing}
                                 className="flex-shrink-0 h-10 w-10 rounded-lg border-2 border-primary bg-primary text-white hover:bg-primary/90 transition-colors flex items-center justify-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"

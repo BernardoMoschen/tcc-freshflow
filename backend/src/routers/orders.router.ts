@@ -11,6 +11,7 @@ import {
 import {
   generateOrderNumber,
   validateOrderCanFinalize,
+  validateOrderTransition,
   validateCanWeighItem,
 } from "../lib/order-state.js";
 import {
@@ -187,12 +188,7 @@ export const ordersRouter = router({
         });
       }
 
-      // Delete existing items and create new ones
-      await ctx.prisma.orderItem.deleteMany({
-        where: { orderId: input.orderId },
-      });
-
-      // Validate product options and calculate prices
+      // Validate product options and calculate prices BEFORE deleting existing items
       const productOptions = await ctx.prisma.productOption.findMany({
         where: {
           id: { in: input.items.map((item) => item.productOptionId) },
@@ -235,6 +231,11 @@ export const ordersRouter = router({
           };
         })
       );
+
+      // Delete existing items and recreate atomically
+      await ctx.prisma.orderItem.deleteMany({
+        where: { orderId: input.orderId },
+      });
 
       // Update order
       const updatedOrder = await ctx.prisma.order.update({
@@ -444,17 +445,23 @@ export const ordersRouter = router({
     .input(
       z.object({
         status: z.nativeEnum(OrderStatus).optional(),
+        search: z.string().optional(),
         skip: z.number().min(0).default(0),
         take: z.number().min(1).max(100).default(20),
       })
     )
     .query(async ({ ctx, input }) => {
-      const { status, skip, take } = input;
+      const { status, search, skip, take } = input;
 
-      const where = {
+      const where: Prisma.OrderWhereInput = {
         accountId: ctx.accountId,
         ...(status && { status }),
       };
+
+      // Add server-side search for order number
+      if (search) {
+        where.orderNumber = { contains: search, mode: "insensitive" as const };
+      }
 
       const [items, total] = await Promise.all([
         ctx.prisma.order.findMany({
@@ -935,14 +942,17 @@ export const ordersRouter = router({
         });
       }
 
-      // Validate can finalize
+      // Validate can finalize (checks items are weighed)
       validateOrderCanFinalize(order);
 
-      // Validate stock availability
-      await validateStockAvailability(ctx.prisma, input.id);
+      // Validate state transition (must be IN_SEPARATION -> FINALIZED)
+      validateOrderTransition(order, OrderStatus.FINALIZED);
 
-      // Deduct stock and create movement records
-      await deductStockForOrder(ctx.prisma, input.id, ctx.userId);
+      // Validate stock and deduct atomically in a single transaction
+      await ctx.prisma.$transaction(async (tx) => {
+        await validateStockAvailability(tx, input.id);
+        await deductStockForOrder(tx, input.id, ctx.userId);
+      });
 
       // Update order status to FINALIZED
       const finalizedOrder = await ctx.prisma.order.update({
@@ -1226,14 +1236,16 @@ export const ordersRouter = router({
         }
       }
 
-      // If finalizing orders, handle stock deduction
+      // If finalizing orders, validate and deduct stock atomically in a single transaction
       if (status === OrderStatus.FINALIZED) {
-        for (const order of orders) {
-          if (order.status !== OrderStatus.FINALIZED) {
-            await validateStockAvailability(ctx.prisma, order.id);
-            await deductStockForOrder(ctx.prisma, order.id, ctx.userId);
+        await ctx.prisma.$transaction(async (tx) => {
+          for (const order of orders) {
+            if (order.status !== OrderStatus.FINALIZED) {
+              await validateStockAvailability(tx, order.id);
+              await deductStockForOrder(tx, order.id, ctx.userId);
+            }
           }
-        }
+        });
       }
 
       // Update all orders
@@ -1374,43 +1386,45 @@ export const ordersRouter = router({
         },
       });
 
-      // If existing draft exists, delete it and create new one
-      if (existingDraft) {
-        await ctx.prisma.order.delete({
-          where: { id: existingDraft.id },
-        });
-      }
+      // Delete existing draft and create new one atomically
+      const draftOrder = await ctx.prisma.$transaction(async (tx) => {
+        if (existingDraft) {
+          await tx.order.delete({
+            where: { id: existingDraft.id },
+          });
+        }
 
-      // Create new draft order with items from original order
-      const draftOrder = await ctx.prisma.order.create({
-        data: {
-          customerId: originalOrder.customerId,
-          accountId: originalOrder.accountId,
-          createdBy: ctx.userId,
-          status: OrderStatus.DRAFT,
-          orderNumber: "DRAFT",
-          items: {
-            create: originalOrder.items.map((item) => ({
-              productOptionId: item.productOptionId,
-              requestedQty: item.requestedQty,
-              notes: item.notes,
-              // For FIXED items, set finalPrice using current prices
-              finalPrice: item.productOption.unitType === "FIXED" ? null : null,
-              isExtra: false,
-            })),
+        // Create new draft order with items from original order
+        return tx.order.create({
+          data: {
+            customerId: originalOrder.customerId,
+            accountId: originalOrder.accountId,
+            createdBy: ctx.userId,
+            status: OrderStatus.DRAFT,
+            orderNumber: "DRAFT",
+            items: {
+              create: originalOrder.items.map((item) => ({
+                productOptionId: item.productOptionId,
+                requestedQty: item.requestedQty,
+                notes: item.notes,
+                // For FIXED items, set finalPrice using current prices
+                finalPrice: item.productOption.unitType === "FIXED" ? null : null,
+                isExtra: false,
+              })),
+            },
           },
-        },
-        include: {
-          items: {
-            include: {
-              productOption: {
-                include: {
-                  product: true,
+          include: {
+            items: {
+              include: {
+                productOption: {
+                  include: {
+                    product: true,
+                  },
                 },
               },
             },
           },
-        },
+        });
       });
 
       // Resolve prices for FIXED items using current pricing

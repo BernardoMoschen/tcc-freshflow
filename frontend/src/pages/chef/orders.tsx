@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
+import { useDebounce } from "@/hooks/use-debounce";
 import { PageLayout } from "@/components/page-layout";
 import { CardSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ export function OrdersPage() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 300);
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<string>("");
@@ -43,6 +45,7 @@ export function OrdersPage() {
   const ordersQuery = trpc.orders.list.useQuery(
     {
       status: statusFilter === "all" ? undefined : (statusFilter as any),
+      search: debouncedSearch || undefined,
       skip: currentPage * PAGE_SIZE,
       take: PAGE_SIZE,
     },
@@ -168,11 +171,8 @@ export function OrdersPage() {
     }
   };
 
-  // Filter orders by search query (client-side for order number)
-  const filteredOrders = ordersQuery.data?.items.filter((order: any) => {
-    if (!searchQuery) return true;
-    return order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase());
-  }) || [];
+  // Use backend results directly (search is done server-side)
+  const filteredOrders = ordersQuery.data?.items || [];
 
   const totalPages = ordersQuery.data ? Math.ceil(ordersQuery.data.total / PAGE_SIZE) : 0;
 

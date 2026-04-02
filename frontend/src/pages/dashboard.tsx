@@ -443,8 +443,8 @@ export function DashboardPage() {
         <Link to="/chef/orders">
           <Card className="hover:shadow-md transition cursor-pointer h-full">
             <CardContent className="flex items-center gap-4 p-6">
-              <div className="p-3 bg-blue-100 rounded-full">
-                <ClipboardList className="h-8 w-8 text-blue-600" />
+              <div className="p-3 bg-primary/10 rounded-full">
+                <ClipboardList className="h-8 w-8 text-primary" />
               </div>
               <div>
                 <h3 className="font-semibold text-lg">Meus Pedidos</h3>

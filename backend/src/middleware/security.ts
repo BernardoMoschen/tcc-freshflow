@@ -112,22 +112,19 @@ export function corsMiddleware(config: Partial<CorsConfig> = {}) {
       finalConfig.origins.includes("*") ||
       finalConfig.origins.includes(origin);
 
-    // In production, reject requests from unknown origins for state-changing methods
+    // In production, reject requests from unknown origins
     if (isProduction && origin && !isAllowed) {
-      const method = req.method.toUpperCase();
-      if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
-        logger.warn("CORS violation: rejected request from unknown origin", {
-          origin,
-          method,
-          path: req.path,
-          ip: req.ip,
-        });
-        res.status(403).json({
-          error: "Forbidden",
-          message: "Cross-origin request blocked",
-        });
-        return;
-      }
+      logger.warn("CORS violation: rejected request from unknown origin", {
+        origin,
+        method: req.method,
+        path: req.path,
+        ip: req.ip,
+      });
+      res.status(403).json({
+        error: "Forbidden",
+        message: "Cross-origin request blocked",
+      });
+      return;
     }
 
     if (isAllowed && origin) {

@@ -1,11 +1,13 @@
 import { PrismaClient, StockMovementType, UnitType } from "@prisma/client";
 import { Errors } from "./errors.js";
 
+type PrismaTransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
+
 /**
  * Check if sufficient stock is available for all items in an order
  */
 export async function validateStockAvailability(
-  prisma: PrismaClient,
+  prisma: PrismaClient | PrismaTransactionClient,
   orderId: string
 ): Promise<void> {
   const order = await prisma.order.findUnique({
@@ -57,10 +59,12 @@ export async function validateStockAvailability(
 }
 
 /**
- * Deduct stock for all items in an order and create stock movement records
+ * Deduct stock for all items in an order and create stock movement records.
+ * When called with a transaction client, operations run within that transaction.
+ * When called with PrismaClient, creates its own transaction.
  */
 export async function deductStockForOrder(
-  prisma: PrismaClient,
+  prisma: PrismaClient | PrismaTransactionClient,
   orderId: string,
   userId: string
 ): Promise<void> {
@@ -79,8 +83,7 @@ export async function deductStockForOrder(
     throw Errors.notFound("Order", orderId);
   }
 
-  // Use a transaction to ensure atomic stock deduction
-  await prisma.$transaction(async (tx) => {
+  const doDeductions = async (tx: PrismaTransactionClient) => {
     for (const item of order.items) {
       const quantityToDeduct = getRequiredQuantity(item);
 
@@ -107,7 +110,16 @@ export async function deductStockForOrder(
         },
       });
     }
-  });
+  };
+
+  // If already inside a transaction (no $transaction method), run directly
+  if (!('$transaction' in prisma)) {
+    await doDeductions(prisma);
+  } else {
+    await (prisma).$transaction(async (tx) => {
+      await doDeductions(tx);
+    });
+  }
 }
 
 /**

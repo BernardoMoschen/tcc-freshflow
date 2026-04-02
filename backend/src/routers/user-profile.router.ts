@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../trpc";
 
 /**
@@ -191,7 +192,10 @@ export const userProfileRouter = router({
       });
 
       if (!membership) {
-        throw new Error("Você não tem permissão para atualizar este perfil de tenant");
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você não tem permissão para atualizar este perfil de tenant",
+        });
       }
 
       const tenant = await ctx.prisma.tenant.update({

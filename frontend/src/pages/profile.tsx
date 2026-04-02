@@ -246,12 +246,12 @@ export function ProfilePage() {
           {/* Personal Information Tab */}
           <TabsContent value="personal" className="space-y-4">
             <Card>
-              <CardHeader className="border-b dark:bg-gradient-to-r dark:from-blue-950 dark:to-indigo-950">
-                <CardTitle className="flex items-center gap-2 dark:text-white">
-                  <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <CardHeader className="border-b bg-primary rounded-t-xl">
+                <CardTitle className="flex items-center gap-2 text-primary-foreground">
+                  <User className="h-5 w-5" />
                   Informações Pessoais
                 </CardTitle>
-                <CardDescription className="dark:text-gray-300">
+                <CardDescription className="text-primary-foreground/80">
                   Gerencie seus dados pessoais e informações de contato
                 </CardDescription>
               </CardHeader>
@@ -354,12 +354,12 @@ export function ProfilePage() {
           {isTenantAdmin && (
             <TabsContent value="company" className="space-y-4">
               <Card>
-                <CardHeader className="border-b dark:bg-gradient-to-r dark:from-green-950 dark:to-emerald-950">
-                  <CardTitle className="flex items-center gap-2 dark:text-white">
-                    <Building2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                <CardHeader className="border-b bg-primary rounded-t-xl">
+                  <CardTitle className="flex items-center gap-2 text-primary-foreground">
+                    <Building2 className="h-5 w-5" />
                     Dados da Empresa
                   </CardTitle>
-                  <CardDescription className="dark:text-gray-300">
+                  <CardDescription className="text-primary-foreground/80">
                     Informações cadastrais e fiscais da sua empresa
                   </CardDescription>
                 </CardHeader>
@@ -417,7 +417,7 @@ export function ProfilePage() {
               <Card>
                 <CardHeader className="border-b">
                   <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <MapPin className="h-5 w-5 text-primary" />
                     Endereço Principal
                   </CardTitle>
                 </CardHeader>
@@ -516,7 +516,7 @@ export function ProfilePage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-3 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-100 dark:border-blue-800">
+                  <div className="flex items-center space-x-3 p-4 bg-secondary rounded-lg border border-border">
                     <Switch
                       id="same-address"
                       checked={useSameAddress}
@@ -533,7 +533,7 @@ export function ProfilePage() {
                 <Card>
                   <CardHeader className="border-b">
                     <CardTitle className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      <MapPin className="h-5 w-5 text-primary" />
                       Endereço de Entrega
                     </CardTitle>
                   </CardHeader>
@@ -676,12 +676,12 @@ export function ProfilePage() {
           {/* Preferences Tab */}
           <TabsContent value="preferences" className="space-y-4">
             <Card>
-              <CardHeader className="border-b dark:bg-gradient-to-r dark:from-purple-950 dark:to-pink-950">
-                <CardTitle className="flex items-center gap-2 dark:text-white">
-                  <Settings className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              <CardHeader className="border-b bg-primary rounded-t-xl">
+                <CardTitle className="flex items-center gap-2 text-primary-foreground">
+                  <Settings className="h-5 w-5" />
                   Preferências do Sistema
                 </CardTitle>
-                <CardDescription className="dark:text-gray-300">
+                <CardDescription className="text-primary-foreground/80">
                   Personalize a aparência e o comportamento do sistema
                 </CardDescription>
               </CardHeader>

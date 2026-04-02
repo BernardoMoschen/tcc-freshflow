@@ -375,10 +375,10 @@ export function AdminOrdersPage() {
             {/* Real-time connection indicator */}
             {isConnected && (
               <div
-                className="flex items-center gap-1.5 px-2 py-1 rounded text-xs bg-blue-100 text-blue-700"
+                className="flex items-center gap-1.5 px-2 py-1 rounded text-xs bg-primary/10 text-primary"
                 title="Conectado - Atualizações em tempo real ativas"
               >
-                <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
                 <span className="hidden sm:inline">Tempo real</span>
               </div>
             )}
@@ -388,8 +388,8 @@ export function AdminOrdersPage() {
 
       {/* Batch Actions */}
       {selectedOrders.size > 0 && (
-        <div className="mb-4 p-4 bg-blue-50 rounded-lg flex flex-col sm:flex-row items-center gap-3">
-          <span className="text-sm font-medium text-blue-900">
+        <div className="mb-4 p-4 bg-secondary rounded-lg flex flex-col sm:flex-row items-center gap-3">
+          <span className="text-sm font-medium text-secondary-foreground">
             {selectedOrders.size} pedido{selectedOrders.size > 1 ? "s" : ""} selecionado
             {selectedOrders.size > 1 ? "s" : ""}
           </span>
@@ -533,8 +533,8 @@ export function AdminOrdersPage() {
                 <div className="p-4 space-y-3">
                   {/* Customer */}
                   <div className="flex items-center gap-2">
-                    <div className="bg-blue-100 rounded-lg p-2">
-                      <ShoppingCart className="h-4 w-4 text-blue-700" />
+                    <div className="bg-primary/10 rounded-lg p-2">
+                      <ShoppingCart className="h-4 w-4 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-muted-foreground">Cliente</p>
