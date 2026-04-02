@@ -44,7 +44,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 ? "bg-red-50 border border-red-200 text-red-800"
                 : toast.type === "warning"
                 ? "bg-yellow-50 border border-yellow-200 text-yellow-800"
-                : "bg-blue-50 border border-blue-200 text-blue-800"
+                : "bg-secondary border border-border text-secondary-foreground"
             }`}
           >
             <div className="flex-shrink-0">

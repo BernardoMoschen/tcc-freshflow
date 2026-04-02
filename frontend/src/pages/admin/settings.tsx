@@ -309,7 +309,7 @@ export function TenantSettingsPage() {
                       {slots.map((slot, index) => (
                         <div
                           key={index}
-                          className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-md text-sm"
+                          className="flex items-center gap-2 bg-secondary text-secondary-foreground px-3 py-1.5 rounded-md text-sm"
                         >
                           <Clock className="h-3 w-3" />
                           {slot}

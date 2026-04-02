@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { router, protectedProcedure, tenantProcedure, tenantAdminProcedure } from "../trpc.js";
+import { TRPCError } from "@trpc/server";
+import { router, accountProcedure, tenantProcedure, tenantAdminProcedure } from "../trpc.js";
 import { StockMovementType } from "@prisma/client";
 import { stockService } from "../services/stock.service.js";
 import { auditLogger, AuditEventType } from "../lib/audit-logger.js";
@@ -185,9 +186,22 @@ export const stockRouter = router({
   /**
    * Validate stock availability for an order
    */
-  validateForOrder: protectedProcedure
+  validateForOrder: accountProcedure
     .input(z.object({ orderId: z.string().uuid() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      // Verify the order belongs to the user's account
+      const order = await ctx.prisma.order.findUnique({
+        where: { id: input.orderId },
+        select: { accountId: true },
+      });
+
+      if (!order || order.accountId !== ctx.accountId) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Order not found",
+        });
+      }
+
       return stockService.validateStockForOrder(input.orderId);
     }),
 });

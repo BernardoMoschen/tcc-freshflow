@@ -186,9 +186,9 @@ export function DropdownMenuItem({
       className={cn(
         "relative flex cursor-pointer select-none items-center rounded-sm px-3 py-2 text-sm outline-none transition-colors",
         "text-popover-foreground",
-        "hover:bg-accent/80 hover:text-accent-foreground",
-        "focus:bg-accent/80 focus:text-accent-foreground",
-        "active:bg-accent",
+        "hover:bg-secondary",
+        "focus:bg-secondary",
+        "active:bg-secondary/80",
         "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className
       )}

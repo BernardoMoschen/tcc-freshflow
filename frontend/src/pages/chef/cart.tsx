@@ -80,7 +80,9 @@ export function CartPage() {
       return;
     }
 
-    const selectedDate = new Date(deliveryDate);
+    // Parse date as local time to avoid UTC timezone shift
+    const [selYear, selMonth, selDay] = deliveryDate.split("-").map(Number);
+    const selectedDate = new Date(selYear, selMonth - 1, selDay);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -150,12 +152,16 @@ export function CartPage() {
         notes: orderNotes || undefined,
       });
 
-      // Clear stale draft cache after submit
+      // Clear stale draft cache and all local cart state after submit
       utils.orders.getDraft.setData(undefined, undefined);
+      void utils.orders.getDraft.invalidate();
+      localStorage.removeItem("freshflow:cart-offline");
 
       const timeSlotText = deliveryTimeSlot ? ` (${deliveryTimeSlot})` : "";
+      const [year, month, day] = deliveryDate.split("-").map(Number);
+      const displayDate = new Date(year, month - 1, day);
       toast.success(`Pedido enviado: ${order.orderNumber}`, {
-        description: `Agendado para ${new Date(deliveryDate).toLocaleDateString("pt-BR")}${timeSlotText}`,
+        description: `Agendado para ${displayDate.toLocaleDateString("pt-BR")}${timeSlotText}`,
       });
       navigate("/chef/orders");
     } catch (error) {
@@ -465,7 +471,8 @@ export function CartPage() {
                   {(() => {
                     // Use tenant-configured time slots if available for the selected day
                     if (deliverySettingsQuery.data?.timeSlots && deliveryDate) {
-                      const selectedWeekday = new Date(deliveryDate).getDay();
+                      const [y, m, d] = deliveryDate.split("-").map(Number);
+                      const selectedWeekday = new Date(y, m - 1, d).getDay();
                       const slotsForDay = deliverySettingsQuery.data.timeSlots[selectedWeekday.toString()];
 
                       if (slotsForDay && slotsForDay.length > 0) {
