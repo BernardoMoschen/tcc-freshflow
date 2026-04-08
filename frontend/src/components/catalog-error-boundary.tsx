@@ -31,7 +31,7 @@ export class CatalogErrorBoundary extends Component<Props, State> {
 
     // Log to localStorage for debugging in E2E tests
     try {
-      const logs = JSON.parse(localStorage.getItem("freshflow:error-logs") || "[]");
+      const logs = JSON.parse(localStorage.getItem("freshflow:error-logs") || "[]") as Array<{type: string; error: string; stack?: string; timestamp: string}>;
       logs.push({
         type: "CATALOG_ERROR",
         error: error.toString(),

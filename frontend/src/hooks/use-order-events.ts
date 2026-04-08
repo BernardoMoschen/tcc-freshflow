@@ -24,7 +24,7 @@ export interface OrderEvent {
   accountId: string;
   tenantId: string;
   status?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   timestamp: string;
 }
 
@@ -73,7 +73,7 @@ export function useOrderEvents(
 
     eventSource.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data as string) as { type: string; timestamp?: string; orderId?: string };
 
         // Handle connection message
         if (data.type === "connected") {
@@ -83,7 +83,7 @@ export function useOrderEvents(
 
         // Handle order events
         console.log("📬 Received order event:", data.type, data.orderId);
-        onEvent(data as OrderEvent);
+        onEvent(data as unknown as OrderEvent);
 
         // Invalidate relevant queries to refetch data
         void utils.orders.list.invalidate();

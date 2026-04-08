@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure, accountProcedure, tenantAdminProcedure } from "../trpc.js";
-import { OrderStatus, Prisma } from "@prisma/client";
+import { OrderStatus, Prisma, StockMovementType } from "@prisma/client";
 import { logger } from "../lib/logger.js";
 import {
   resolvePrice,
@@ -1099,7 +1099,7 @@ export const ordersRouter = router({
 
       // If updating quantity and it's a FIXED item, update the requested quantity
       if (updateData.requestedQty && orderItem.productOption.unitType === "FIXED") {
-        updateData.requestedQty = input.requestedQty!;
+        updateData.requestedQty = input.requestedQty ?? updateData.requestedQty;
       }
 
       const updatedItem = await ctx.prisma.orderItem.update({
@@ -1169,7 +1169,7 @@ export const ordersRouter = router({
             await tx.stockMovement.create({
               data: {
                 productOptionId: item.productOptionId,
-                type: "RETURN" as any,
+                type: StockMovementType.RETURN,
                 quantity: quantityToRestore,
                 orderId: order.id,
                 orderItemId: item.id,

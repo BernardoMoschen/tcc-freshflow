@@ -29,6 +29,7 @@ interface ProductOption {
   lowStockThreshold: number | null;
   isAvailable: boolean;
   customerPrices?: Array<{ price: number }>;
+  hasCustomerPrice?: boolean;
 }
 
 export function CatalogPage() {
@@ -62,7 +63,7 @@ export function CatalogPage() {
   // Get customer ID from session
   const accountId = localStorage.getItem("freshflow:accountId");
   const currentMembership = session?.memberships?.find(
-    (m: any) => m.account?.id === accountId
+    (m) => m.account?.id === accountId
   );
   const customerId = currentMembership?.account?.customerId;
 
@@ -70,7 +71,7 @@ export function CatalogPage() {
   useEffect(() => {
     const stored = localStorage.getItem(RECENT_SEARCHES_KEY);
     if (stored) {
-      setRecentSearches(JSON.parse(stored));
+      setRecentSearches(JSON.parse(stored) as string[]);
     }
   }, []);
 
@@ -418,7 +419,7 @@ export function CatalogPage() {
         {/* Product grid - single column on mobile, responsive grid on larger screens */}
         {!productsQuery.isLoading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {productsQuery.data?.items.map((product: any) =>
+            {productsQuery.data?.items.map((product) =>
               product.options
                 .filter((option: ProductOption) => {
                   // Filter by favorites
@@ -459,7 +460,7 @@ export function CatalogPage() {
                       optionName: option.name,
                       unitType: option.unitType,
                       requestedQty: 1,
-                      price: (option as any).resolvedPrice || option.basePrice,
+                      price: option.resolvedPrice || option.basePrice,
                     });
                     setJustAddedId(option.id);
                     setTimeout(() => setJustAddedId(null), 2000);
@@ -528,9 +529,9 @@ export function CatalogPage() {
                           </span>
                           <div className="text-right">
                             <p className="text-lg font-bold text-primary">
-                              R$ {(((option as any).resolvedPrice || option.basePrice) / 100).toFixed(2)}
+                              R$ {((option.resolvedPrice || option.basePrice) / 100).toFixed(2)}
                             </p>
-                            {(option as any).hasCustomerPrice && (
+                            {option.hasCustomerPrice && (
                               <div className="flex items-center gap-1 text-xs text-green-600">
                                 <Tag className="h-3 w-3" />
                                 <span>Preço especial</span>

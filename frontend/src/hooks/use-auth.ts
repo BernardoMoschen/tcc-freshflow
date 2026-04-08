@@ -144,6 +144,7 @@ export function useAuth() {
       const devUserEmail = localStorage.getItem("freshflow:dev-user-email");
       if (devUserEmail) {
         // Create a mock user object for dev mode
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
         setUser({
           id: "dev-user",
           email: devUserEmail,

@@ -30,6 +30,7 @@ function createPrismaClient(): PrismaClient {
     });
 
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await Promise.race([next(params), timeoutPromise]);
       const duration = Date.now() - start;
 
@@ -38,6 +39,7 @@ function createPrismaClient(): PrismaClient {
         logger.warn(`Slow query: ${params.model}.${params.action} took ${duration}ms`);
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return result;
     } catch (error) {
       const duration = Date.now() - start;

@@ -24,6 +24,7 @@ export function WeighingPage() {
   const { isOnline, pending } = useOffline();
   const { showToast } = useToast();
 
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const orderQuery = trpc.orders.get.useQuery({ id: orderId! }, { enabled: !!orderId });
   const weighMutation = trpc.orders.weigh.useMutation();
 
@@ -231,7 +232,7 @@ export function WeighingPage() {
   if (!orderQuery.data) return <div className="p-8 text-center">Pedido não encontrado</div>;
 
   const order = orderQuery.data;
-  const weightItems = order.items.filter((item: any) => item.productOption.unitType === "WEIGHT");
+  const weightItems = order.items.filter((item) => item.productOption.unitType === "WEIGHT");
 
   // Validate order status - only allow weighing for IN_SEPARATION status
   if (order.status !== "IN_SEPARATION") {
@@ -355,7 +356,7 @@ export function WeighingPage() {
           </div>
         ) : (
           <div className="space-y-5">
-            {weightItems.map((item: any) => {
+            {weightItems.map((item) => {
               const currentWeight = weights[item.id];
               const warning = currentWeight ? getWeightWarning(item.requestedQty, currentWeight) : null;
 

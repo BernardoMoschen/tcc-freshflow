@@ -131,12 +131,14 @@ class CacheManager {
     try {
       if (this.isRedisAvailable && this.redis) {
         const value = await this.redis.get(key);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return value ? JSON.parse(value) : null;
       }
 
       // Fallback to memory cache
       const cached = this.memoryCache.get(key);
       if (cached && cached.expiry > Date.now()) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return cached.value as T;
       }
 

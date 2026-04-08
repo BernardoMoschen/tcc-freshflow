@@ -10,6 +10,7 @@ if (!import.meta.env.DEV && (!supabaseUrl || !supabaseAnonKey)) {
   throw new Error("Missing Supabase environment variables");
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 export const supabase: SupabaseClient = createClient(
   supabaseUrl || "http://localhost:54321",
   supabaseAnonKey || "dev-placeholder-key",

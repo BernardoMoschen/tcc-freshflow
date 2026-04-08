@@ -27,7 +27,8 @@ export const authRouter = router({
     // Batch fetch all customers for account memberships (avoids N+1)
     const accountIds = memberships
       .filter((m) => m.account)
-      .map((m) => m.account!.id);
+      .map((m) => m.account?.id)
+      .filter((id): id is string => !!id);
 
     const customers =
       accountIds.length > 0

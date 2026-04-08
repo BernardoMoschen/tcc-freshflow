@@ -90,7 +90,7 @@ export function useCart() {
   const serverItems: CartItem[] = useMemo(() => {
     if (!draftQuery.data?.items) return [];
 
-    return draftQuery.data.items.map((item: any) => ({
+    return draftQuery.data.items.map((item) => ({
       productOptionId: item.productOptionId,
       productName: item.productOption.product.name,
       optionName: item.productOption.name,
@@ -114,7 +114,7 @@ export function useCart() {
           const offlineItems = JSON.parse(offlineCart) as CartItem[];
           if (offlineItems.length > 0 && draftQuery.data.id) {
             // Merge with existing items
-            const currentItems = draftQuery.data.items.map((item: any) => ({
+            const currentItems = draftQuery.data.items.map((item) => ({
               productOptionId: item.productOptionId,
               requestedQty: item.requestedQty,
               notes: item.notes ?? undefined,

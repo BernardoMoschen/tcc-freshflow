@@ -191,7 +191,7 @@ export function ContextSwitcher() {
               >
                 <Building2 className="h-4 w-4 mr-2 flex-shrink-0 text-primary" />
                 <div className="flex flex-col min-w-0">
-                  <span className="text-sm font-medium truncate">{membership.tenant!.name}</span>
+                  <span className="text-sm font-medium truncate">{membership.tenant?.name}</span>
                   <span className="text-xs text-muted-foreground">
                     {membership.role}
                   </span>
@@ -219,7 +219,7 @@ export function ContextSwitcher() {
               >
                 <Store className="h-4 w-4 mr-2 flex-shrink-0 text-green-600" />
                 <div className="flex flex-col min-w-0">
-                  <span className="text-sm font-medium truncate">{membership.account!.name}</span>
+                  <span className="text-sm font-medium truncate">{membership.account?.name ?? ""}</span>
                   <span className="text-xs text-muted-foreground">
                     {membership.role}
                   </span>

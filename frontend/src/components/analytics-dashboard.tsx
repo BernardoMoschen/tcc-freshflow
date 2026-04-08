@@ -43,7 +43,9 @@ export function AnalyticsDashboard() {
     );
   }
 
-  const data = analyticsQuery.data!;
+  if (!analyticsQuery.data) return null;
+
+  const data = analyticsQuery.data;
 
   const formatPrice = (cents: number) => {
     return new Intl.NumberFormat("pt-BR", {

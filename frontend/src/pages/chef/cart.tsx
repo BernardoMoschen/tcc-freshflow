@@ -133,7 +133,7 @@ export function CartPage() {
 
       if (!stockValidation.isValid) {
         const itemNames = stockValidation.insufficientItems
-          .map((i: any) => `${i.productName} (disponível: ${i.available}, necessário: ${i.required})`)
+          .map((i) => `${i.productName} (disponível: ${i.available}, necessário: ${i.required})`)
           .join("\n");
         toast.error("Estoque insuficiente", {
           description: itemNames,
@@ -473,10 +473,11 @@ export function CartPage() {
                     if (deliverySettingsQuery.data?.timeSlots && deliveryDate) {
                       const [y, m, d] = deliveryDate.split("-").map(Number);
                       const selectedWeekday = new Date(y, m - 1, d).getDay();
-                      const slotsForDay = deliverySettingsQuery.data.timeSlots[selectedWeekday.toString()];
+                      const timeSlotsMap = deliverySettingsQuery.data.timeSlots as Record<string, string[]>;
+                      const slotsForDay = timeSlotsMap[selectedWeekday.toString()];
 
                       if (slotsForDay && slotsForDay.length > 0) {
-                        return slotsForDay.map((slot: string) => (
+                        return slotsForDay.map((slot) => (
                           <SelectItem key={slot} value={slot}>
                             {slot}
                           </SelectItem>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { trpc } from "@/lib/trpc";
+import { trpc, type RouterOutputs } from "@/lib/trpc";
 import { PageLayout } from "@/components/page-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +41,8 @@ const AUTO_REFRESH_INTERVAL = 15 * 1000;
 
 const PAGE_SIZE = 20;
 
+type OrderStatus = NonNullable<RouterOutputs["orders"]["adminList"]["items"][number]["status"]>;
+
 export function AdminOrdersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -58,7 +60,7 @@ export function AdminOrdersPage() {
 
   const ordersQuery = trpc.orders.adminList.useQuery(
     {
-      status: statusFilter === "all" ? undefined : (statusFilter as any),
+      status: statusFilter === "all" ? undefined : (statusFilter as OrderStatus),
       search: searchQuery || undefined,
       skip: currentPage * PAGE_SIZE,
       take: PAGE_SIZE,
@@ -126,7 +128,7 @@ export function AdminOrdersPage() {
   const exportQuery = trpc.orders.exportCsv.useQuery(
     {
       orderIds: selectedOrders.size > 0 ? Array.from(selectedOrders) : undefined,
-      status: statusFilter !== "all" ? (statusFilter as any) : undefined,
+      status: statusFilter !== "all" ? (statusFilter as OrderStatus) : undefined,
     },
     { enabled: false }
   );
@@ -145,7 +147,7 @@ export function AdminOrdersPage() {
     if (selectedOrders.size === filteredOrders.length) {
       setSelectedOrders(new Set());
     } else {
-      setSelectedOrders(new Set(filteredOrders.map((o: any) => o.id)));
+      setSelectedOrders(new Set(filteredOrders.map((o) => o.id)));
     }
   };
 
@@ -161,7 +163,7 @@ export function AdminOrdersPage() {
 
     bulkUpdateMutation.mutate({
       orderIds: Array.from(selectedOrders),
-      status: bulkStatus as any,
+      status: bulkStatus as OrderStatus,
     });
   };
 
@@ -198,10 +200,10 @@ export function AdminOrdersPage() {
   // Calculate statistics
   const stats = {
     total: ordersQuery.data?.total || 0,
-    sent: filteredOrders.filter((o: any) => o.status === "SENT").length,
-    inSeparation: filteredOrders.filter((o: any) => o.status === "IN_SEPARATION").length,
-    finalized: filteredOrders.filter((o: any) => o.status === "FINALIZED").length,
-    today: filteredOrders.filter((o: any) => {
+    sent: filteredOrders.filter((o) => o.status === "SENT").length,
+    inSeparation: filteredOrders.filter((o) => o.status === "IN_SEPARATION").length,
+    finalized: filteredOrders.filter((o) => o.status === "FINALIZED").length,
+    today: filteredOrders.filter((o) => {
       const today = new Date();
       const orderDate = new Date(o.createdAt);
       return (
@@ -489,13 +491,13 @@ export function AdminOrdersPage() {
       {/* Orders Grid */}
       {filteredOrders.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredOrders.map((order: any) => {
+          {filteredOrders.map((order) => {
             const hasWeightItems = order.items.some(
-              (item: any) => item.productOption?.unitType === "WEIGHT"
+              (item) => item.productOption?.unitType === "WEIGHT"
             );
             const allWeighed = order.items
-              .filter((item: any) => item.productOption?.unitType === "WEIGHT")
-              .every((item: any) => item.actualWeight !== null);
+              .filter((item) => item.productOption?.unitType === "WEIGHT")
+              .every((item) => item.actualWeight !== null);
 
             return (
               <div

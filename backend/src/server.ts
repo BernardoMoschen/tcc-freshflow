@@ -24,6 +24,7 @@ import {
   jsonParser,
   errorHandler,
   notFoundHandler,
+  ExtendedRequest,
 } from "./middleware/security.js";
 
 // Validate environment variables at startup (fail fast)
@@ -86,7 +87,7 @@ const apiV1 = express.Router();
 
 // ========== PDF Delivery Note Endpoint ==========
 apiV1.get("/delivery-note/:orderId.pdf", rateLimiters.read, async (req, res) => {
-  const requestIdHeader = (req as any).requestId;
+  const requestIdHeader = (req as ExtendedRequest).requestId;
 
   try {
     const { orderId } = req.params;
@@ -187,9 +188,10 @@ apiV1.get("/delivery-note/:orderId.pdf", rateLimiters.read, async (req, res) => 
 });
 
 // ========== WhatsApp Webhook Endpoint ==========
-apiV1.post("/whatsapp/webhook", rateLimiters.webhook, async (req, res) => {
+apiV1.post("/whatsapp/webhook", rateLimiters.webhook, (req, res) => {
   try {
-    const { From, Body } = req.body;
+    const body = req.body as { From?: string; Body?: string };
+    const { From, Body } = body;
 
     if (!From || !Body) {
       return res.status(400).json({
@@ -314,7 +316,16 @@ apiV1.get("/orders/events", rateLimiters.standard, async (req, res) => {
 // ========== Frontend Error Reporting Endpoint ==========
 apiV1.post("/errors", rateLimiters.standard, async (req, res) => {
   try {
-    const { errorId, message, stack, componentStack, url, userAgent, timestamp } = req.body;
+    const body = req.body as {
+      errorId?: string;
+      message?: string;
+      stack?: string;
+      componentStack?: string;
+      url?: string;
+      userAgent?: string;
+      timestamp?: string;
+    };
+    const { errorId, message, stack, componentStack, url, userAgent, timestamp } = body;
 
     // Validate required fields
     if (!errorId || !message) {
@@ -353,7 +364,7 @@ apiV1.post("/errors", rateLimiters.standard, async (req, res) => {
       },
       ipAddress: req.ip || req.headers["x-forwarded-for"]?.toString(),
       userAgent: req.headers["user-agent"],
-      requestId: (req as any).requestId,
+      requestId: (req as ExtendedRequest).requestId,
       errorMessage: message,
     });
 

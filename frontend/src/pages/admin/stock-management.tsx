@@ -58,6 +58,7 @@ export function StockManagementPage() {
 
   const movementsQuery = trpc.stock.getMovements.useQuery(
     {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       productOptionId: selectedOptionForMovements!,
       take: 20,
     },
@@ -168,7 +169,7 @@ export function StockManagementPage() {
     setShowMovements(true);
   };
 
-  const getStockBadge = (item: any) => {
+  const getStockBadge = (item: NonNullable<typeof stockQuery.data>["items"][number]) => {
     if (item.isOutOfStock) {
       return (
         <Badge variant="destructive" className="flex items-center gap-1">
@@ -431,7 +432,7 @@ export function StockManagementPage() {
 
           {movementsQuery.data && (
             <div className="space-y-3">
-              {movementsQuery.data.items.map((movement: any) => (
+              {movementsQuery.data.items.map((movement) => (
                 <div
                   key={movement.id}
                   className="border rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition"

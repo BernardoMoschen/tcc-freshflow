@@ -23,7 +23,7 @@ export interface OrderEvent {
   accountId: string;
   tenantId: string;
   status?: OrderStatus;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   timestamp: string;
 }
 

@@ -84,7 +84,7 @@ export class OrderService {
 
         let finalPrice: number | null = null;
 
-        if (productOption!.unitType === "FIXED") {
+        if (productOption?.unitType === "FIXED") {
           finalPrice = await calculateFixedItemPrice(
             item.productOptionId,
             item.requestedQty,
@@ -191,7 +191,7 @@ export class OrderService {
 
         let finalPrice: number | null = null;
 
-        if (productOption!.unitType === "FIXED") {
+        if (productOption?.unitType === "FIXED") {
           finalPrice = await calculateFixedItemPrice(
             item.productOptionId,
             item.requestedQty,

@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "@prisma/client": ["../backend/node_modules/.prisma/client"]
+    }
+  },
+  "include": ["src", "../backend/src"]
+}

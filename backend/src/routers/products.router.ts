@@ -187,7 +187,7 @@ export const productsRouter = router({
 
           // Maintain sort order (Prisma doesn't preserve order from `in` clause)
           const productMap = new Map(fullProducts.map((p) => [p.id, p]));
-          items = sortedIds.map((id) => productMap.get(id)!).filter(Boolean);
+          items = sortedIds.map((id) => productMap.get(id)).filter((p): p is NonNullable<typeof p> => !!p);
         } else {
           items = [];
         }

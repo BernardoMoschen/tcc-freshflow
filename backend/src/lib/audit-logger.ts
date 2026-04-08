@@ -1,6 +1,16 @@
-import { Request } from "express";
+import { Request, Response } from "express";
 import { PrismaClient, AuditEventType, AuditSeverity } from "@prisma/client";
 import { Prisma } from "@prisma/client";
+
+/**
+ * Extended Express Request with auth properties
+ */
+interface AuthenticatedRequest extends Request {
+  userId?: string;
+  tenantId?: string;
+  accountId?: string;
+  requestId?: string;
+}
 
 // Re-export enums for convenience
 export { AuditEventType, AuditSeverity };
@@ -19,7 +29,7 @@ export interface AuditLogEntry {
   accountId?: string | null;
   resourceType?: string | null;
   resourceId?: string | null;
-  details?: Record<string, any> | null;
+  details?: Record<string, unknown> | null;
   ipAddress?: string | null;
   userAgent?: string | null;
   requestId?: string | null;
@@ -117,26 +127,27 @@ class AuditLogger {
       severity?: AuditSeverity;
       resourceType?: string;
       resourceId?: string;
-      details?: Record<string, any>;
+      details?: Record<string, unknown>;
       errorMessage?: string;
     } = {}
   ): void {
+    const authReq = req as AuthenticatedRequest;
     // Fire and forget - don't await to avoid blocking requests
     this.log({
       eventType,
       action,
       success: options.success ?? true,
       severity: options.severity ?? AuditSeverity.INFO,
-      userId: (req as any).userId,
-      tenantId: (req as any).tenantId,
-      accountId: (req as any).accountId,
+      userId: authReq.userId,
+      tenantId: authReq.tenantId,
+      accountId: authReq.accountId,
       resourceType: options.resourceType,
       resourceId: options.resourceId,
       details: options.details,
       errorMessage: options.errorMessage,
       ipAddress: req.ip || req.headers["x-forwarded-for"]?.toString(),
       userAgent: req.headers["user-agent"],
-      requestId: (req as any).requestId,
+      requestId: authReq.requestId,
     }).catch((err) => console.error("Audit log failed:", err));
   }
 
@@ -148,7 +159,7 @@ class AuditLogger {
     userId: string | undefined,
     success: boolean,
     ipAddress?: string,
-    details?: Record<string, any>
+    details?: Record<string, unknown>
   ): void {
     // Map event type to action string
     const actionMap: Record<string, string> = {
@@ -176,7 +187,7 @@ class AuditLogger {
     eventType: AuditEventType,
     orderId: string,
     userId: string,
-    details?: Record<string, any>
+    details?: Record<string, unknown>
   ): void {
     this.log({
       eventType,
@@ -198,7 +209,7 @@ class AuditLogger {
     productOptionId: string,
     userId: string,
     quantity: number,
-    details?: Record<string, any>
+    details?: Record<string, unknown>
   ): void {
     this.log({
       eventType,
@@ -219,7 +230,7 @@ class AuditLogger {
     action: string,
     userId: string | undefined,
     ipAddress: string | undefined,
-    details?: Record<string, any>
+    details?: Record<string, unknown>
   ): void {
     this.log({
       eventType: AuditEventType.SECURITY_VIOLATION,
@@ -238,7 +249,7 @@ class AuditLogger {
   logError(
     action: string,
     errorMessage: string,
-    details?: Record<string, any>
+    details?: Record<string, unknown>
   ): void {
     this.log({
       eventType: AuditEventType.SYSTEM_ERROR,
@@ -357,7 +368,7 @@ class AuditLogger {
       return { items, total };
     }
 
-    const where: any = {};
+    const where: Prisma.AuditLogWhereInput = {};
     if (options.eventType) where.eventType = options.eventType;
     if (options.severity) where.severity = options.severity;
     if (options.userId) where.userId = options.userId;
@@ -440,7 +451,7 @@ export function auditMiddleware(
   eventType: AuditEventType,
   resourceType?: string
 ) {
-  return (req: Request, res: any, next: () => void) => {
+  return (req: Request, res: Response, next: () => void) => {
     // Log after response
     res.on("finish", () => {
       const success = res.statusCode >= 200 && res.statusCode < 400;

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { trpc, type RouterOutputs } from "@/lib/trpc";
 import { PageLayout } from "@/components/page-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,9 +16,11 @@ import {
 import { Users, Search, DollarSign, Package, TrendingUp, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+type CustomerItem = RouterOutputs["customers"]["list"]["items"][number];
+
 export function CustomersManagementPage() {
   const [search, setSearch] = useState("");
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerItem | null>(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [selectedProductOption, setSelectedProductOption] = useState("");
   const [customPrice, setCustomPrice] = useState("");
@@ -83,7 +85,7 @@ export function CustomersManagementPage() {
     }).format(cents / 100);
   };
 
-  const openCustomerDetails = (customer: any) => {
+  const openCustomerDetails = (customer: CustomerItem) => {
     setSelectedCustomer(customer);
   };
 
@@ -156,7 +158,7 @@ export function CustomersManagementPage() {
 
       {customersQuery.data && customersQuery.data.items.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {customersQuery.data.items.map((customer: any) => (
+          {customersQuery.data.items.map((customer) => (
             <div
               key={customer.id}
               className="bg-card rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden cursor-pointer"
@@ -265,7 +267,7 @@ export function CustomersManagementPage() {
 
                 {customerDetailsQuery.data.customerPrices.length > 0 && (
                   <div className="space-y-2">
-                    {customerDetailsQuery.data.customerPrices.map((cp: any) => (
+                    {customerDetailsQuery.data.customerPrices.map((cp) => (
                       <div
                         key={cp.id}
                         className="flex items-center justify-between p-3 bg-muted rounded-lg"
@@ -315,7 +317,7 @@ export function CustomersManagementPage() {
 
                 {customerDetailsQuery.data.orders.length > 0 && (
                   <div className="space-y-2">
-                    {customerDetailsQuery.data.orders.slice(0, 10).map((order: any) => (
+                    {customerDetailsQuery.data.orders.slice(0, 10).map((order) => (
                       <div
                         key={order.id}
                         className="flex items-center justify-between p-3 bg-muted rounded-lg"
@@ -371,8 +373,8 @@ export function CustomersManagementPage() {
                 className="w-full p-2 border rounded-md"
               >
                 <option value="">Selecione uma opção de produto...</option>
-                {productsQuery.data?.items.flatMap((product: any) =>
-                  product.options.map((option: any) => (
+                {productsQuery.data?.items.flatMap((product) =>
+                  product.options.map((option) => (
                     <option key={option.id} value={option.id}>
                       {product.name} - {option.name} (Base: {formatPrice(option.basePrice)})
                     </option>

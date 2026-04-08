@@ -74,7 +74,7 @@ export const DropdownMenuTrigger = React.forwardRef<
   };
 
   if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children as React.ReactElement<any>, {
+    return React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
       ref: (el: HTMLElement) => {
         (triggerRef as React.MutableRefObject<HTMLElement | null>).current = el;
         if (typeof ref === "function") ref(el as HTMLButtonElement);

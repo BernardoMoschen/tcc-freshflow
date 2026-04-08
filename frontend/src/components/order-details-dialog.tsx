@@ -31,6 +31,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
   const hasTenantContext = !!localStorage.getItem("freshflow:tenantId");
 
   const { data: order, isLoading } = trpc.orders.get.useQuery(
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     { id: orderId! },
     { enabled: !!orderId }
   );
@@ -96,7 +97,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
     if (!order) return;
 
     let itemsAdded = 0;
-    order.items.forEach((item: any) => {
+    order.items.forEach((item) => {
       // Only add items that have finalPrice (FIXED items or weighed WEIGHT items)
       if (item.finalPrice) {
         addItem({
@@ -168,6 +169,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
       return;
     }
     addItemMutation.mutate({
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       orderId: orderId!,
       productOptionId: selectedOptionId,
       requestedQty: qty,
@@ -185,7 +187,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
 
   const calculateTotal = () => {
     if (!order) return 0;
-    return order.items.reduce((sum: number, item: any) => {
+    return order.items.reduce((sum, item) => {
       if (item.productOption.unitType === "FIXED" && item.finalPrice) {
         return sum + item.finalPrice;
       } else if (item.productOption.unitType === "WEIGHT" && item.actualWeight && item.finalPrice) {
@@ -309,7 +311,7 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
               </div>
 
               <div className="space-y-3">
-                {order.items.map((item: any) => (
+                {order.items.map((item) => (
                   <div
                     key={item.id}
                     className="border rounded-lg p-4 bg-muted"
@@ -564,8 +566,8 @@ export function OrderDetailsDialog({ orderId, onClose }: OrderDetailsDialogProps
 
             {productsQuery.data && (
               <div className="max-h-48 overflow-y-auto space-y-1 border rounded p-2">
-                {productsQuery.data.items.flatMap((product: any) =>
-                  product.options.map((option: any) => (
+                {productsQuery.data.items.flatMap((product) =>
+                  product.options.map((option) => (
                     <button
                       key={option.id}
                       type="button"

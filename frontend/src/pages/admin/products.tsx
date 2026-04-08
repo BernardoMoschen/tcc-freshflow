@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { trpc, type RouterOutputs } from "@/lib/trpc";
 import { PageLayout } from "@/components/page-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,11 +43,13 @@ type ProductFormData = {
   options: OptionFormData[];
 };
 
+type ProductItem = RouterOutputs["products"]["list"]["items"][number];
+
 export function ProductsManagementPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null);
   const [originalOptionIds, setOriginalOptionIds] = useState<string[]>([]);
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
@@ -129,15 +131,15 @@ export function ProductsManagementPage() {
     setShowCreateModal(true);
   };
 
-  const openEditModal = (product: any) => {
+  const openEditModal = (product: ProductItem) => {
     setEditingProduct(product);
-    setOriginalOptionIds(product.options.map((opt: any) => opt.id));
+    setOriginalOptionIds(product.options.map((opt) => opt.id));
     setFormData({
       name: product.name,
       description: product.description || "",
       category: product.category || "",
       imageUrl: product.imageUrl || "",
-      options: product.options.map((opt: any) => ({
+      options: product.options.map((opt) => ({
         id: opt.id,
         name: opt.name,
         sku: opt.sku,
@@ -193,6 +195,7 @@ export function ProductsManagementPage() {
         // Determine which options to create, update, or delete
         const currentOptionIds = formData.options
           .filter((opt) => opt.id)
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           .map((opt) => opt.id!);
         const deletedIds = originalOptionIds.filter(
           (id) => !currentOptionIds.includes(id)
@@ -233,8 +236,9 @@ export function ProductsManagementPage() {
         toast.success("Produto atualizado com sucesso");
         await utils.products.list.invalidate();
         closeModal();
-      } catch (error: any) {
-        toast.error("Falha ao atualizar produto", { description: error.message });
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        toast.error("Falha ao atualizar produto", { description: message });
       } finally {
         setIsSaving(false);
       }
@@ -255,7 +259,7 @@ export function ProductsManagementPage() {
           isAvailable: true,
         })),
       };
-      createMutation.mutate(data as any);
+      createMutation.mutate(data);
     }
   };
 
@@ -289,9 +293,9 @@ export function ProductsManagementPage() {
     });
   };
 
-  const updateOption = (index: number, field: string, value: any) => {
+  const updateOption = (index: number, field: keyof OptionFormData, value: string) => {
     const newOptions = [...formData.options];
-    (newOptions[index] as any)[field] = value;
+    newOptions[index] = { ...newOptions[index], [field]: value };
     setFormData({ ...formData, options: newOptions });
   };
 
@@ -345,7 +349,7 @@ export function ProductsManagementPage() {
 
       {productsQuery.data && productsQuery.data.items.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {productsQuery.data.items.map((product: any) => (
+          {productsQuery.data.items.map((product) => (
             <div
               key={product.id}
               className="bg-card rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden"
@@ -372,7 +376,7 @@ export function ProductsManagementPage() {
                   <p className="text-xs font-medium text-muted-foreground mb-2">
                     {product.options.length} opç{product.options.length !== 1 ? "ões" : "ão"}
                   </p>
-                  {product.options.slice(0, 2).map((option: any) => (
+                  {product.options.slice(0, 2).map((option) => (
                     <div key={option.id} className="text-xs text-muted-foreground mb-1">
                       • {option.name} - R$ {(option.basePrice / 100).toFixed(2)}
                     </div>

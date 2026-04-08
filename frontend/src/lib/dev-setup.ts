@@ -144,7 +144,7 @@ export function initDevMode() {
 
 // Expose to window for easy console access
 if (import.meta.env.DEV && typeof window !== "undefined") {
-  (window as any).devSetup = {
+  (window as Window & { devSetup?: unknown }).devSetup = {
     setup: setupDevMode,
     clear: clearDevMode,
     status: getDevModeStatus,

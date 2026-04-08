@@ -21,6 +21,7 @@ export function PublicCatalogPage() {
 
   const catalogQuery = trpc.products.publicCatalog.useQuery(
     {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       tenantSlug: tenantSlug!,
       search: searchQuery || undefined,
       category: categoryFilter !== "all" ? categoryFilter : undefined,
@@ -81,7 +82,9 @@ export function PublicCatalogPage() {
     );
   }
 
-  const { tenant, products, categories } = catalogQuery.data!;
+  if (!catalogQuery.data) return null;
+
+  const { tenant, products, categories } = catalogQuery.data;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50">
@@ -121,7 +124,7 @@ export function PublicCatalogPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas Categorias</SelectItem>
-                {categories.map((category: any) => (
+                {categories.map((category) => (
                   <SelectItem key={category} value={category}>
                     {category}
                   </SelectItem>
@@ -144,7 +147,7 @@ export function PublicCatalogPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {products.map((product: any) => (
+            {products.map((product) => (
               <div
                 key={product.id}
                 className="bg-card rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
@@ -184,7 +187,7 @@ export function PublicCatalogPage() {
 
                   {/* Options */}
                   <div className="space-y-2">
-                    {product.options.map((option: any) => (
+                    {product.options.map((option) => (
                       <div
                         key={option.id}
                         className="flex items-center justify-between p-3 bg-muted rounded-lg"

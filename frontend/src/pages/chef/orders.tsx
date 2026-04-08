@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { trpc } from "@/lib/trpc";
+import { trpc, type RouterOutputs } from "@/lib/trpc";
 import { useDebounce } from "@/hooks/use-debounce";
 import { PageLayout } from "@/components/page-layout";
 import { CardSkeleton } from "@/components/ui/skeleton";
@@ -18,6 +18,8 @@ import { OrderStatusTimeline } from "@/components/order-status-timeline";
 import { Search, ChevronLeft, ChevronRight, Eye, Download, FileDown, RefreshCw, Wifi, WifiOff, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+
+type OrderStatus = RouterOutputs["orders"]["list"]["items"][number]["status"];
 
 // Auto-refresh interval in milliseconds (30 seconds)
 const AUTO_REFRESH_INTERVAL = 30 * 1000;
@@ -44,7 +46,7 @@ export function OrdersPage() {
 
   const ordersQuery = trpc.orders.list.useQuery(
     {
-      status: statusFilter === "all" ? undefined : (statusFilter as any),
+      status: statusFilter === "all" ? undefined : (statusFilter as OrderStatus),
       search: debouncedSearch || undefined,
       skip: currentPage * PAGE_SIZE,
       take: PAGE_SIZE,
@@ -106,7 +108,7 @@ export function OrdersPage() {
   const exportQuery = trpc.orders.exportCsv.useQuery(
     {
       orderIds: selectedOrders.size > 0 ? Array.from(selectedOrders) : undefined,
-      status: statusFilter !== "all" ? (statusFilter as any) : undefined,
+      status: statusFilter !== "all" ? (statusFilter as OrderStatus) : undefined,
     },
     { enabled: false }
   );
@@ -125,7 +127,7 @@ export function OrdersPage() {
     if (selectedOrders.size === filteredOrders.length) {
       setSelectedOrders(new Set());
     } else {
-      setSelectedOrders(new Set(filteredOrders.map((o: any) => o.id)));
+      setSelectedOrders(new Set(filteredOrders.map((o) => o.id)));
     }
   };
 
@@ -141,7 +143,7 @@ export function OrdersPage() {
 
     bulkUpdateMutation.mutate({
       orderIds: Array.from(selectedOrders),
-      status: bulkStatus as any,
+      status: bulkStatus as OrderStatus,
     });
   };
 
@@ -379,7 +381,7 @@ export function OrdersPage() {
       )}
 
       <div className="space-y-4">
-        {filteredOrders.map((order: any) => (
+        {filteredOrders.map((order) => (
           <div
             key={order.id}
             className={`bg-card rounded-lg shadow-sm p-4 md:p-6 hover:shadow-md transition-shadow ${

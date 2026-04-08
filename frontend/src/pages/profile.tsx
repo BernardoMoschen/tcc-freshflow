@@ -25,6 +25,16 @@ import {
   Bell,
 } from "lucide-react";
 
+interface AddressJson {
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+}
+
 export function ProfilePage() {
   const utils = trpc.useUtils();
   const profileQuery = trpc.userProfile.get.useQuery();
@@ -82,7 +92,7 @@ export function ProfilePage() {
 
       // Load tenant data if user is tenant admin
       const tenantMembership = profileQuery.data.memberships.find(
-        (m: any) => m.role.name === "TENANT_OWNER" || m.role.name === "TENANT_ADMIN"
+        (m) => m.role.name === "TENANT_OWNER" || m.role.name === "TENANT_ADMIN"
       );
 
       if (tenantMembership?.tenant) {
@@ -92,7 +102,7 @@ export function ProfilePage() {
         setTenantPhone(tenant.phone || "");
 
         if (tenant.address) {
-          const addr = tenant.address;
+          const addr = tenant.address as AddressJson;
           setAddress({
             street: addr.street || "",
             number: addr.number || "",
@@ -105,7 +115,7 @@ export function ProfilePage() {
         }
 
         if (tenant.deliveryAddress) {
-          const delAddr = tenant.deliveryAddress;
+          const delAddr = tenant.deliveryAddress as AddressJson;
           setDeliveryAddress({
             street: delAddr.street || "",
             number: delAddr.number || "",
@@ -177,7 +187,7 @@ export function ProfilePage() {
 
   const handleSaveTenantInfo = () => {
     const tenantMembership = profileQuery.data?.memberships.find(
-      (m: any) => m.role.name === "TENANT_OWNER" || m.role.name === "TENANT_ADMIN"
+      (m) => m.role.name === "TENANT_OWNER" || m.role.name === "TENANT_ADMIN"
     );
 
     if (!tenantMembership?.tenant) {
@@ -206,7 +216,7 @@ export function ProfilePage() {
   };
 
   const isTenantAdmin = profileQuery.data?.memberships.some(
-    (m: any) => m.role.name === "TENANT_OWNER" || m.role.name === "TENANT_ADMIN"
+    (m) => m.role.name === "TENANT_OWNER" || m.role.name === "TENANT_ADMIN"
   );
 
   if (profileQuery.isLoading || preferencesQuery.isLoading) {

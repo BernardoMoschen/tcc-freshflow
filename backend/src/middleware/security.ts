@@ -176,7 +176,7 @@ export function sanitizeInput(req: Request, res: Response, next: NextFunction): 
   try {
     // Sanitize body
     if (req.body && typeof req.body === "object") {
-      sanitizeObject(req.body);
+      sanitizeObject(req.body as Record<string, unknown>);
     }
 
     // Sanitize query params
@@ -277,7 +277,7 @@ export function errorHandler(
   res: Response,
   _next: NextFunction
 ): void {
-  const requestId = (req as any).requestId || "unknown";
+  const requestIdValue = (req as ExtendedRequest).requestId || "unknown";
 
   // Log error with context
   logger.error("Request error", {
@@ -298,7 +298,7 @@ export function errorHandler(
   res.status(500).json({
     error: "Internal Server Error",
     message,
-    requestId,
+    requestId: requestIdValue,
     ...(stack && { stack }),
   });
 }

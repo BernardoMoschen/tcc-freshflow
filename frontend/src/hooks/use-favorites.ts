@@ -5,7 +5,7 @@ const STORAGE_KEY = "freshflow:favorites";
 export function useFavorites() {
   const [favorites, setFavorites] = useState<string[]>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
+    return stored ? JSON.parse(stored) as string[] : [];
   });
 
   useEffect(() => {
